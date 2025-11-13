@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code-Abenteuer Blackjack</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font 'Inter' -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Wir verwenden 'Inter' als Standard-Sans-Serif-Schriftart */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* 'Source Code Pro' für alle Code-Blöcke */
+        .code-block {
+            font-family: 'Source Code Pro', monospace;
+            background-color: #1e293b; /* slate-800 */
+            color: #e2e8f0; /* slate-200 */
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        /* Syntax-Hervorhebung für den "falschen" Code */
+        .code-comment { color: #94a3b8; } /* slate-400 */
+        .code-keyword { color: #c084fc; } /* purple-400 */
+        .code-string { color: #facc15; } /* yellow-400 */
+        .code-variable { color: #e2e8f0; } /* slate-200 */
+        .code-value { color: #60a5fa; } /* blue-400 */
+
+        /* Stil für die interaktiven Lücken/Platzhalter */
+        .code-blank {
+            display: inline-block;
+            background-color: #334155; /* slate-700 */
+            color: #94a3b8; /* slate-400 */
+            padding: 0.1rem 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px dashed #475569; /* slate-600 */
+        }
+
+        /* Stil für die Multiple-Choice-Buttons */
+        .option-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background-color: #334155; /* slate-700 */
+            color: #e2e8f0; /* slate-200 */
+            border: 2px solid #475569; /* slate-600 */
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Source Code Pro', monospace;
+        }
+
+        .option-btn:hover {
+            background-color: #475569; /* slate-600 */
+            border-color: #60a5fa; /* blue-400 */
+        }
+
+        /* Stil für den "Weiter"-Button */
+        .next-btn {
+            background-color: #22c55e; /* green-500 */
+            color: #ffffff;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: none; /* Standardmäßig ausgeblendet */
+        }
+
+        .next-btn:hover {
+            background-color: #16a34a; /* green-600 */
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 min-h-screen flex items-center justify-center p-4">
+
+    <main class="w-full max-w-3xl bg-slate-800 shadow-2xl rounded-xl overflow-hidden">
+        <div class="p-8 md:p-12">
+            <h1 class="text-3xl font-bold text-center mb-2 text-white">Code-Abenteuer</h1>
+            <h2 class="text-xl font-semibold text-blue-400 text-center mb-8">Blackjack Edition</h2>
+
+            <!-- Tutorial-Dialog -->
+            <div id="tutorial-text" class="text-lg text-slate-300 mb-6 leading-relaxed">
+                Wird geladen...
+            </div>
+
+            <!-- Interaktiver Code-Bereich -->
+            <div id="interactive-area" class="mb-6">
+                <!-- Dynamisch gefüllt -->
+            </div>
+
+            <!-- Feedback-Nachricht -->
+            <div id="feedback-message" class="mt-4 h-6 text-base">
+                <!-- Feedback (Richtig/Falsch) -->
+            </div>
+
+            <!-- Nächstes Level Button -->
+            <div class="text-right mt-6">
+                <button id="next-button" class="next-btn" onclick="nextLevel()">
+                    Nächstes Level &rarr;
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentLevel = 0;
+        
+        // DOM-Elemente
+        const tutorialTextEl = document.getElementById('tutorial-text');
+        const interactiveAreaEl = document.getElementById('interactive-area');
+        const feedbackMessageEl = document.getElementById('feedback-message');
+        const nextButtonEl = document.getElementById('next-button');
+
+        // Level-Daten (basierend auf deinem Konzept)
+        const levels = [
+            { // Level 0: Variablen (int)
+                dialog: "Willkommen, Code-Magier! Wir bauen Blackjack. Zuerst brauchen wir einen Ort, um die Punkte des Spielers zu speichern. Punkte sind ganze Zahlen. Welchen Datentyp wählen wir?",
+                taskHtml: `
+                    <div class="code-block">
+                        <span class="code-comment">// Wähle den richtigen Datentyp für die Punktzahl:</span>
+                        <div id="level-0-options" class="my-4 space-y-3">
+                            <button class="option-btn" onclick="checkAnswer(0, 'String')">String</button>
+                            <button class="option-btn" onclick="checkAnswer(0, 'int')">int</button>
+                            <button class="option-btn" onclick="checkAnswer(0, 'boolean')">boolean</button>
+                        </div>
+                        <span id="level-0-blank" class="code-blank">___</span> <span class="code-variable">spielerPunkte</span> = <span class="code-value">10</span>;
+                    </div>
+                `,
+                correctAnswer: 'int',
+                onCorrect: () => {
+                    document.getElementById('level-0-blank').innerHTML = `<span class="code-keyword">int</span>`;
+                    document.getElementById('level-0-options').style.display = 'none';
+                }
+            },
+            { // Level 1: Operatoren (+)
+                dialog: "Super! Der Spieler hat 10 Punkte. Jetzt zieht er eine zweite Karte mit 7 Punkten. Wir müssen die Punkte addieren und in der Variable `spielerPunkte` speichern.",
+                taskHtml: `
+                    <div class="code-block">
+                        <span class="code-keyword">int</span> <span class="code-variable">karte1</span> = <span class="code-value">10</span>;<br>
+                        <span class="code-keyword">int</span> <span class="code-variable">karte2</span> = <span class="code-value">7</span>;<br>
+                        <span class="code-keyword">int</span> <span class="code-variable">spielerPunkte</span> = <span class="code-value">0</span>;<br><br>
+                        <span class="code-comment">// Wie rechnest du die Gesamtpunkte aus?</span>
+                        <div id="level-1-options" class="my-4 space-y-3">
+                            <button class="option-btn" onclick="checkAnswer(1, 'correct')">spielerPunkte = karte1 + karte2;</button>
+                            <button class="option-btn" onclick="checkAnswer(1, 'wrong1')">spielerPunkte == karte1 + karte2;</button>
+                            <button class="option-btn" onclick="checkAnswer(1, 'wrong2')">spielerPunkte = "10 + 7";</button>
+                        </div>
+                    </div>
+                `,
+                correctAnswer: 'correct',
+                onCorrect: () => {
+                    document.getElementById('level-1-options').style.display = 'none';
+                    interactiveAreaEl.querySelector('.code-block').innerHTML += `<br><span class="code-variable">spielerPunkte</span> = <span class="code-variable">karte1</span> + <span class="code-variable">karte2</span>; <span class="code-comment">// Richtig!</span>`;
+                }
+            },
+            { // Level 2: Verzweigungen (if/else)
+                dialog: "Jetzt wird es spannend! Der Spieler hat 17 Punkte und muss 'hit' (ziehen) oder 'stand' (halten) wählen. Wir müssen auf seine Wahl reagieren. Wie füllen wir die Lücken, um zu prüfen, ob er 'hit' gewählt hat?",
+                taskHtml: `
+                    <div class="code-block">
+                        <span class="code-keyword">String</span> <span class="code-variable">spielerWahl</span> = <span class="code-string">"hit"</span>;<br><br>
+                        <span class="code-comment">// Fülle die Lücken:</span><br>
+                        <span id="level-2-blank1" class="code-blank">__</span> (<span class="code-variable">spielerWahl</span> == <span class="code-string">"hit"</span>) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-comment">// Code zum Karteziehen...</span><br>
+                        } <span id="level-2-blank2" class="code-blank">_____</span> {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-comment">// Code fürs Halten...</span><br>
+                        }
+                        
+                        <div id="level-2-options" class="my-4 space-y-3">
+                            <button class="option-btn" onclick="checkAnswer(2, 'correct')">Lücke 1: if, Lücke 2: else</button>
+                            <button class="option-btn" onclick="checkAnswer(2, 'wrong1')">Lücke 1: else, Lücke 2: if</button>
+                            <button class="option-btn" onclick="checkAnswer(2, 'wrong2')">Lücke 1: while, Lücke 2: if</button>
+                        </div>
+                    </div>
+                `,
+                correctAnswer: 'correct',
+                onCorrect: () => {
+                    document.getElementById('level-2-blank1').innerHTML = `<span class="code-keyword">if</span>`;
+                    document.getElementById('level-2-blank2').innerHTML = `<span class="code-keyword">else</span>`;
+                    document.getElementById('level-2-options').style.display = 'none';
+                }
+            },
+            { // Level 3: Verzweigungen (if/else if/else)
+                dialog: "Okay, das Spiel ist zu Ende. Jetzt müssen wir den Gewinner ermitteln. Die *Reihenfolge* der Prüfungen ist entscheidend! Was müssen wir *zuerst* prüfen, noch bevor wir die Punkte vergleichen?",
+                taskHtml: `
+                    <div class="code-block">
+                        <span class="code-comment">// Was ist die WICHTIGSTE erste Prüfung?</span>
+                        <div id="level-3-options" class="my-4 space-y-3">
+                            <button class="option-btn" onclick="checkAnswer(3, 'wrong1')">if (spielerPunkte > dealerPunkte) { ... }</button>
+                            <button class="option-btn" onclick="checkAnswer(3, 'correct')">if (spielerPunkte > 21) { ... } // Prüfen auf "Bust"</button>
+                            <button class="option-btn" onclick="checkAnswer(3, 'wrong2')">else { ... } // Unentschieden</button>
+                        </div>
+                    </div>
+                `,
+                correctAnswer: 'correct',
+                onCorrect: () => {
+                    document.getElementById('level-3-options').style.display = 'none';
+                    tutorialTextEl.innerHTML = `Richtig! Wir müssen *zuerst* prüfen, ob der Spieler "Bust" ist (über 21), *bevor* wir seinen Punktestand mit dem des Dealers vergleichen. Das verhindert falsche Gewinner.`;
+                }
+            },
+            { // Level 4: Schleifen (while)
+                dialog: "Der Spieler ist fertig. Jetzt ist der Dealer dran. Regel: Der Dealer MUSS Karten ziehen, *solange* seine Punktzahl unter 17 ist. Das klingt nach einer Wiederholung! Welche Schleife ist perfekt dafür?",
+                taskHtml: `
+                    <div class="code-block">
+                        <span class="code-keyword">int</span> <span class="code-variable">dealerPunkte</span> = <span class="code-value">15</span>;<br><br>
+                        <span class="code-comment">// Wähle die richtige Schleife:</span>
+                        
+                        <div id="level-4-options" class="my-4 space-y-3">
+                            <button class="option-btn" onclick="checkAnswer(4, 'wrong1')">for (int i = 0; i < 17; i++) { ... }</button>
+                            <button class="option-btn" onclick="checkAnswer(4, 'correct')">while (dealerPunkte < 17) { ... }</button>
+                            <button class="option-btn" onclick="checkAnswer(4, 'wrong2')">if (dealerPunkte < 17) { ... }</button>
+                        </div>
+
+                        <span class="code-blank">_______</span> {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-comment">// dealerPunkte += zieheNeueKarte();</span><br>
+                        }
+                    </div>
+                `,
+                correctAnswer: 'correct',
+                onCorrect: () => {
+                    document.getElementById('level-4-options').style.display = 'none';
+                    interactiveAreaEl.querySelector('.code-blank').innerHTML = `<span class="code-keyword">while</span> (<span class="code-variable">dealerPunkte</span> < <span class="code-value">17</span>)`;
+                }
+            },
+            { // Level 5: Arrays
+                dialog: "Lass uns ein echtes Kartendeck erstellen! Wir brauchen eine Liste (ein 'Array'), um alle Kartenwerte zu speichern. Computer fangen beim Zählen von Listenplätzen bei 0 an. Wie greifen wir auf die *erste* Karte (die '2') zu?",
+                taskHtml: `
+                    <div class="code-block">
+                        <span class="code-comment">// (11 ist das Ass)</span><br>
+                        <span class="code-keyword">int</span>[] <span class="code-variable">kartendeck</span> = { <span class="code-value">2</span>, <span class="code-value">3</span>, <span class="code-value">4</span>, <span class="code-value">5</span>, <span class="code-value">6</span>, <span class="code-value">7</span>, <span class="code-value">8</span>, <span class="code-value">9</span>, <span class="code-value">10</span>, <span class="code-value">10</span>, <span class="code-value">11</span> };<br><br>
+                        <span class="code-comment">// Wie lautet der Code für die erste Karte?</span>
+                        
+                        <div id="level-5-options" class="my-4 space-y-3">
+                            <button class="option-btn" onclick="checkAnswer(5, 'wrong1')">int ersteKarte = kartendeck[1];</button>
+                            <button class="option-btn" onclick="checkAnswer(5, 'correct')">int ersteKarte = kartendeck[0];</button>
+                            <button class="option-btn" onclick="checkAnswer(5, 'wrong2')">int ersteKarte = kartendeck.erste();</button>
+                        </div>
+                    </div>
+                `,
+                correctAnswer: 'correct',
+                onCorrect: () => {
+                    document.getElementById('level-5-options').style.display = 'none';
+                    interactiveAreaEl.querySelector('.code-block').innerHTML += `<br><span class="code-keyword">int</span> <span class="code-variable">ersteKarte</span> = <span class="code-variable">kartendeck</span>[<span class="code-value">0</span>]; <span class="code-comment">// Genau! Der erste Index ist immer 0.</span>`;
+                }
+            },
+            { // Level 6: Methoden
+                dialog: "Wow, unser Code wird lang! Lass uns aufräumen. Wir packen den Code in 'Methoden' (wiederverwendbare Pakete). Wir sind im Hauptmenü und der Spieler wählt 'Blackjack'. Wie *starten* (oder 'rufen') wir die Methode auf?",
+                taskHtml: `
+                    <div class="code-block">
+                        <span class="code-comment">// Definitionen (Baupläne):</span><br>
+                        <span class="code-keyword">void</span> <span class="code-variable">spieleBlackjack</span>() { ... }<br>
+                        <span class="code-keyword">void</span> <span class="code-variable">spieleRoulette</span>() { ... }<br><br>
+                        <span class="code-comment">// Hauptmenü:</span><br>
+                        <span class="code-keyword">if</span> (<span class="code-variable">spielWahl</span> == <span class="code-string">"Blackjack"</span>) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-blank">_______________</span> <span class="code-comment">// Wie rufen wir das Spiel auf?</span><br>
+                        }
+
+                        <div id="level-6-options" class="my-4 space-y-3">
+                            <button class="option-btn" onclick="checkAnswer(6, 'wrong1')">spieleBlackjack;</button>
+                            <button class="option-btn" onclick="checkAnswer(6, 'wrong2')">void spieleBlackjack()</button>
+                            <button class="option-btn" onclick="checkAnswer(6, 'correct')">spieleBlackjack()</button>
+                        </div>
+                    </div>
+                `,
+                correctAnswer: 'correct',
+                onCorrect: () => {
+                    document.getElementById('level-6-options').style.display = 'none';
+                    interactiveAreaEl.querySelector('.code-blank').innerHTML = `<span class="code-variable">spieleBlackjack</span>();`;
+                }
+            },
+            { // Level 7: Abschluss
+                dialog: "Herzlichen Glückwunsch! Du hast gerade ein ganzes Spiel strukturiert und dabei die wichtigsten Grundlagen der Programmierung gelernt. Du bist bereit, echten Code zu schreiben!",
+                taskHtml: `
+                    <div class="code-block text-center">
+                        <span class="text-2xl">🎉</span><br><br>
+                        <span class="text-xl text-green-400 font-semibold">Level Abgeschlossen!</span><br><br>
+                        <span class="text-slate-300">Du hast gelernt:<br>
+                        - Variablen (int, String)<br>
+                        - Operatoren (+)<br>
+                        - Verzweigungen (if, else if, else)<br>
+                        - Schleifen (while)<br>
+                        - Arrays ([])<br>
+                        - Methoden ()</span>
+                    </div>
+                `,
+                correctAnswer: null, // Kein Quiz in diesem Level
+                onCorrect: () => {}
+            }
+        ];
+
+        // Funktion zum Laden eines Levels
+        function loadLevel(levelIndex) {
+            // Sicherstellen, dass das Level existiert
+            if (levelIndex >= levels.length) {
+                console.error("Level-Index außerhalb des Bereichs");
+                return;
+            }
+
+            const level = levels[levelIndex];
+            
+            // UI zurücksetzen
+            tutorialTextEl.innerHTML = level.dialog;
+            interactiveAreaEl.innerHTML = level.taskHtml;
+            feedbackMessageEl.textContent = "";
+            feedbackMessageEl.className = "mt-4 h-6 text-base";
+            nextButtonEl.style.display = 'none';
+
+            // Wenn es ein Abschlusslevel ohne Quiz ist
+            if (level.correctAnswer === null) {
+                nextButtonEl.style.display = 'none'; // Kein "Nächstes Level" am Ende
+            }
+        }
+
+        // Funktion zur Überprüfung der Antwort
+        function checkAnswer(levelIndex, chosenAnswer) {
+            const level = levels[levelIndex];
+            
+            if (chosenAnswer === level.correctAnswer) {
+                // Richtig
+                feedbackMessageEl.textContent = "Richtig! Sehr gut.";
+                feedbackMessageEl.className = "mt-4 h-6 text-base text-green-400 font-semibold";
+                if (level.onCorrect) {
+                    level.onCorrect();
+                }
+                nextButtonEl.style.display = 'inline-block';
+            } else {
+                // Falsch
+                feedbackMessageEl.textContent = "Das ist nicht ganz richtig. Versuche es nochmal!";
+                feedbackMessageEl.className = "mt-4 h-6 text-base text-red-400 font-semibold";
+            }
+        }
+
+        // Funktion, um zum nächsten Level zu gelangen
+        function nextLevel() {
+            currentLevel++;
+            if (currentLevel < levels.length) {
+                loadLevel(currentLevel);
+            } else {
+                // Sollte nicht passieren, da der Button beim letzten Level ausgeblendet wird,
+                // aber als Fallback:
+                tutorialTextEl.innerHTML = "Du hast es geschafft!";
+                interactiveAreaEl.innerHTML = "<p class='text-center text-lg'>Alle Lektionen abgeschlossen!</p>";
+                feedbackMessageEl.style.display = 'none';
+                nextButtonEl.style.display = 'none';
+            }
+        }
+
+        // Das Spiel beim Laden der Seite starten
+        window.onload = () => {
+            loadLevel(0);
+        };
+
+    </script>
+</body>
+</html>

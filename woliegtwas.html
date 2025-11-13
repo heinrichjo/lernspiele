@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Wo liegt was?! – Das große Autobahnen-Geo-Raten</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet korrekt einbinden -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- osmtogeojson (Overpass → GeoJSON) -->
+  <script src="https://unpkg.com/osmtogeojson@3.0.0/osmtogeojson.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af;
+      --accent:#22c55e; --warn:#f59e0b; --err:#ef4444; --link:#60a5fa; --border:#1f2937;
+      --abHighlight:#22d3ee; --abDots:#94a3b8;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    header{padding:12px 16px;border-bottom:1px solid var(--border);background:#0b1220}
+    h1{margin:0 0 4px 0;font-size:18px}
+    .sub{color:var(--muted);font-size:12px}
+
+    /* Layout */
+    .wrap{display:grid;grid-template-columns:1fr;gap:12px;padding:12px}
+    @media (min-width: 960px){ .wrap{grid-template-columns:1fr 380px} }
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
+    #map{height:70vh;min-height:420px;border-radius:10px;border:1px solid var(--border)}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+    button{
+      background:#1f2937;color:var(--text);border:1px solid #334155;padding:10px 14px;border-radius:10px;cursor:pointer
+    }
+    button:hover{border-color:#475569}
+    .primary{background:#16a34a;border-color:#16a34a}
+    .primary:hover{background:#22c55e;border-color:#22c55e}
+    .ghost{background:transparent}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid var(--border)}
+    .stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;background:#0b1220;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px}
+    .good{color:var(--accent)} .warn{color:var(--warn)} .err{color:var(--err)}
+    a{color:var(--link);text-decoration:none} a:hover{text-decoration:underline}
+    footer{color:var(--muted);font-size:12px;padding:8px 12px 16px}
+
+    /* Modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:999}
+    .modal{background:#0b1220;border:1px solid var(--border);border-radius:12px;padding:16px;width:min(580px,92vw);box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+    .modal h2{margin:0 0 6px 0;font-size:18px}
+    .modal p{margin:6px 0;color:var(--muted)}
+    .modal .score{font-size:15px;margin:10px 0 12px}
+    .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+    .show{display:flex !important}
+    .hint{color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Wo liegt was?! – Das große Autobahnen-Geo-Raten</h1>
+    <div class="sub">Von Flensburg bis Passau – finde die Orte, die du kennst (oder kennen solltest)!
+    Spielmodi: Klassik: 5 Orte · Roadbook‑Rallye: alle Marker setzen, Auflösung am Ende · Freie Fahrt: 5 Marker, Auflösung ohne Distanzen/Linien.</div>
+  </header>
+
+  <div class="wrap">
+    <!-- Karte -->
+    <section><div id="map"></div></section>
+
+    <!-- Panel -->
+    <section class="panel">
+      <!-- Aktueller Ort -->
+      <label>Aktueller Ort</label>
+      <div id="placeName" style="font-weight:700;font-size:18px;margin:4px 0 8px;">—</div>
+
+      <!-- Varianten -->
+      <h3 style="margin:6px 0 6px 0;">Spielvariante</h3>
+      <div class="row">
+        <label style="display:inline-flex;align-items:center;gap:6px;"><input type="radio" name="variant" value="classic" checked/> Klassik</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;"><input type="radio" name="variant" value="ab_list"/> Roadbook‑Rallye</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;"><input type="radio" name="variant" value="ab_free"/> Freie Fahrt</label>
+      </div>
+
+      <!-- Klassik -->
+      <div id="classicUI">
+        <div class="row">
+          <button id="btnStart" class="primary">Runde starten</button>
+          <button id="btnReset" class="ghost">Zurücksetzen</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="pill">Runde: <strong id="roundNo" style="margin-left:6px;">0</strong></div>
+          <div class="pill">Ort in Runde: <strong id="placeInRound" style="margin-left:6px;">0 / 5</strong></div>
+          <div class="pill">Gesamtdistanz: <strong id="totalKm" style="margin-left:6px;">0.0 km</strong></div>
+          <div class="pill">Ø Fehler ges.: <strong id="avgKm" style="margin-left:6px;">—</strong></div>
+          <div class="pill">Gesamt‑Tipps: <strong id="totalGuesses" style="margin-left:6px;">0</strong></div>
+        </div>
+        <div class="stat" id="classicStat" style="margin-top:8px;">
+          <div>Dein Tipp:</div><div id="guessCoords" style="text-align:right;">—</div>
+          <div>Tatsächlich:</div><div id="trueCoords" style="text-align:right;">—</div>
+          <div>ΔLat / ΔLng:</div><div id="delta" style="text-align:right;">—</div>
+          <div>Distanz:</div><div id="distKm" class="good" style="text-align:right;">—</div>
+        </div>
+      </div>
+
+      <!-- Autobahn (zufällige Autobahn) -->
+      <div id="autobahnUI" style="display:none;">
+        <div class="pill">Autobahn (zufällig): <strong id="abChosen" style="margin-left:6px;">—</strong></div>
+
+        <!-- Roadbook-Liste: bleibt sichtbar -->
+        <div id="abListWrap" style="margin-top:8px; display:none;">
+          <div>Gesuchte Städte (Roadbook):</div>
+          <ul id="abList" style="margin:6px 0 0; padding-left:18px; color:#d1d5db;"></ul>
+        </div>
+
+        <div class="row" style="margin-top:8px;">
+          <button id="btnStartAB" class="primary">Challenge starten</button>
+          <button id="btnFinishAB" class="ghost" disabled>Auflösung zeigen</button>
+          <button id="btnResetAB" class="ghost">Zurücksetzen</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+          <div class="pill">Gesetzt: <strong id="abPlaced" style="margin-left:6px;">0</strong> / <strong id="abNeeded">0</strong></div>
+        </div>
+
+        <div class="stat" style="margin-top:10px;">
+          <div>Letzter Klick:</div><div id="guessCoordsAB" style="text-align:right;">—</div>
+          <div>Hinweis:</div><div id="hintAB" style="text-align:right;">Setze alle Marker, dann „Auflösung zeigen“.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Basiskarte: CARTO (ohne Labels) • Autobahnen: OSM/Overpass • Bibliotheken: Leaflet & osmtogeojson.
+
+<p>
+
+<div style="display:flex; align-items:center; gap:10px; margin-top:20px;">
+  <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="Logo" style="height:50px;">
+  <span>Erstellt von J. Heinrich – Mithilfe von Copilot – Berufsschule IV – Welserschule Augsburg – 2025</span>
+</div>
+
+</p>
+
+  </footer>
+
+  <!-- Ergebnis-Modal -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2 id="modalTitle">Ergebnis</h2>
+      <p id="modalMsg">—</p>
+      <div class="score" id="modalScore">—</div>
+      <div id="modalExtra" class="hint" style="margin-bottom:8px;"></div>
+      <div class="actions">
+        <button id="btnCloseModal">Schließen</button>
+        <button id="btnNextRound" class="primary">Neu starten</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   Daten & Konstanten
+   ========================= */
+const PLACES_DE = [
+  { name:"Berlin", lat:52.520008, lng:13.404954 },
+  { name:"Hamburg", lat:53.551086, lng:9.993682 },
+  { name:"München", lat:48.137154, lng:11.576124 },
+  { name:"Köln", lat:50.937531, lng:6.960279 },
+  { name:"Frankfurt am Main", lat:50.110924, lng:8.682127 },
+  { name:"Stuttgart", lat:48.783333, lng:9.183333 },
+  { name:"Düsseldorf", lat:51.227741, lng:6.773456 },
+  { name:"Leipzig", lat:51.339695, lng:12.373075 },
+  { name:"Dortmund", lat:51.514244, lng:7.468429 },
+  { name:"Essen", lat:51.450001, lng:7.016667 },
+  { name:"Bremen", lat:53.079296, lng:8.801694 },
+  { name:"Dresden", lat:51.050407, lng:13.737262 },
+  { name:"Hannover", lat:52.375892, lng:9.732010 },
+  { name:"Nürnberg", lat:49.452103, lng:11.076665 },
+  { name:"Bonn", lat:50.737430, lng:7.098207 },
+  { name:"Münster", lat:51.960665, lng:7.626135 },
+  { name:"Augsburg", lat:48.370545, lng:10.897790 },
+  { name:"Karlsruhe", lat:49.006889, lng:8.403653 },
+  { name:"Mannheim", lat:49.487459, lng:8.466039 },
+  { name:"Kiel", lat:54.323293, lng:10.122765 },
+  { name:"Magdeburg", lat:52.120533, lng:11.627624 },
+  { name:"Freiburg im Breisgau", lat:47.999008, lng:7.842104 },
+  { name:"Lübeck", lat:53.865467, lng:10.686559 },
+  { name:"Osnabrück", lat:52.279911, lng:8.047179 },
+  { name:"Bielefeld", lat:52.030228, lng:8.532471 },
+  { name:"Braunschweig", lat:52.268874, lng:10.526769 },
+  { name:"Potsdam", lat:52.390569, lng:13.064473 },
+  { name:"Würzburg", lat:49.791304, lng:9.953355 },
+  { name:"Regensburg", lat:49.013432, lng:12.101624 },
+  { name:"Passau", lat:48.566736, lng:13.431946 },
+  { name:"Aachen", lat:50.775346, lng:6.083887 },
+  { name:"Chemnitz", lat:50.832260, lng:12.925297 },
+  { name:"Darmstadt", lat:49.872825, lng:8.651192 },
+  { name:"Kaiserslautern", lat:49.440065, lng:7.749127 },
+  { name:"Heilbronn", lat:49.142692, lng:9.210879 },
+  { name:"Saarbrücken", lat:49.240157, lng:6.996933 },
+  { name:"Flensburg", lat:54.793743, lng:9.446996 },
+  { name:"Göttingen", lat:51.541280, lng:9.915803 },
+  { name:"Kassel", lat:51.312711, lng:9.479746 },
+  { name:"Ulm", lat:48.400032, lng:10.002363 },
+  { name:"Rosenheim", lat:47.856373, lng:12.122423 },
+  { name:"Ingolstadt", lat:48.764314, lng:11.434041 },
+  { name:"Bayreuth", lat:49.945639, lng:11.571334 },
+  { name:"Erfurt", lat:50.984768, lng:11.029880 },
+  { name:"Oberhausen", lat:51.469613, lng:6.851443 }
+];
+const PLACES_BY_NAME = Object.fromEntries(PLACES_DE.map(p => [p.name, p]));
+
+const AUTOBAHN_CITIES = {
+  A1: ["Lübeck","Hamburg","Bremen","Osnabrück","Dortmund","Köln"],
+  A2: ["Oberhausen","Bielefeld","Hannover","Braunschweig","Magdeburg","Potsdam"],
+  A3: ["Köln","Frankfurt am Main","Würzburg","Nürnberg","Regensburg","Passau"],
+  A4: ["Aachen","Köln","Erfurt","Dresden","Chemnitz"],
+  A5: ["Frankfurt am Main","Darmstadt","Karlsruhe","Freiburg im Breisgau"],
+  A6: ["Saarbrücken","Kaiserslautern","Mannheim","Heilbronn","Nürnberg"],
+  A7: ["Flensburg","Hamburg","Hannover","Kassel","Würzburg","Ulm"],
+  A8: ["Saarbrücken","Karlsruhe","Stuttgart","Ulm","Augsburg","München","Rosenheim"],
+  A9: ["Berlin","Leipzig","Bayreuth","Nürnberg","Ingolstadt","München"]
+};
+
+const ROUND_SIZE = 5;
+const AB_FREE_CLICKS = 5;
+const DE_BOUNDS = L.latLngBounds([47.27, 5.87], [55.09, 15.04]);
+const FEEDBACK_MS = 800;  // Klassik: Feedback-Ansicht vor Zurückzoomen
+
+/* =========================
+   Utils
+   ========================= */
+const toFixed6 = (x) => (Math.round(x * 1e6) / 1e6).toFixed(6);
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371.0088, toRad = d => d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function formatLatLng(lat,lng){ return `${toFixed6(lat)}°, ${toFixed6(lng)}°`; }
+function evaluateRound(avgKm){
+  if (avgKm <= 30) return "Starke Leistung – du kennst dich super aus! 💪🗺️";
+  if (avgKm <= 80) return "Gute Arbeit – solides Gefühl für die Orte! 👍";
+  if (avgKm <= 150) return "Okay – mit etwas Übung wird das top. 🙂";
+  return "Weiter üben – bald klappt’s noch besser! 🚀";
+}
+function shuffle(a){
+  const arr=a.slice();
+  for (let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+function sampleWithoutReplacement(a, n){ return shuffle(a).slice(0,n); }
+function greedyMatch(guesses, targets) {
+  const remaining = targets.map(t => ({...t}));
+  const pairs = [];
+  for (const g of guesses) {
+    let best=null,bestDist=Infinity,bestIdx=-1;
+    for (let i=0;i<remaining.length;i++){
+      const t=remaining[i], d=haversineKm(g.lat,g.lng,t.lat,t.lng);
+      if (d<bestDist){ best=t; bestDist=d; bestIdx=i; }
+    }
+    if (best){ pairs.push({ g, t: best, distKm: bestDist }); remaining.splice(bestIdx,1); }
+  }
+  return pairs;
+}
+
+/* =========================
+   Karte
+   ========================= */
+const map = L.map("map", { zoomControl:true, attributionControl:true });
+map.fitBounds(DE_BOUNDS);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
+  maxZoom:19, attribution:'&copy; OpenStreetMap-Mitwirkende &copy; CARTO'
+}).addTo(map);
+
+// Dezentes Autobahn-Grundnetz (optional)
+fetch("https://overpass-api.de/api/interpreter", {
+  method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+  body:"data="+encodeURIComponent(`
+    [out:json][timeout:60];
+    area["ISO3166-1"="DE"][admin_level=2]->.de;
+    ( way(area.de)["highway"="motorway"]; relation(area.de)["highway"="motorway"]; );
+    (._;>;); out body;`)
+})
+.then(r=>r.json())
+.then(data=>{
+  const gj=osmtogeojson(data);
+  L.geoJSON(gj,{style:{color:"#f59e0b",weight:1.4,opacity:0.6}}).addTo(map);
+})
+.catch(()=>{/* bei Fehler einfach weitermachen */});
+
+/* =========================
+   Marker / Layer
+   ========================= */
+const guessIcon = L.icon({ iconUrl:"data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><circle cx='16' cy='16' r='10' fill='#ef4444' stroke='white' stroke-width='3'/></svg>`),
+  iconSize:[24,24], iconAnchor:[12,12]});
+const trueIcon = L.icon({ iconUrl:"data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><circle cx='16' cy='16' r='10' fill='#16a34a' stroke='white' stroke-width='3'/></svg>`),
+  iconSize:[24,24], iconAnchor:[12,12]});
+let guessMarkers=[], trueMarkers=[], lines=[], abHighlightLayer=null;
+
+function clearOverlays(which=["all"]){
+  const all=which.includes("all");
+  if (all||which.includes("guess")){ guessMarkers.forEach(m=>map.removeLayer(m)); guessMarkers=[]; }
+  if (all||which.includes("true")){ trueMarkers.forEach(m=>map.removeLayer(m)); trueMarkers=[]; }
+  if (all||which.includes("lines")){ lines.forEach(l=>map.removeLayer(l)); lines=[]; }
+  if (all||which.includes("ab")){ if (abHighlightLayer){ map.removeLayer(abHighlightLayer); abHighlightLayer=null; } }
+}
+function addPermanentLabelsToTrueMarkers(){
+  trueMarkers.forEach(m=>{
+    const name = m.options && m.options._name ? m.options._name : (m.getPopup()?.getContent()||"");
+    if (name) m.bindTooltip(String(name), { permanent:true, direction:"top", offset:[0,-10] }).openTooltip();
+  });
+}
+async function highlightAutobahn(ref, addDots=true){
+  try{
+    const resp=await fetch("https://overpass-api.de/api/interpreter",{
+      method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+      body:"data="+encodeURIComponent(`
+        [out:json][timeout:60];
+        area["ISO3166-1"="DE"][admin_level=2]->.de;
+        ( way(area.de)["highway"="motorway"]["ref"="${ref}"]; relation(area.de)["route"="road"]["ref"="${ref}"]; );
+        (._;>;); out body;`)
+    });
+    const data=await resp.json(); const gj=osmtogeojson(data);
+    if (abHighlightLayer) map.removeLayer(abHighlightLayer);
+    const group=L.layerGroup();
+    L.geoJSON(gj,{style:{color:"#22d3ee",weight:4,opacity:0.95}}).addTo(group);
+    if (addDots){
+      const dots=L.layerGroup();
+      const add=coords=>{
+        const linesArr=Array.isArray(coords[0][0])?coords:[coords];
+        for (const line of linesArr){
+          for(let i=0;i<line.length;i+=20){
+            const [lng,lat]=line[i];
+            dots.addLayer(L.circleMarker([lat,lng],{radius:3,color:"#000",weight:1,fillColor:"#94a3b8",fillOpacity:0.9,opacity:0.8}));
+          }
+        }
+      };
+      (gj.features||[]).forEach(f=>{
+        if(!f.geometry) return;
+        if (f.geometry.type==="LineString") add(f.geometry.coordinates);
+        if (f.geometry.type==="MultiLineString") add(f.geometry.coordinates);
+      });
+      dots.addTo(group);
+    }
+    group.addTo(map); abHighlightLayer=group;
+  }catch(e){ console.warn("Highlight fail",e); }
+}
+
+/* =========================
+   DOM
+   ========================= */
+const dom = {
+  radios: document.getElementsByName("variant"),
+  placeName: document.getElementById("placeName"),
+
+  // Klassik
+  classicSection: document.getElementById("classicUI"),
+  roundNo: document.getElementById("roundNo"),
+  placeInRound: document.getElementById("placeInRound"),
+  totalKm: document.getElementById("totalKm"),
+  avgKm: document.getElementById("avgKm"),
+  totalGuesses: document.getElementById("totalGuesses"),
+  guessCoords: document.getElementById("guessCoords"),
+  trueCoords: document.getElementById("trueCoords"),
+  delta: document.getElementById("delta"),
+  distKm: document.getElementById("distKm"),
+  btnStart: document.getElementById("btnStart"),
+  btnReset: document.getElementById("btnReset"),
+
+  // Autobahn
+  autobahnSection: document.getElementById("autobahnUI"),
+  abChosen: document.getElementById("abChosen"),
+  abListWrap: document.getElementById("abListWrap"),
+  abList: document.getElementById("abList"),
+  abPlaced: document.getElementById("abPlaced"),
+  abNeeded: document.getElementById("abNeeded"),
+  btnStartAB: document.getElementById("btnStartAB"),
+  btnFinishAB: document.getElementById("btnFinishAB"),
+  btnResetAB: document.getElementById("btnResetAB"),
+  guessCoordsAB: document.getElementById("guessCoordsAB"),
+  hintAB: document.getElementById("hintAB"),
+
+  // Modal
+  modalBackdrop: document.getElementById("modalBackdrop"),
+  modalTitle: document.getElementById("modalTitle"),
+  modalMsg: document.getElementById("modalMsg"),
+  modalScore: document.getElementById("modalScore"),
+  modalExtra: document.getElementById("modalExtra"),
+  btnCloseModal: document.getElementById("btnCloseModal"),
+  btnNextRound: document.getElementById("btnNextRound"),
+};
+
+/* =========================
+   Variante & State
+   ========================= */
+let activeVariant="classic"; // "classic" | "ab_list" | "ab_free"
+let stage="idle";            // "idle" | "await-guess" | "placing"
+
+/* Umschalten der Variante */
+function setVariantUI(){
+  const isClassic = activeVariant==="classic";
+  dom.classicSection.style.display = isClassic ? "block" : "none";
+  dom.autobahnSection.style.display = isClassic ? "none" : "block";
+  dom.placeName.textContent = isClassic ? "—" : "—";
+  map.fitBounds(DE_BOUNDS);
+  stage="idle";
+}
+Array.from(dom.radios).forEach(r=>r.addEventListener("change", e=>{
+  activeVariant=e.target.value; setVariantUI();
+}));
+
+/* =========================
+   Klassik – Auto-Advance
+   ========================= */
+let current=null, roundNo=0, placeIndex=0, overallGuesses=0, overallTotalDist=0, roundTotalDist=0, roundQueue=[];
+
+function updateClassicHeader(){
+  dom.roundNo.textContent=String(roundNo);
+  dom.placeInRound.textContent=`${Math.min(placeIndex+1,ROUND_SIZE)} / ${ROUND_SIZE}`;
+  dom.totalGuesses.textContent=String(overallGuesses);
+  dom.totalKm.textContent=`${overallTotalDist.toFixed(1)} km`;
+  dom.avgKm.textContent = overallGuesses>0 ? `${(overallTotalDist/overallGuesses).toFixed(1)} km` : "—";
+}
+function setClassicStatus({ place="—", g="—", t="—", d="—", km="—", kmClass="good" }={}){
+  dom.placeName.textContent=place; dom.guessCoords.textContent=g; dom.trueCoords.textContent=t;
+  dom.delta.textContent=d; dom.distKm.textContent=km; dom.distKm.className=kmClass;
+}
+function startClassicRound(){
+  roundNo+=1; placeIndex=0; roundTotalDist=0;
+  roundQueue=sampleWithoutReplacement(PLACES_DE, ROUND_SIZE);
+  clearOverlays(["all"]); map.fitBounds(DE_BOUNDS);
+  dom.btnStart.disabled=true; setClassicStatus({}); updateClassicHeader();
+  stage="await-guess";
+  // ersten Ort setzen
+  current = roundQueue[0];
+  dom.placeName.textContent=current.name;
+}
+function advanceClassicOrFinish(){
+  if (placeIndex+1 < ROUND_SIZE){
+    placeIndex += 1;
+    current = roundQueue[placeIndex];
+    setClassicStatus({ place: current.name });
+    updateClassicHeader();
+    stage="await-guess";
+  } else {
+    // Runde beenden
+    const avgRound=roundTotalDist/ROUND_SIZE;
+    addPermanentLabelsToTrueMarkers();
+    dom.modalTitle.textContent="Ergebnis – Klassik";
+    dom.modalMsg.textContent=evaluateRound(avgRound);
+    dom.modalScore.innerHTML = `<div>Gesamt: <b>${roundTotalDist.toFixed(1)} km</b>, Ø: <b>${avgRound.toFixed(1)} km</b></div>`;
+    dom.modalExtra.textContent = "Die Ortsnamen wurden an den richtigen Markern eingeblendet.";
+    dom.modalBackdrop.classList.add("show");
+    dom.btnNextRound.onclick = ()=>{ dom.modalBackdrop.classList.remove("show"); startClassicRound(); };
+    dom.btnStart.disabled=false; stage="idle";
+  }
+}
+function onMapClickClassic(e){
+  if (activeVariant!=="classic" || stage!=="await-guess" || !current) return;
+  const {lat,lng}=e.latlng;
+
+  const gM=L.marker([lat,lng],{icon:guessIcon}).addTo(map);
+  const tM=L.marker([current.lat,current.lng],{icon:trueIcon,_name:current.name}).addTo(map).bindPopup(`${current.name}`);
+  const ln=L.polyline([[lat,lng],[current.lat,current.lng]],{color:"#22c55e",weight:3,opacity:0.9}).addTo(map);
+  guessMarkers.push(gM); trueMarkers.push(tM); lines.push(ln);
+
+  const dist=haversineKm(lat,lng,current.lat,current.lng);
+  const dLat=current.lat-lat, dLng=current.lng-lng;
+  overallGuesses+=1; overallTotalDist+=dist; roundTotalDist+=dist;
+
+  const kmClass=dist<25?"good":dist<150?"warn":"err";
+  setClassicStatus({ place:current.name, g:formatLatLng(lat,lng), t:formatLatLng(current.lat,current.lng),
+    d:`${toFixed6(dLat)}°, ${toFixed6(dLng)}°`, km:`${dist.toFixed(1)} km`, kmClass });
+  updateClassicHeader();
+
+  // Feedback → dann DE → dann automatisch weiter
+  const bounds=L.latLngBounds([[lat,lng],[current.lat,current.lng]]);
+  map.fitBounds(bounds.pad(0.3));
+  setTimeout(()=>{
+    map.fitBounds(DE_BOUNDS);
+    advanceClassicOrFinish();
+  }, FEEDBACK_MS);
+}
+dom.btnStart.addEventListener("click", startClassicRound);
+dom.btnReset.addEventListener("click", ()=>{
+  roundNo=0; placeIndex=0; overallGuesses=0; overallTotalDist=0; roundTotalDist=0; roundQueue=[];
+  clearOverlays(["all"]); setClassicStatus({}); updateClassicHeader(); map.fitBounds(DE_BOUNDS);
+  dom.btnStart.disabled=false; stage="idle";
+});
+
+/* =========================
+   Autobahn – Roadbook & Freie Fahrt
+   ========================= */
+let abMode="ab_list"; let abCode="A8";
+let abTargets=[];         // volle (5–9) Zielsammlung nach Autobahn
+let abTargetsDisplay=[];  // Zufalls-Reihenfolge für die Anzeige (Roadbook)
+let abTargetPoints=[];    // {name, lat, lng}
+let abNeeded=0;           // Anzahl nötiger Klicks
+let abGuesses=[];         // {lat,lng,marker}
+let abRunning=false;
+
+function randomAutobahnCode(){ const k=Object.keys(AUTOBAHN_CITIES); return k[Math.floor(Math.random()*k.length)]; }
+function prepareAutobahnRound(){
+  abCode = randomAutobahnCode();
+  const baseTargets=(AUTOBAHN_CITIES[abCode]||[]).filter(n=>!!PLACES_BY_NAME[n]);
+  abTargets = baseTargets;                       // alles (für Auflösung)
+  abTargetsDisplay = shuffle(baseTargets);       // zufällige Anzeige-Reihenfolge (Roadbook)
+  abTargetPoints = abTargets.map(n=>({name:n, lat:PLACES_BY_NAME[n].lat, lng:PLACES_BY_NAME[n].lng}));
+  abNeeded = (abMode==="ab_list") ? abTargets.length : Math.min(AB_FREE_CLICKS, abTargets.length);
+  abGuesses=[];
+
+  dom.abChosen.textContent=abCode;
+  dom.abPlaced.textContent="0";
+  dom.abNeeded.textContent=String(abNeeded);
+
+  if (abMode==="ab_list"){
+    // Roadbook-Liste sichtbar & zufällig
+    dom.abListWrap.style.display="block";
+    dom.abList.innerHTML = abTargetsDisplay.map(c=>`<li>${c}</li>`).join("");
+    dom.hintAB.textContent = `Setze ${abNeeded} Marker für die Städte aus dem Roadbook.`;
+  } else {
+    dom.abListWrap.style.display="none";
+    dom.abList.innerHTML="";
+    dom.hintAB.textContent = `Setze ${abNeeded} Marker entlang der zufällig gewählten Autobahn.`;
+  }
+
+  dom.btnFinishAB.disabled=true;
+}
+function startAutobahn(){
+  clearOverlays(["all"]); map.fitBounds(DE_BOUNDS);
+  abRunning=true; stage="placing";
+  abMode = activeVariant; // "ab_list" oder "ab_free"
+  prepareAutobahnRound();
+}
+async function finishAutobahn(){
+  if (!abRunning) return;
+
+  // 1) Korrekte Städte IMMER vollständig einblenden (grün + Name)
+  abTargetPoints.forEach(p=>{
+    const m=L.marker([p.lat,p.lng],{icon:trueIcon,_name:p.name}).addTo(map).bindPopup(p.name);
+    trueMarkers.push(m);
+  });
+  addPermanentLabelsToTrueMarkers();
+
+  // 2) Modus-spezifische Auswertung/Anzeige
+  if (abMode==="ab_list"){
+    // Zuordnung + Linien + Fehlerwerte
+    const pairs=greedyMatch(abGuesses.map(g=>({lat:g.lat,lng:g.lng})), abTargetPoints.slice());
+    let sum=0; pairs.forEach(pr=>{ sum+=pr.distKm; const l=L.polyline([[pr.g.lat,pr.g.lng],[pr.t.lat,pr.t.lng]],{color:"#22c55e",weight:3,opacity:0.9}).addTo(map); lines.push(l); });
+    const avg = pairs.length ? (sum/pairs.length) : 0;
+
+    dom.modalTitle.textContent="Ergebnis – Roadbook‑Rallye";
+    dom.modalMsg.textContent = evaluateRound(avg);
+    dom.modalScore.innerHTML = `<div>${abCode}: Marker <b>${abGuesses.length}</b> · Ziele <b>${abTargetPoints.length}</b> · Gesamt <b>${sum.toFixed(1)} km</b> · Ø <b>${avg.toFixed(1)} km</b></div>`;
+    dom.modalExtra.innerHTML = `Die gesuchten Städte (siehe Liste) blieben sichtbar; Auflösung zeigt alle Ziele.`;
+  } else {
+    // Freie Fahrt: keine Distanzen/Linien
+    dom.modalTitle.textContent="Ergebnis – Freie Fahrt";
+    dom.modalMsg.textContent = `Auflösung – ${abCode}`;
+    dom.modalScore.innerHTML = `<div>Gesetzte Marker: <b>${abGuesses.length}</b> · Eingeblendete Städte (Ziele): <b>${abTargetPoints.length}</b></div>`;
+    dom.modalExtra.innerHTML = `Wie gewünscht ohne Distanzen/Verbindungs‑Linien.`;
+  }
+
+  // 3) Autobahnverlauf hervorheben
+  await highlightAutobahn(abCode,true);
+
+  // 4) Modal zeigen
+  dom.modalBackdrop.classList.add("show");
+  dom.btnNextRound.onclick = ()=>{ dom.modalBackdrop.classList.remove("show"); startAutobahn(); };
+
+  abRunning=false; stage="idle";
+}
+function resetAutobahn(){
+  abRunning=false; abTargets=[]; abTargetsDisplay=[]; abTargetPoints=[]; abGuesses=[]; abNeeded=0;
+  dom.abChosen.textContent="—"; dom.abPlaced.textContent="0"; dom.abNeeded.textContent="0";
+  dom.abListWrap.style.display="none"; dom.abList.innerHTML="";
+  clearOverlays(["all"]); map.fitBounds(DE_BOUNDS); stage="idle"; dom.btnFinishAB.disabled=true;
+}
+
+/* =========================
+   Map-Klicks & Buttons
+   ========================= */
+map.on("click",(e)=>{
+  if (activeVariant==="classic"){ onMapClickClassic(e); return; }
+  // Autobahn-Modi: Klicks sammeln (keine Zwischen-Auswertung)
+  if (!abRunning || stage!=="placing") return;
+  const {lat,lng}=e.latlng;
+  const m=L.marker([lat,lng],{icon:guessIcon}).addTo(map);
+  guessMarkers.push(m); abGuesses.push({lat,lng,marker:m});
+  dom.abPlaced.textContent=String(abGuesses.length);
+  dom.guessCoordsAB.textContent = formatLatLng(lat,lng);
+  // Sofort auf DE zurück
+  map.fitBounds(DE_BOUNDS);
+  if (abGuesses.length>=abNeeded){ dom.btnFinishAB.disabled=false; dom.hintAB.textContent="Alle Marker gesetzt – Auflösung möglich."; }
+});
+
+/* Buttons */
+dom.btnStart.addEventListener("click", startClassicRound);
+dom.btnReset.addEventListener("click", ()=>{
+  roundNo=0; placeIndex=0; overallGuesses=0; overallTotalDist=0; roundTotalDist=0; roundQueue=[];
+  clearOverlays(["all"]); setClassicStatus({}); updateClassicHeader(); map.fitBounds(DE_BOUNDS);
+  dom.btnStart.disabled=false; stage="idle";
+});
+
+dom.btnStartAB.addEventListener("click", startAutobahn);
+dom.btnFinishAB.addEventListener("click", finishAutobahn);
+dom.btnResetAB.addEventListener("click", resetAutobahn);
+
+dom.btnCloseModal.addEventListener("click", ()=> dom.modalBackdrop.classList.remove("show"));
+
+/* Init */
+setVariantUI();
+function updateClassicHeader(){ dom.roundNo.textContent=String(roundNo); dom.placeInRound.textContent=`${Math.min(placeIndex+1,ROUND_SIZE)} / ${ROUND_SIZE}`; }
+</script>
