@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Der OOP-Lehrpfad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* bg-gray-900 */
+        }
+        .action-button {
+            transition: all 0.1s ease-in-out;
+            border-bottom: 4px solid #2b6cb0; /* Dunkleres Blau */
+        }
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            border-bottom-width: 2px;
+            margin-top: 2px;
+        }
+        .action-button:active {
+            transform: translateY(1px);
+            border-bottom-width: 2px;
+            margin-top: 2px;
+        }
+        #feedback-popup {
+            transition: all 0.5s ease-in-out;
+            top: -200px;
+            opacity: 0;
+        }
+        #feedback-popup.show {
+            top: 20px;
+            opacity: 1;
+        }
+        .inventory-item {
+            background-color: #4a5568; /* bg-gray-600 */
+            border-left: 5px solid #fbd38d; /* border-yellow-400 */
+            transition: background-color 0.2s;
+        }
+        .inventory-item.object {
+            border-left: 5px solid #68d391; /* border-green-400 */
+        }
+        .inventory-button {
+            text-align: left;
+            width: 100%;
+            cursor: pointer;
+        }
+        .inventory-button:hover .inventory-item {
+            background-color: #5a6578; /* Etwas heller bei Hover */
+        }
+
+        /* ASCII-Art Stil */
+        .ascii-art {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.5rem; /* Größere Emojis/Zeichen */
+            line-height: 1.2;
+            color: #a0aec0; /* text-gray-400 */
+            white-space: pre;
+            text-align: center;
+            padding: 2rem 0;
+        }
+        .code-font {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .code-in-button {
+            display: block;
+            font-family: 'Courier New', Courier, monospace;
+            color: #d1d5db; /* text-gray-300 */
+            background-color: rgba(0,0,0,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body class="text-gray-200 min-h-screen">
+
+    <!-- Feedback-Popup -->
+    <div id="feedback-popup" class="fixed left-1/2 -translate-x-1/2 w-11/12 max-w-lg p-4 rounded-lg shadow-lg z-50">
+        <h3 id="feedback-title" class="font-bold"></h3>
+        <p id="feedback-message"></p>
+    </div>
+
+    <!-- NEU: Info-Modal für Inventar -->
+    <div id="info-modal-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="Game.hideItemInfo()"></div>
+    <div id="info-modal" class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-2xl bg-gray-800 rounded-lg shadow-2xl z-50 p-6 hidden">
+        <h2 id="info-modal-title" class="text-2xl font-bold text-yellow-400 mb-4"></h2>
+        
+        <h3 class="text-lg font-semibold text-green-400">Was ist das (allgemein)?</h3>
+        <p id="info-modal-general" class="mb-4"></p>
+        
+        <h3 class="text-lg font-semibold text-green-400">Was macht das (spezifisch)?</h3>
+        <p id="info-modal-specific" class="mb-6"></p>
+
+        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="Game.hideItemInfo()">
+            Schließen
+        </button>
+    </div>
+
+
+    <!-- Spiel-Container -->
+    <div id="game-screen" class="max-w-7xl mx-auto p-4 md:p-8">
+        <h1 class="text-3xl font-bold text-center text-green-400 mb-6">Der OOP-Lehrpfad</h1>
+
+        <div class="md:flex md:space-x-8">
+            <!-- Linke Spalte: Szenario & Inventar -->
+            <div class="md:w-2/5 lg:w-1/3">
+                <!-- Szenario -->
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6 mb-6">
+                    <h2 class="text-2xl font-semibold text-yellow-400 mb-4">Szenario</h2>
+                    <div id="visual-art" class="ascii-art">🚪</div>
+                    <p id="scenario-description" class="text-lg leading-relaxed"></p>
+                </div>
+                
+                <!-- Inventar -->
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6">
+                    <h2 class="text-2xl font-semibold text-yellow-400 mb-4">Dein Inventar (klickbar)</h2>
+                    <div id="inventory-list" class="space-y-3">
+                        <!-- Inventar-Items werden hier eingefügt -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rechte Spalte: Aktionen & Hintergrund -->
+            <div class="md:w-3/5 lg:w-2/3 mt-6 md:mt-0">
+                <!-- Aktionen -->
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6 mb-6">
+                    <h2 class="text-2xl font-semibold text-yellow-400 mb-4">Mögliche Aktionen</h2>
+                    <div id="action-buttons" class="space-y-4">
+                        <!-- Action-Buttons werden hier eingefügt -->
+                    </div>
+                </div>
+                
+                <!-- Hintergrund-Info -->
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6">
+                    <h2 class="text-2xl font-semibold text-yellow-400 mb-4">Klassen-Info (Baupläne)</h2>
+                    <div id="class-info" class="code-font bg-gray-900 text-gray-300 p-4 rounded-md overflow-x-auto">
+                        <!-- Klassen-Infos werden hier eingefügt -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- End-Screen -->
+    <div id="summary-screen" class="hidden max-w-3xl mx-auto bg-gray-800 rounded-lg shadow-xl p-8 md:p-12 mt-10 text-center">
+        <!-- ... Inhalt unverändert ... -->
+        <h1 class="text-4xl font-bold text-green-400 mb-6">Lehrpfad Abgeschlossen!</h1>
+        <p class="text-xl text-gray-200 mb-8">Sehr gut! Du hast die Grundlagen der Objektorientierung Schritt für Schritt gemeistert.</p>
+        
+        <h2 class="text-2xl font-semibold text-yellow-400 mb-4">Das hast du gelernt:</h2>
+        <ul class="text-left text-lg space-y-4 text-gray-300 max-w-lg mx-auto list-disc list-inside">
+            <li>
+                <strong>Klasse (Bauplan):</strong> Eine Anleitung, die nicht direkt nutzbar ist (z.B. `Bauplan: Schluessel`).
+            </li>
+            <li>
+                <strong>Objekt (Instanz):</strong> Ein echtes Ding, gebaut nach dem Bauplan mit `new` (z.B. `Objekt: meinSchluessel`).
+            </li>
+            <li>
+                <strong>Methodenaufruf:</strong> Objekte haben Aktionen (Methoden), die man mit `objekt.methode()` aufruft.
+            </li>
+            <li>
+                <strong>Kapselung (private):</strong> `private` schützt Attribute vor direktem Zugriff (Der Gremlin-Angriff).
+            </li>
+            <li>
+                <strong>Getter/Setter:</strong> Öffentliche Methoden (`getCode()`, `setCode()`), die einen kontrollierten Zugriff auf private Attribute erlauben.
+            </li>
+            <li>
+                <strong>Vererbung (extends):</strong> Eine Unterklasse (`MeisterSchluessel`) erbt alle Eigenschaften einer Oberklasse (`Schluessel`).
+            </li>
+            <li>
+                <strong>Polymorphie:</strong> Eine Methode, die eine Oberklasse (`Schluessel`) erwartet, akzeptiert "polymorph" (vielgestaltig) auch alle Unterklassen (`MeisterSchluessel`).
+            </li>
+        </ul>
+        <button onclick="location.reload()" class="mt-10 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition duration-300">
+            Nochmal starten
+        </button>
+    </div>
+
+    <!-- Fußzeile -->
+    <footer class="mt-10 p-4 text-center text-gray-500 text-sm">
+        <div class="flex items-center justify-center space-x-4">
+            <span>Johannes Heinrich - 2025 - Berufsschule IV Augsburg</span>
+            <img src="https://www.welserschule.de/wp-content/uploads/2024/02/BS4_Logo_Web_ohneSlogan.png" alt="Logo BS4 Augsburg" class="h-8">
+        </div>
+    </footer>
+
+
+    <script>
+        // --- GLOBALES SPIEL-OBJEKT ---
+        const Game = {
+            // Spielzustand
+            state: {
+                currentLevel: 0,
+                inventory: []
+            },
+
+            // NEU: Datenbank für Inventar-Infos
+            itemInfo: {
+                'schluesselKlasse': {
+                    title: 'Bauplan: Schluessel',
+                    general: "Eine 'Klasse' ist ein Bauplan oder eine Vorlage. Sie definiert, welche Eigenschaften (Attribute) und Fähigkeiten (Methoden) ein Objekt haben wird. Man kann sie nicht direkt benutzen, sondern muss erst ein Objekt daraus 'bauen'.",
+                    specific: "Dieser spezifische Bauplan beschreibt einen einfachen 'Schluessel'. Er dient als Vorlage, um neue 'Schluessel'-Objekte zu erstellen, die an Türen übergeben werden können."
+                },
+                'schluesselObjekt': {
+                    title: 'Objekt: Schluessel',
+                    general: "Ein 'Objekt' ist eine reale Instanz, die nach dem Bauplan einer Klasse erstellt wurde (mit 'new'). Es ist ein echtes 'Ding' im Speicher, das einen Zustand hat und Aktionen (Methoden) ausführen kann.",
+                    specific: "Dies ist ein echter, greifbarer Schlüssel. Du kannst ihn an Methoden (wie 'tuer.oeffnen()') übergeben, die einen 'Schluessel' als Parameter erwarten."
+                },
+                'codeSchluesselKlasse': {
+                    title: 'Bauplan: CodeSchluessel',
+                    general: "Eine 'Klasse' ist ein Bauplan.",
+                    specific: "Dieser Bauplan beschreibt einen speziellen Schlüssel, der einen privaten 'code' (int) speichert. Beim Bauen (im Konstruktor) muss dieser Code direkt mitgegeben werden."
+                },
+                'codeSchluesselObjekt': {
+                    title: 'Objekt: CodeSchluessel',
+                    general: "Ein 'Objekt' ist eine reale Instanz einer Klasse.",
+                    specific: "Dies ist ein echter 'CodeSchluessel'. Er speichert intern einen privaten Code (z.B. 1234). Dieser Code kann von außen nicht direkt gelesen oder geändert werden (Kapselung)."
+                },
+                'meisterSchluesselKlasse': {
+                    title: 'Bauplan: MeisterSchluessel',
+                    general: "Eine 'Klasse', die von einer anderen 'erbt' (extends), ist eine Unterklasse. Sie bekommt alle Fähigkeiten der Oberklasse und kann eigene hinzufügen.",
+                    specific: "Dies ist der Bauplan für einen 'MeisterSchluessel'. Er 'extends Schluessel', d.h. er *ist* ein Schluessel und kann alles, was ein normaler Schluessel kann (Vererbung)."
+                },
+                'meisterSchluesselObjekt': {
+                    title: 'Objekt: MeisterSchluessel',
+                    general: "Ein 'Objekt' einer Unterklasse.",
+                    specific: "Dies ist ein 'MeisterSchluessel'-Objekt. Da er von 'Schluessel' erbt, kann er überall dort benutzt werden, wo ein normaler 'Schluessel' erwartet wird (Polymorphie)."
+                }
+            },
+
+            // Feedback-System
+            feedbackTimer: null,
+            showFeedback(title, message, type = 'info') {
+                // ... (Code unverändert) ...
+                const popup = document.getElementById('feedback-popup');
+                const titleEl = document.getElementById('feedback-title');
+                const messageEl = document.getElementById('feedback-message');
+                popup.classList.remove('bg-red-600', 'bg-green-600', 'bg-blue-600');
+                if (type === 'error') {
+                    popup.classList.add('bg-red-600');
+                } else if (type === 'success') {
+                    popup.classList.add('bg-green-600');
+                } else {
+                    popup.classList.add('bg-blue-600');
+                }
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                popup.classList.add('show');
+                if (this.feedbackTimer) {
+                    clearTimeout(this.feedbackTimer);
+                }
+                this.feedbackTimer = setTimeout(() => {
+                    popup.classList.remove('show');
+                }, 5000);
+            },
+
+            // NEU: Info-Modal anzeigen/verstecken
+            showItemInfo(itemId) {
+                const info = this.itemInfo[itemId];
+                if (!info) return;
+
+                document.getElementById('info-modal-title').textContent = info.title;
+                document.getElementById('info-modal-general').textContent = info.general;
+                document.getElementById('info-modal-specific').textContent = info.specific;
+                
+                document.getElementById('info-modal-backdrop').classList.remove('hidden');
+                document.getElementById('info-modal').classList.remove('hidden');
+            },
+            hideItemInfo() {
+                document.getElementById('info-modal-backdrop').classList.add('hidden');
+                document.getElementById('info-modal').classList.add('hidden');
+            },
+
+
+            // UI-Update-Funktionen
+            updateInventory() {
+                const listEl = document.getElementById('inventory-list');
+                listEl.innerHTML = '';
+                if (this.state.inventory.length === 0) {
+                    listEl.innerHTML = '<p class="text-gray-400">Dein Inventar ist leer.</p>';
+                }
+                this.state.inventory.forEach(item => {
+                    // NEU: Als Button gerendert mit onclick-Handler
+                    listEl.innerHTML += `
+                        <button class="inventory-button" onclick="Game.showItemInfo('${item.id}')">
+                            <div class="inventory-item ${item.type} p-3 rounded-md shadow">
+                                <span class="font-bold">${item.name}</span>
+                                <span class="text-sm text-gray-300 block">(${item.type === 'class' ? 'Klasse' : 'Objekt'})</span>
+                            </div>
+                        </button>
+                    `;
+                });
+            },
+
+            updateUI(level) {
+                // ... (Code fast unverändert) ...
+                document.getElementById('scenario-description').textContent = level.description;
+                document.getElementById('visual-art').textContent = level.visual;
+                const formattedClassInfo = level.classInfo
+                    .replace(/\+ /g, '<span class="text-green-400">+</span> ')
+                    .replace(/- /g, '<span class="text-red-400">-</span> ');
+                document.getElementById('class-info').innerHTML = formattedClassInfo;
+
+                const actionsEl = document.getElementById('action-buttons');
+                actionsEl.innerHTML = '';
+                level.actions.forEach((action, index) => {
+                    const codeSnippet = action.code ? `<span class="code-in-button">${action.code}</span>` : '';
+                    actionsEl.innerHTML += `
+                        <button class="action-button w-full text-left bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg shadow-lg"
+                                onclick="Game.handleAction(${this.state.currentLevel}, ${index})">
+                            ${action.text}
+                            ${codeSnippet}
+                        </button>
+                    `;
+                });
+                this.updateInventory(); // Wichtig: muss nach UI-Update aufgerufen werden
+            },
+
+            // Spiel-Logik
+            loadLevel(levelIndex) {
+                // ... (Code unverändert) ...
+                if (levelIndex >= this.levels.length) {
+                    this.showSummary();
+                    return;
+                }
+                this.state.currentLevel = levelIndex;
+                const level = this.levels[levelIndex];
+                this.updateUI(level);
+            },
+
+            handleAction(levelIndex, actionIndex) {
+                // ... (Code unverändert) ...
+                const level = this.levels[levelIndex];
+                const action = level.actions[actionIndex];
+                const parts = action.onClick.split('.');
+                const methodName = parts[parts.length - 1];
+                if (Game.logic[methodName]) {
+                    Game.logic[methodName](); 
+                } else {
+                    console.error("Aktion nicht gefunden:", action.onClick);
+                }
+            },
+
+            showSummary() {
+                // ... (Code unverändert) ...
+                document.getElementById('game-screen').classList.add('hidden');
+                document.getElementById('summary-screen').classList.remove('hidden');
+            },
+
+            start() {
+                // NEU: Inventar-Items haben jetzt IDs
+                this.state.inventory = [
+                    { name: 'Bauplan: Schluessel', type: 'class', id: 'schluesselKlasse' }
+                ];
+                this.loadLevel(0);
+            },
+
+            // --- SPIEL-LOGIK (Aktionen) ---
+            logic: {
+                // --- Generische falsche Aktionen (unverändert) ---
+                failBauplan() {
+                    Game.showFeedback('FEHLER!', 'Das geht nicht! Ein Bauplan (Klasse) ist nur eine Anleitung. Du brauchst ein echtes Objekt!', 'error');
+                },
+                failUnnecessary() {
+                    Game.showFeedback('Moment mal...', 'Du baust einen neuen Schlüssel, aber der alte war doch noch da? Naja, egal. Die Tür ist noch zu.', 'info');
+                },
+                failDespair() {
+                    Game.showFeedback('Info', 'Verzweifeln hilft nicht. Dein Bauplan ist noch da!', 'info');
+                },
+
+                // --- Level-Logik (mit NEUEN Inventar-IDs) ---
+                buildKey() {
+                    Game.showFeedback('Erfolg!', "Du hast 'new Schluessel()' ausgeführt und ein echtes 'Schluessel'-Objekt (eine Instanz) erstellt.", 'success');
+                    // NEU: Item hat eine ID
+                    Game.state.inventory.push({ name: 'Objekt: meinSchluessel', type: 'object', id: 'schluesselObjekt' });
+                    Game.loadLevel(1);
+                },
+
+                useKey() {
+                    Game.showFeedback('Erfolg!', "Klick! Du hast 'tuer.oeffnen(meinSchluessel)' ausgeführt. Die Methode wurde auf dem Objekt aufgerufen.", 'success');
+                    Game.loadLevel(2);
+                },
+
+                reuseKey() {
+                    Game.showFeedback('Erfolg!', "Klick! Das 'meinSchluessel'-Objekt funktioniert wieder! Objekte können wiederverwendet werden.", 'success');
+                    setTimeout(() => {
+                        Game.showFeedback('Oh nein!', "...aber *ZISCH*! Der Schlüssel war alt und zerbricht zu Staub.", 'info');
+                        // NEU: Filtert anhand der ID
+                        Game.state.inventory = Game.state.inventory.filter(item => item.id !== 'schluesselObjekt');
+                        Game.loadLevel(3);
+                    }, 3000); 
+                },
+
+                buildKeyAgain() {
+                    Game.showFeedback('AHA!', "Genau! Der Bauplan (Klasse) ist ja noch da. Du kannst beliebig viele Objekte daraus bauen!", 'success');
+                    // NEU: Item hat eine ID
+                    Game.state.inventory.push({ name: 'Objekt: neuerSchluessel', type: 'object', id: 'schluesselObjekt' });
+                    Game.loadLevel(4); 
+                },
+                
+                useNewKey() {
+                    Game.showFeedback('Erfolg!', "Klick! Der 'neueSchluessel' funktioniert einwandfrei.", 'success');
+                    // NEU: Item hat eine ID
+                    Game.state.inventory.push({ name: 'Bauplan: CodeSchluessel', type: 'class', id: 'codeSchluesselKlasse' });
+                    Game.loadLevel(5);
+                },
+
+                buildCodeKey() {
+                    Game.showFeedback('Erfolg!', "Du hast 'new CodeSchluessel(1234)' ausgeführt.", 'success');
+                    // NEU: Item hat eine ID
+                    Game.state.inventory.push({ name: 'Objekt: meinCodeSchluessel', type: 'object', id: 'codeSchluesselObjekt' });
+                    Game.loadLevel(6);
+                },
+
+                runGremlinAttack() {
+                    Game.showFeedback('Achtung!', "Gremlin versucht: 'meinCodeSchluessel.code = 9999;'", 'info');
+                    setTimeout(() => {
+                        Game.showFeedback('FEHLER!', "Compiler meldet: 'code' ist 'private'! Zugriff verweigert!", 'error');
+                    }, 2000);
+                    setTimeout(() => {
+                        Game.showFeedback('Sicher!', "Puh! Kapselung (private) hat deine Daten geschützt.", 'success');
+                        Game.loadLevel(7); 
+                    }, 4500);
+                },
+
+                useGetter() {
+                    Game.showFeedback('Erfolg!', "Das Display zeigt '1234' an. Die 'getCode()' Methode hat den privaten Wert sicher gelesen.", 'success');
+                    Game.loadLevel(8);
+                },
+
+                failSetter() {
+                    Game.showFeedback('Achtung!', "Gremlin versucht: 'maschine.aendereCode(meinCodeSchluessel, 9999)'", 'info');
+                    setTimeout(() => {
+                        Game.showFeedback('FEHLER!', "Die 'setCode'-Methode meldet: 'Falsches altes Passwort!'. Der Code bleibt '1234'.", 'error');
+                    }, 2000);
+                },
+                useSetter() {
+                    Game.showFeedback('Erfolg!', "Die 'setCode(4321, 1234)' Methode war erfolgreich. Der neue Code ist 4321.", 'success');
+                    // NEU: Item hat eine ID
+                    Game.state.inventory.push({ name: 'Bauplan: MeisterSchluessel', type: 'class', id: 'meisterSchluesselKlasse' });
+                    Game.loadLevel(9);
+                },
+
+                buildMeisterSchluessel() {
+                    Game.showFeedback('Interessant!', "Ein 'MeisterSchluessel' ist eine Unterklasse von 'Schluessel'.", 'success');
+                    // NEU: Item hat eine ID
+                    Game.state.inventory.push({ name: 'Objekt: meisterSchluessel', type: 'object', id: 'meisterSchluesselObjekt' });
+                    Game.loadLevel(10);
+                },
+
+                failNormalKeyOnT7() {
+                    Game.showFeedback('FEHLER!', "*KNACK*... ein normaler Schlüssel zerbricht in diesem Schloss.", 'error');
+                },
+                useMeisterKeyOnT7() {
+                    Game.showFeedback('ERFOLG!', "Klick! Obwohl die Tür 'Schluessel' erwartet, akzeptiert sie 'MeisterSchluessel'. Weil ein MeisterSchluessel *auch* ein Schluessel ist! (Polymorphie)", 'success');
+                    Game.loadLevel(11); // Zum Finale
+                }
+            },
+
+
+            // --- LEVEL-DATENBANK (unverändert) ---
+            levels: [
+                // Level 0: Klasse vs Objekt
+                {
+                    description: "Du stehst vor einer verschlossenen Tür (T1). In deinem Inventar befindet sich ein 'Bauplan' für einen Schlüssel.",
+                    visual: "🚪",
+                    classInfo: "Klasse Schluessel { ... }",
+                    actions: [
+                        { text: "Tür mit BAUPLAN öffnen (ungültig)", code: "// tuer.oeffnen(Bauplan: Schluessel)", onClick: "Game.logic.failBauplan" },
+                        { text: "Schlüssel aus BAUPLAN bauen", code: "Schluessel meinSchluessel = new Schluessel();", onClick: "Game.logic.buildKey" }
+                    ]
+                },
+                // Level 1: Methodenaufruf
+                {
+                    description: "Du hast jetzt ein echtes 'Schluessel'-Objekt. Die Tür (T1) ist immer noch verschlossen.",
+                    visual: "🚪",
+                    classInfo: "Klasse Tuer {\n  + oeffnen(Schluessel s): void\n}",
+                    actions: [
+                        { text: "Tür mit BAUPLAN öffnen (ungültig)", code: "// tuer.oeffnen(Bauplan: Schluessel)", onClick: "Game.logic.failBauplan" },
+                        { text: "Tür mit OBJEKT öffnen", code: "tuer.oeffnen(meinSchluessel);", onClick: "Game.logic.useKey" }
+                    ]
+                },
+                // Level 2: Reusability
+                {
+                    description: "Du gehst durch T1 und stehst vor Tür T2. Sie sieht identisch aus. Dein 'meinSchluessel'-Objekt ist noch im Inventar.",
+                    visual: "🚪",
+                    classInfo: "Klasse Tuer {\n  + oeffnen(Schluessel s): void\n}",
+                    actions: [
+                        { text: "Vorhandenes Objekt 'meinSchluessel' benutzen", code: "tuer2.oeffnen(meinSchluessel);", onClick: "Game.logic.reuseKey" },
+                        { text: "Neuen Schlüssel aus dem Bauplan bauen", code: "Schluessel nochEiner = new Schluessel();", onClick: "Game.logic.failUnnecessary" }
+                    ]
+                },
+                // Level 3: AHA-Moment
+                {
+                    description: "Du stehst vor T3. Dein alter Schlüssel ist zerbrochen! Dein Inventar ist fast leer, nur der Bauplan ist noch da.",
+                    visual: "🚪",
+                    classInfo: "Klasse Schluessel { ... }",
+                    actions: [
+                        { text: "Verzweifeln", code: "// :-(", onClick: "Game.logic.failDespair" },
+                        { text: "Tür mit BAUPLAN öffnen (ungültig)", code: "// tuer3.oeffnen(Bauplan: Schluessel)", onClick: "Game.logic.failBauplan" },
+                        { text: "Neuen Schlüssel aus dem Bauplan bauen", code: "Schluessel neuerSchluessel = new Schluessel();", onClick: "Game.logic.buildKeyAgain" }
+                    ]
+                },
+                // Level 4: Neuen Schlüssel benutzen
+                {
+                    description: "Du hast einen 'neuenSchluessel'. T3 wartet.",
+                    visual: "🚪",
+                    classInfo: "Klasse Tuer {\n  + oeffnen(Schluessel s): void\n}",
+                    actions: [
+                        { text: "Tür mit 'neuerSchluessel' öffnen", code: "tuer3.oeffnen(neuerSchluessel);", onClick: "Game.logic.useNewKey" }
+                    ]
+                },
+                // Level 5: Konstruktoren
+                {
+                    description: "Du stehst vor T4 🔒. Schild: 'Nur CodeSchluessel mit Code 1234'. Du findest einen neuen Bauplan.",
+                    visual: "🔒",
+                    classInfo: "Klasse CodeSchluessel {\n  - code: int\n  + CodeSchluessel(int c)\n}",
+                    actions: [
+                        { text: "Einen 'CodeSchluessel' mit Code 1234 bauen", code: "CodeSchluessel meinCodeSchluessel = new CodeSchluessel(1234);", onClick: "Game.logic.buildCodeKey" }
+                    ]
+                },
+                // Level 6: Kapselung (private)
+                {
+                    description: "Ein Gremlin 👺 erscheint! 'Ich ändere deinen Code!' Er versucht, direkt auf das Attribut 'code' zuzugreifen.",
+                    visual: "👺 🔑",
+                    classInfo: "Klasse CodeSchluessel {\n  - code: int (private!)\n  ...\n}",
+                    actions: [
+                        { text: "Zusehen, was passiert", code: "// Gremlin versucht:\n// meinCodeSchluessel.code = 9999;", onClick: "Game.logic.runGremlinAttack" }
+                    ]
+                },
+                // Level 7: Kapselung (Getter)
+                {
+                    description: "Du stehst vor T5. Ein Display 📟 leuchtet auf: 'Zeige mir deinen Code!'. Die Tür hat eine 'anzeigen'-Methode.",
+                    visual: "📟",
+                    classInfo: "Klasse CodeSchluessel {\n  - code: int\n  + getCode(): int\n}\n\nKlasse TuerDisplay {\n  + anzeigen(int code): void\n}",
+                    actions: [
+                        { text: "Code mit Getter-Methode sicher auslesen", code: "tuerDisplay.anzeigen(meinCodeSchluessel.getCode());", onClick: "Game.logic.useGetter" }
+                    ]
+                },
+                // Level 8: Kapselung (Setter)
+                {
+                    description: "Der Gremlin 👺 ist zurück! Er hat eine 'Code-Änderungs-Maschine' 🔧. Er weiß deinen alten Code nicht.",
+                    visual: "👺 🔧 🔑",
+                    classInfo: "Klasse CodeSchluessel {\n  - code: int\n  + setCode(int neu, int alt):\n  // (funktioniert nur, wenn 'alt' == 'code')\n}",
+                    actions: [
+                        { text: "Gremlin-Angriff (scheitert)", code: "// Gremlin versucht:\n// meinCodeSchluessel.setCode(9999, 0000);", onClick: "Game.logic.failSetter" },
+                        { text: "Code selbst ändern (von 1234 auf 4321)", code: "meinCodeSchluessel.setCode(4321, 1234);", onClick: "Game.logic.useSetter" }
+                    ]
+                },
+                // Level 9: Vererbung
+                {
+                    description: "Du findest einen neuen Bauplan: 'MeisterSchluessel'. Er sieht aus wie ein normaler Schlüssel, aber 'erbt' alle seine Fähigkeiten.",
+                    visual: "📜",
+                    classInfo: "Klasse MeisterSchluessel \n  extends Schluessel {\n  // Erbt alles von Schluessel\n  + extraFunktion(): void\n}",
+                    actions: [
+                        { text: "Einen 'MeisterSchluessel' bauen", code: "MeisterSchluessel meister = new MeisterSchluessel();", onClick: "Game.logic.buildMeisterSchluessel" }
+                    ]
+                },
+                // Level 10: Polymorphie
+                {
+                    description: "Die letzte Tür (T-Final) 🏛️. Das Schloss sieht vertraut aus... es erwartet einen normalen 'Schluessel'.",
+                    visual: "🏛️",
+                    classInfo: "Klasse FinalTuer {\n  // Erwartet die OBERKLASSE:\n  + oeffnen(Schluessel s): void\n}",
+                    actions: [
+                        { text: "Normalen 'Schluessel' bauen & benutzen", code: "tuer.oeffnen(new Schluessel());", onClick: "Game.logic.failNormalKeyOnT7" },
+                        { text: "'MeisterSchluessel' (Unterklasse) benutzen", code: "tuer.oeffnen(meisterSchluessel);", onClick: "Game.logic.useMeisterKeyOnT7" }
+                    ]
+                }
+            ]
+        };
+
+        // Spiel starten
+        document.addEventListener('DOMContentLoaded', () => {
+            Game.start();
+        });
+    </script>
+</body>
+</html>
