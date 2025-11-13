@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code-Abenteuer Hi-Lo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font 'Inter' & 'Source Code Pro' -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        main {
+            flex-grow: 1;
+        }
+
+        .code-block {
+            font-family: 'Source Code Pro', monospace;
+            background-color: #1e293b; /* slate-800 */
+            color: #e2e8f0; /* slate-200 */
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap; /* Wichtig für Zeilenumbrüche */
+        }
+        
+        .code-comment { color: #94a3b8; } /* slate-400 */
+        .code-keyword { color: #c084fc; } /* purple-400 */
+        .code-string { color: #facc15; } /* yellow-400 */
+        .code-variable { color: #e2e8f0; } /* slate-200 */
+        .code-value { color: #60a5fa; } /* blue-400 */
+
+        /* NEU: Stil für die Code-Eingabefelder */
+        .code-input {
+            font-family: 'Source Code Pro', monospace;
+            background-color: #334155; /* slate-700 */
+            color: #e2e8f0; /* slate-200 */
+            border: 1px solid #475569; /* slate-600 */
+            border-radius: 0.25rem;
+            padding: 0 0.4rem;
+            margin: 0 0.1rem;
+            width: 8rem; /* Standardbreite */
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: #60a5fa; /* blue-400 */
+            background-color: #1e293b; /* slate-800 */
+        }
+        
+        /* Klassen für Richtig/Falsch-Feedback an den Inputs */
+        .code-input.correct {
+            border-color: #22c55e; /* green-500 */
+            background-color: #052e16; /* green-950 */
+        }
+        .code-input.incorrect {
+            border-color: #ef4444; /* red-500 */
+            background-color: #450a0a; /* red-950 */
+        }
+
+
+        /* Stil für Inline-Code im Dialogtext */
+        #tutorial-text code {
+            font-family: 'Source Code Pro', monospace;
+            color: #c084fc; /* purple-400 */
+            background-color: #334155; /* slate-700 */
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+        }
+
+        /* Stil für den "Prüfen"-Button (ersetzt "Nächstes Level") */
+        .action-btn {
+            background-color: #3b82f6; /* blue-500 */
+            color: #ffffff;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .action-btn:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+
+        .next-btn {
+            background-color: #22c55e; /* green-500 */
+            display: none; /* Standardmäßig ausgeblendet */
+        }
+        .next-btn:hover {
+            background-color: #16a34a; /* green-600 */
+        }
+
+        /* Stile für die Kapitel-Navigation */
+        .nav-btn {
+            background-color: #334155;
+            color: #cbd5e1;
+            border: 1px solid #475569;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .nav-btn:hover {
+            background-color: #475569;
+            border-color: #60a5fa;
+        }
+        .nav-btn.active {
+            background-color: #60a5fa;
+            color: #1e293b;
+            font-weight: 600;
+            border-color: #60a5fa;
+        }
+
+        /* Stil für "Zurück"-Button */
+        .prev-btn {
+            background-color: #64748b; /* slate-500 */
+        }
+        .prev-btn:hover {
+            background-color: #475569; /* slate-600 */
+        }
+
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200">
+
+    <main class="flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl bg-slate-800 shadow-2xl rounded-xl overflow-hidden">
+            <div class="p-8 md:p-12">
+                <h1 class="text-3xl font-bold text-center mb-2 text-white">Code-Abenteuer</h1>
+                <h2 class="text-xl font-semibold text-blue-400 text-center mb-8">Hi-Lo Edition (Level 2)</h2>
+
+                <!-- Tutorial-Dialog -->
+                <div id="tutorial-text" class="text-lg text-slate-300 mb-6 leading-relaxed">
+                    Wird geladen...
+                </div>
+
+                <!-- Interaktiver Code-Bereich -->
+                <div id="interactive-area" class="mb-6">
+                    <!-- Dynamisch gefüllt -->
+                </div>
+
+                <!-- Layout für Buttons und Feedback -->
+                <div class="flex justify-between items-center mt-6">
+                    <!-- "Zurück"-Button -->
+                    <button id="prev-button" class="action-btn prev-btn" onclick="prevLevel()" style="display: none;">
+                        &larr; Zurück
+                    </button>
+
+                    <!-- Feedback-Nachricht -->
+                    <div id="feedback-message" class="h-6 text-base text-center flex-1 px-4">
+                        <!-- Feedback (Richtig/Falsch) -->
+                    </div>
+
+                    <!-- "Prüfen" / "Nächstes Level" Buttons -->
+                    <div>
+                        <button id="check-button" class="action-btn" onclick="checkAnswers()">
+                            Prüfen
+                        </button>
+                        <button id="next-button" class="action-btn next-btn" onclick="nextLevel()">
+                            Nächstes Level &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kapitel-Navigation -->
+                <div class="border-t border-slate-700 mt-8 pt-6">
+                    <h3 class="text-sm font-semibold text-slate-400 text-center mb-3">Kapitelübersicht</h3>
+                    <div id="navigation-area" class="text-center flex flex-wrap justify-center gap-2">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- NEU: Footer -->
+    <footer class="w-full bg-slate-800 border-t border-slate-700 mt-8 p-4">
+        <div class="max-w-3xl mx-auto flex justify-between items-center text-sm text-slate-400">
+            <div>
+                <span>Johannes Heinrich, 2025</span>
+            </div>
+            <div>
+                <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                     alt="Logo Berufsschule IV Augsburg" 
+                     class="h-10"
+                     onerror="this.onerror=null; this.alt='Logo BS4'; this.src='https://placehold.co/100x40/334155/e2e8f0?text=Logo+BS4';">
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+        let currentLevel = 0;
+        
+        // DOM-Elemente
+        const tutorialTextEl = document.getElementById('tutorial-text');
+        const interactiveAreaEl = document.getElementById('interactive-area');
+        const feedbackMessageEl = document.getElementById('feedback-message');
+        const checkButtonEl = document.getElementById('check-button');
+        const nextButtonEl = document.getElementById('next-button');
+        const prevButtonEl = document.getElementById('prev-button');
+        const navAreaEl = document.getElementById('navigation-area');
+
+        // NEU: Kapitel-Definition für die "Tippen"-Version
+        // Indizes sind die Start-Level-Indizes für jedes Kapitel
+        const chapters = [
+            { title: "Variablen", levelIndex: 0 },
+            { title: "Operatoren", levelIndex: 3 },
+            { title: "Verzweigungen", levelIndex: 7 },
+            { title: "Schleifen", levelIndex: 10 },
+            { title: "Methoden", levelIndex: 14 },
+            { title: "Abschluss", levelIndex: 17 }
+        ];
+
+        // Normalisierungsfunktion für Antworten
+        function normalizeAnswer(answer) {
+            return answer.trim().toLowerCase().replace(/;/g, ''); // Entfernt Leerzeichen, ; und macht alles klein
+        }
+
+        // Level-Daten (basierend auf spiel-konzept-hilo.md)
+        const levels = [
+            // --- Kapitel 1: Variablen ---
+            { // Level 0 (1.1)
+                dialog: "Willkommen zu 'Hi-Lo'! Wir brauchen wieder Variablen. Du weißt, wie das geht. Tippe die korrekten Datentypen in die Lücken.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// 1. Eine 'int' Variable für die aktuelle Karte (Wert 8).</span>
+<input type="text" id="input-0" class="code-input" style="width: 5rem;"> <span class="code-variable">aktuelleKarte</span> = <span class="code-value">8</span>;
+
+<span class="code-comment">// 2. Eine 'String' Variable für den Tipp des Spielers.</span>
+<input type="text" id="input-1" class="code-input" style="width: 5rem;"> <span class="code-variable">spielerTipp</span> = <span class="code-string">"höher"</span>;
+</pre>
+                `,
+                // Antworten können Arrays sein, um mehrere richtige Schreibweisen zu erlauben
+                correctAnswers: [
+                    ['int'],
+                    ['string']
+                ]
+            },
+            { // Level 1 (1.2)
+                dialog: "Sehr gut. Dein Punktestand (`score`) ist 100. Du gewinnst 50 Punkte. Wie aktualisierst du den Punktestand?",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">score</span> = <span class="code-value">100</span>;
+
+<span class="code-comment">// Erhöhe den Score um 50 Punkte.</span>
+<span class="code-variable">score</span> = <input type="text" id="input-0" class="code-input" style="width: 10rem;">;
+</pre>
+                `,
+                correctAnswers: [
+                    ['score + 50', '100 + 50', '150'] // Mehrere richtige Antworten
+                ]
+            },
+            { // Level 2 (1.3) - MODIFIZIERT, VEREINFACHT
+                dialog: "Stark. Jetzt brauchen wir eine `boolean`-Variable. Sie kann nur `true` (wahr) oder `false` (falsch) sein. Setze die Variable `istSpielerDran` auf den Wert `true`.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Erstelle eine boolean Variable 'istSpielerDran'</span>
+<span class="code-comment">// und setze sie auf 'true'.</span>
+<span class="code-keyword">boolean</span> <span class="code-variable">istSpielerDran</span> = <input type="text" id="input-0" class="code-input" style="width: 6rem;">;
+</pre>
+                `,
+                correctAnswers: [
+                    ['true']
+                ]
+            },
+            // --- Kapitel 2: Operatoren ---
+            { // Level 3 (2.1)
+                dialog: "Wir müssen oft Punkte zusammenzählen. Fülle die Lücken mit dem richtigen Operator, um die Gesamtpunktzahl zu berechnen.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">karte1</span> = <span class="code-value">10</span>;
+<span class="code-keyword">int</span> <span class="code-variable">karte2</span> = <span class="code-value">5</span>;
+<span class="code-keyword">int</span> <span class="code-variable">bonus</span> = <span class="code-value">2</span>;
+
+<span class="code-keyword">int</span> <span class="code-variable">gesamt</span> = <span class="code-variable">karte1</span> <input type="text" id="input-0" class="code-input" style="width: 2rem;"> <span class="code-variable">karte2</span> <input type="text" id="input-1" class="code-input" style="width: 2rem;"> <span class="code-variable">bonus</span>;
+</pre>
+                `,
+                correctAnswers: [
+                    ['+'],
+                    ['+']
+                ]
+            },
+            { // Level 4 (2.2)
+                dialog: "Okay, die erste Karte (`Index 0`) ist eine 8. Die nächste Karte (`Index 1`) ist eine 5. Prüfe, ob die nächste Karte *GRÖSSER* war als die aktuelle.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span>[] <span class="code-variable">karten</span> = { <span class="code-value">8</span>, <span class="code-value">5</span> }; <span class="code-comment">// [aktuelle, nächste]</span>
+
+<span class="code-comment">// Fülle die Lücke, um zu prüfen, ob
+// Index 1 GRÖSSER ist als Index 0.</span>
+<span class="code-keyword">if</span> ( <input type="text" id="input-0" class="code-input" style="width: 15rem;"> ) {
+    <span class="code-comment">print("Die nächste Karte war höher.");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['karten[1] > karten[0]']
+                ]
+            },
+            { // Level 5 (2.3)
+                dialog: "Der Spieler gewinnt, wenn ZWEI Dinge zutreffen: 1. Er hat 'höher' getippt UND 2. die nächste Karte *war* höher (`warHöher == true`).",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">String</span> <span class="code-variable">tipp</span> = <span class="code-string">"höher"</span>;
+<span class="code-keyword">boolean</span> <span class="code-variable">warHöher</span> = <span class="code-value">true</span>;
+
+<span class="code-comment">// Fülle die Lücke, um zu prüfen, ob BEIDES wahr ist:</span>
+<span class="code-keyword">if</span> ( (<span class="code-variable">tipp</span> == <span class="code-string">"höher"</span> <input type="text" id="input-0" class="code-input" style="width: 3rem;"> <span class="code-variable">warHöher</span> == <span class="code-value">true</span>) ) {
+    <span class="code-comment">print("Gewonnen!");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['&&', 'and']
+                ]
+            },
+            { // Level 6 (2.4)
+                dialog: "Jetzt wird's knifflig. Der Spieler gewinnt auch, wenn er 'niedriger' tippt UND die Karte *nicht* höher war. Fülle die Lücke für beide Gewinnbedingungen (ODER).",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Bedingung 1: 'höher' getippt UND 'warHöher'</span>
+<span class="code-comment">// Bedingung 2: 'niedriger' getippt UND NICHT 'warHöher'</span>
+<span class="code-keyword">if</span> ( (<span class="code-variable">tipp</span> == <span class="code-string">"höher"</span> && <span class="code-variable">warHöher</span> == <span class="code-value">true</span>) <input type="text" id="input-0" class="code-input" style="width: 3rem;">
+     (<span class="code-variable">tipp</span> == <span class="code-string">"niedriger"</span> && <span class="code-variable">warHöher</span> == <span class="code-value">false</span>) ) 
+{
+    <span class="code-comment">print("Gewonnen!");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['||', 'or']
+                ]
+            },
+            // --- Kapitel 3: Verzweigungen ---
+            { // Level 7 (3.1)
+                dialog: "Wir müssen auf 'Bust' prüfen. Wenn die Punkte über 21 sind, ist das Spiel vorbei. Fülle die Lücken, um diese Prüfung zu bauen.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">punkte</span> = <span class="code-value">22</span>;
+
+<span class="code-comment">// Fülle 'if' und die Bedingung ein:</span>
+<input type="text" id="input-0" class="code-input" style="width: 3rem;"> ( <input type="text" id="input-1" class="code-input" style="width: 10rem;"> ) {
+    <span class="code-comment">print("Bust! Verloren.");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['if'],
+                    ['punkte > 21']
+                ]
+            },
+            { // Level 8 (3.2)
+                dialog: "Jetzt ein 'entweder/oder'. War der Tipp richtig (`warTippRichtig == true`)? Dann gib 'Gewonnen' aus, *sonst* 'Verloren'.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">boolean</span> <span class="code-variable">warTippRichtig</span> = <span class="code-value">true</span>;
+
+<span class="code-keyword">if</span> ( <span class="code-variable">warTippRichtig</span> == <span class="code-value">true</span> ) {
+    <span class="code-comment">print("Gewonnen!");</span>
+} <input type="text" id="input-0" class="code-input" style="width: 4rem;"> {
+    <span class="code-comment">print("Verloren!");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['else']
+                ]
+            },
+            { // Level 9 (3.3)
+                dialog: "Am Ende vergleichen wir die Punkte. Spieler (`p`) gegen Dealer (`d`). Es gibt 3 Möglichkeiten: Gewonnen, Verloren oder Unentschieden.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">p</span> = <span class="code-value">18</span>;
+<span class="code-keyword">int</span> <span class="code-variable">d</span> = <span class="code-value">17</span>;
+
+<span class="code-keyword">if</span> ( <span class="code-variable">p</span> > <span class="code-variable">d</span> ) {
+    <span class="code-comment">print("Gewonnen!");</span>
+} <input type="text" id="input-0" class="code-input" style="width: 7rem;"> ( <span class="code-variable">p</span> < <span class="code-variable">d</span> ) {
+    <span class="code-comment">print("Verloren!");</span>
+} <input type="text" id="input-1" class="code-input" style="width: 4rem;"> {
+    <span class="code-comment">print("Unentschieden.");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['else if'],
+                    ['else']
+                ]
+            },
+            // --- Kapitel 4: Schleifen ---
+            { // Level 10 (4.1)
+                dialog: "In Blackjack muss der Dealer Karten ziehen, *solange* seine Punkte unter 17 sind. Fülle die Lücke, um diese `while`-Schleife zu erstellen.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">dealerPunkte</span> = <span class="code-value">15</span>;
+
+<span class="code-comment">// Fülle das Schlüsselwort für die Schleife ein:</span>
+<input type="text" id="input-0" class="code-input" style="width: 5rem;"> ( <span class="code-variable">dealerPunkte</span> < <span class="code-value">17</span> ) {
+    <span class="code-comment">// ... Code zum Karteziehen ...</span>
+    <span class="code-variable">dealerPunkte</span> = <span class="code-variable">dealerPunkte</span> + <span class="code-value">4</span>; <span class="code-comment">// Bsp.</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['while']
+                ]
+            },
+            { // Level 11 (4.2)
+                dialog: "Das 'Hi-Lo'-Spiel soll laufen, solange `credits > 0` sind. Pro Runde verliert man 1 Credit. Fülle alle Lücken, um die Haupt-Spielschleife zu bauen.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">credits</span> = <span class="code-value">10</span>;
+
+<span class="code-comment">// 1. Schlüsselwort für die Schleife:</span>
+<input type="text" id="input-0" class="code-input" style="width: 5rem;"> ( <input type="text" id="input-1" class="code-input" style="width: 10rem;"> ) { <span class="code-comment">// 2. Bedingung:</span>
+    
+    <span class="code-comment">// ... Code für eine Spielrunde ...</span>
+    <span class="code-comment">print("Noch " + credits + " Credits übrig.");</span>
+
+    <span class="code-comment">// 3. WICHTIG: Credits reduzieren!</span>
+    <input type="text" id="input-2" class="code-input" style="width: 10rem;">;
+}
+<span class="code-comment">print("Spiel vorbei!");</span>
+</pre>
+                `,
+                correctAnswers: [
+                    ['while'],
+                    ['credits > 0'],
+                    ['credits--', 'credits = credits - 1', 'credits -= 1']
+                ]
+            },
+            { // Level 12 (4.3)
+                dialog: "Jetzt eine `for`-Schleife. Wir wollen 5 Runden spielen. Fülle die 3 Teile der Schleife: Start, Bedingung, Inkrement (Hochzählen).",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Zähle von i=0 bis i=4 (das sind 5 Runden)</span>
+<input type="text" id="input-0" class="code-input" style="width: 3rem;"> ( <input type="text" id="input-1" class="code-input" style="width: 8rem;">; <input type="text" id="input-2" class="code-input" style="width: 5rem;">; <input type="text" id="input-3" class="code-input" style="width: 3rem;"> ) {
+    <span class="code-comment">print("Runde " + i);</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['for'],
+                    ['int i = 0'],
+                    ['i < 5'],
+                    ['i++']
+                ]
+            },
+            { // Level 13 (4.4)
+                dialog: "Experten-Level! Nutze eine `for`-Schleife, um alle Karten in einem Array (`hand`) zusammenzuzählen.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span>[] <span class="code-variable">hand</span> = { <span class="code-value">10</span>, <span class="code-value">5</span>, <span class="code-value">3</span> }; <span class="code-comment">// Gesamt: 18</span>
+<span class="code-keyword">int</span> <span class="code-variable">total</span> = <span class="code-value">0</span>;
+
+<span class="code-keyword">for</span> (<span class="code-keyword">int</span> <span class="code-variable">i</span> = <span class="code-value">0</span>; <input type="text" id="input-0" class="code-input" style="width: 12rem;">; <span class="code-variable">i</span>++) {
+    <span class="code-comment">// Füge die Karte beim Index 'i' zum 'total' hinzu</span>
+    <span class="code-variable">total</span> = <span class="code-variable">total</span> + <input type="text" id="input-1" class="code-input" style="width: 8rem;">;
+}
+<span class="code-comment">print("Gesamtwert: " + total);</span>
+</pre>
+                `,
+                correctAnswers: [
+                    ['i < hand.length', 'i < 3'],
+                    ['hand[i]']
+                ]
+            },
+            // --- Kapitel 5: Methoden ---
+            { // Level 14 (5.1)
+                dialog: "Code wird schnell unübersichtlich. Lass uns aufräumen. Erstelle eine `void`-Methode (gibt nichts zurück) namens `zeigeRegeln`.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// 1. Fülle 'void' und den Namen ein:</span>
+<input type="text" id="input-0" class="code-input" style="width: 4rem;"> <input type="text" id="input-1" class="code-input" style="width: 10rem;">() {
+    <span class="code-comment">print("Willkommen zu Hi-Lo!");</span>
+}
+
+<span class="code-comment">// 2. So ruft man sie auf:</span>
+<span class="code-variable">zeigeRegeln</span>();
+</pre>
+                `,
+                correctAnswers: [
+                    ['void'],
+                    ['zeigeregeln'] // wird zu kleinschreibung normalisiert
+                ]
+            },
+            { // Level 15 (5.2)
+                dialog: "Eine Methode kann uns auch einen Wert *zurückgeben*. Diese Methode soll `true` oder `false` zurückgeben (einen `boolean`).",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Fülle den RÜCKGABETYP und das RETURN-Wort ein</span>
+<input type="text" id="input-0" class="code-input" style="width: 7rem;"> <span class="code-variable">istVolljährig</span>(<span class="code-keyword">int</span> <span class="code-variable">alter</span>) {
+    <span class="code-keyword">if</span> (<span class="code-variable">alter</span> >= <span class="code-value">18</span>) {
+        <input type="text" id="input-1" class="code-input" style="width: 6rem;"> <span class="code-value">true</span>;
+    } <span class="code-keyword">else</span> {
+        <input type="text" id="input-2" class="code-input" style="width: 6rem;"> <span class="code-value">false</span>;
+    }
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['boolean'],
+                    ['return'],
+                    ['return']
+                ]
+            },
+            { // Level 16 (5.3)
+                dialog: "Klasse! Jetzt schreibe eine Methode namens `addiere`, die zwei `int` (a und b) entgegennimmt und die Summe als `int` zurückgibt.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// 1. Rückgabetyp, 2. Name, 3. Parameter</span>
+<input type="text" id="input-0" class="code-input" style="width: 3rem;"> <input type="text" id="input-1" class="code-input" style="width: 7rem;">(<input type="text" id="input-2" class="code-input" style="width: 6rem;">, <input type="text" id="input-3" class="code-input" style="width: 6rem;">) {
+    <span class="code-comment">// 4. Gib die Summe zurück</span>
+    <input type="text" id="input-4" class="code-input" style="width: 12rem;">;
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['int'],
+                    ['addiere'],
+                    ['int a'],
+                    ['int b'],
+                    ['return a + b']
+                ]
+            },
+            // --- Abschluss ---
+            { // Level 17 (Abschluss)
+                dialog: "Fantastisch! Du hast jetzt nicht nur Code *gelesen* und *ausgewählt*, sondern ihn selbst *geschrieben*. Du hast bewiesen, dass du die Konzepte anwenden kannst. Du bist bereit, dein erstes eigenes, freies Projekt zu starten!",
+                taskHtml: `
+                    <div class="code-block text-center">
+                        <span class="text-3xl">🎉</span><br><br>
+                        <span class="text-2xl text-green-400 font-semibold">Alle Level Geschafft!</span><br><br>
+                        <span class="text-slate-300 text-lg">
+                        Gute Arbeit, Code-Magier!
+                        </span>
+                    </div>
+                `,
+                correctAnswers: null // Dies ist ein Abschlusslevel
+            }
+        ];
+
+        // Funktion zum Laden eines Levels
+        function loadLevel(levelIndex) {
+            // Sicherstellen, dass das Level existiert
+            if (levelIndex >= levels.length) {
+                console.error("Level-Index außerhalb des Bereichs");
+                return;
+            }
+
+            const level = levels[levelIndex];
+            
+            // UI zurücksetzen
+            tutorialTextEl.innerHTML = level.dialog;
+            interactiveAreaEl.innerHTML = level.taskHtml;
+            feedbackMessageEl.textContent = "";
+            feedbackMessageEl.className = "h-6 text-base text-center flex-1 px-4";
+            
+            nextButtonEl.style.display = 'none';
+            checkButtonEl.style.display = 'inline-block';
+            prevButtonEl.style.display = (levelIndex > 0) ? 'inline-block' : 'none';
+
+            // Aktiven Navigations-Button hervorheben
+            updateNavActive(levelIndex);
+
+            // Wenn es ein Abschlusslevel ohne Quiz ist
+            if (level.correctAnswers === null) {
+                checkButtonEl.style.display = 'none';
+                nextButtonEl.style.display = 'none'; 
+                prevButtonEl.style.display = (levelIndex > 0) ? 'inline-block' : 'none';
+            } else {
+                // Fokus auf das erste Eingabefeld setzen
+                setTimeout(() => {
+                    const firstInput = interactiveAreaEl.querySelector('input[type="text"]');
+                    if (firstInput) {
+                        firstInput.focus();
+                    }
+                }, 100);
+            }
+        }
+
+        // Funktion zur Überprüfung der Antworten (NEU)
+        function checkAnswers() {
+            const level = levels[currentLevel];
+            if (level.correctAnswers === null) return; // Sollte nicht passieren
+
+            const inputs = interactiveAreaEl.querySelectorAll('input[type="text"]');
+            let allCorrect = true;
+
+            inputs.forEach((input, index) => {
+                const userAnswer = normalizeAnswer(input.value);
+                const correctOptions = level.correctAnswers[index].map(normalizeAnswer); // Alle korrekten Optionen normalisieren
+
+                if (correctOptions.includes(userAnswer)) {
+                    input.classList.remove('incorrect');
+                    input.classList.add('correct');
+                    input.disabled = true; // Eingabefeld sperren
+                } else {
+                    input.classList.remove('correct');
+                    input.classList.add('incorrect');
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                feedbackMessageEl.textContent = "Richtig! Sehr gut.";
+                feedbackMessageEl.className = "h-6 text-base text-center flex-1 px-4 text-green-400 font-semibold";
+                checkButtonEl.style.display = 'none';
+                nextButtonEl.style.display = 'inline-block';
+            } else {
+                feedbackMessageEl.textContent = "Einige Antworten sind noch falsch. Versuche es nochmal!";
+                feedbackMessageEl.className = "h-6 text-base text-center flex-1 px-4 text-red-400 font-semibold";
+            }
+        }
+
+        // Funktion, um zum nächsten Level zu gelangen
+        function nextLevel() {
+            currentLevel++;
+            if (currentLevel < levels.length) {
+                loadLevel(currentLevel);
+            }
+        }
+
+        // Funktion, um zum vorherigen Level zu gelangen
+        function prevLevel() {
+            if (currentLevel > 0) {
+                currentLevel--;
+                loadLevel(currentLevel);
+            }
+        }
+
+        // Funktion, um direkt zu einem Level zu springen
+        function jumpToLevel(levelIndex) {
+            if (levelIndex >= 0 && levelIndex < levels.length) {
+                currentLevel = levelIndex;
+                loadLevel(currentLevel);
+            }
+        }
+
+        // Funktion, um die Kapitel-Navigation zu erstellen
+        function createNavigation() {
+            let navHtml = '';
+            // NEU: chapters-Array durchlaufen (ohne den "Ende"-Dummy)
+            chapters.slice(0, -1).forEach((chapter, index) => {
+                navHtml += `<button id="nav-btn-${index}" class="nav-btn" onclick="jumpToLevel(${chapter.levelIndex})">${chapter.title}</button>`;
+            });
+            navAreaEl.innerHTML = navHtml;
+        }
+
+        // Funktion, um den aktiven Navigations-Button hervorzuheben
+        function updateNavActive(activeIndex) {
+            const allNavButtons = document.querySelectorAll('.nav-btn');
+            
+            // Finde das "aktive" Kapitel
+            let activeChapterIndex = -1;
+            // Wir müssen vom Ende her suchen, um das *letzte* passende Kapitel zu finden
+            for (let i = chapters.length - 1; i >= 0; i--) {
+                if (activeIndex >= chapters[i].levelIndex) {
+                    activeChapterIndex = i;
+                    break;
+                }
+            }
+            
+            // Wenn das aktive Kapitel "Abschluss" ist (Index 17),
+            // soll der "Abschluss"-Button (Index 16) leuchten.
+            if (activeChapterIndex === chapters.length - 1) { // Letzter Dummy-Eintrag
+                activeChapterIndex = chapters.length - 2; // Vorletzter "echter" Eintrag
+            }
+
+            allNavButtons.forEach((btn, index) => {
+                if (index === activeChapterIndex) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+
+        // Das Spiel beim Laden der Seite starten
+        window.onload = () => {
+            createNavigation();
+            loadLevel(0);
+        };
+
+    </script>
+</body>
+</html>
