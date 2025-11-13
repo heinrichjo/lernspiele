@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code-Fixer: Das Text-Abenteuer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font 'Inter' & 'Source Code Pro' -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        main {
+            flex-grow: 1;
+        }
+
+        .code-block {
+            font-family: 'Source Code Pro', monospace;
+            background-color: #1e293b; /* slate-800 */
+            color: #e2e8f0; /* slate-200 */
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .code-comment { color: #94a3b8; } /* slate-400 */
+        .code-keyword { color: #c084fc; } /* purple-400 */
+        .code-string { color: #facc15; } /* yellow-400 */
+        .code-variable { color: #e2e8f0; } /* slate-200 */
+        .code-value { color: #60a5fa; } /* blue-400 */
+        .code-bug { /* NEU: Für fehlerhaften Code */
+            color: #f87171; /* red-400 */
+            text-decoration: wavy underline;
+            text-decoration-color: #ef4444; /* red-500 */
+            background-color: #450a0a; /* red-950 */
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+        }
+
+        .code-input {
+            font-family: 'Source Code Pro', monospace;
+            background-color: #334155;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 0.25rem;
+            padding: 0 0.4rem;
+            margin: 0 0.1rem;
+            width: 8rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background-color: #1e293b;
+        }
+        
+        .code-input.correct {
+            border-color: #22c55e;
+            background-color: #052e16;
+        }
+        .code-input.incorrect {
+            border-color: #ef4444;
+            background-color: #450a0a;
+        }
+
+        #tutorial-text code {
+            font-family: 'Source Code Pro', monospace;
+            color: #c084fc;
+            background-color: #334155;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+        }
+
+        .action-btn {
+            background-color: #3b82f6;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .action-btn:hover {
+            background-color: #2563eb;
+        }
+
+        .next-btn {
+            background-color: #22c55e;
+            display: none;
+        }
+        .next-btn:hover {
+            background-color: #16a34a;
+        }
+
+        .nav-btn {
+            background-color: #334155;
+            color: #cbd5e1;
+            border: 1px solid #475569;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .nav-btn:hover {
+            background-color: #475569;
+            border-color: #60a5fa;
+        }
+        .nav-btn.active {
+            background-color: #60a5fa;
+            color: #1e293b;
+            font-weight: 600;
+            border-color: #60a5fa;
+        }
+
+        .prev-btn {
+            background-color: #64748b;
+        }
+        .prev-btn:hover {
+            background-color: #475569;
+        }
+
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200">
+
+    <main class="flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl bg-slate-800 shadow-2xl rounded-xl overflow-hidden">
+            <div class="p-8 md:p-12">
+                <h1 class="text-3xl font-bold text-center mb-2 text-white">Code-Fixer</h1>
+                <h2 class="text-xl font-semibold text-blue-400 text-center mb-8">Das Text-Abenteuer (Level 3)</h2>
+
+                <!-- Tutorial-Dialog -->
+                <div id="tutorial-text" class="text-lg text-slate-300 mb-6 leading-relaxed">
+                    Wird geladen...
+                </div>
+
+                <!-- Interaktiver Code-Bereich -->
+                <div id="interactive-area" class="mb-6">
+                    <!-- Dynamisch gefüllt -->
+                </div>
+
+                <!-- Layout für Buttons und Feedback -->
+                <div class="flex justify-between items-center mt-6">
+                    <!-- "Zurück"-Button -->
+                    <button id="prev-button" class="action-btn prev-btn" onclick="prevLevel()" style="display: none;">
+                        &larr; Zurück
+                    </button>
+
+                    <!-- Feedback-Nachricht -->
+                    <div id="feedback-message" class="h-6 text-base text-center flex-1 px-4">
+                        <!-- Feedback (Richtig/Falsch) -->
+                    </div>
+
+                    <!-- "Prüfen" / "Nächstes Level" Buttons -->
+                    <div>
+                        <button id="check-button" class="action-btn" onclick="checkAnswers()">
+                            Reparieren!
+                        </button>
+                        <button id="next-button" class="action-btn next-btn" onclick="nextLevel()">
+                            Nächstes Level &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kapitel-Navigation -->
+                <div class="border-t border-slate-700 mt-8 pt-6">
+                    <h3 class="text-sm font-semibold text-slate-400 text-center mb-3">Kapitelübersicht</h3>
+                    <div id="navigation-area" class="text-center flex flex-wrap justify-center gap-2">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full bg-slate-800 border-t border-slate-700 mt-8 p-4">
+        <div class="max-w-3xl mx-auto flex justify-between items-center text-sm text-slate-400">
+            <div>
+                <span>Johannes Heinrich, 2025</span>
+            </div>
+            <div>
+                <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                     alt="Logo Berufsschule IV Augsburg" 
+                     class="h-10"
+                     onerror="this.onerror=null; this.alt='Logo BS4'; this.src='https://placehold.co/100x40/334155/e2e8f0?text=Logo+BS4';">
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+        let currentLevel = 0;
+        
+        // DOM-Elemente
+        const tutorialTextEl = document.getElementById('tutorial-text');
+        const interactiveAreaEl = document.getElementById('interactive-area');
+        const feedbackMessageEl = document.getElementById('feedback-message');
+        const checkButtonEl = document.getElementById('check-button');
+        const nextButtonEl = document.getElementById('next-button');
+        const prevButtonEl = document.getElementById('prev-button');
+        const navAreaEl = document.getElementById('navigation-area');
+
+        // NEU: Kapitel-Definition für das "Code-Fixer"-Spiel
+        const chapters = [
+            { title: "Variablen", levelIndex: 0 },
+            { title: "Operatoren", levelIndex: 3 },
+            { title: "Verzweigungen", levelIndex: 6 },
+            { title: "Schleifen", levelIndex: 9 },
+            { title: "Arrays", levelIndex: 12 },
+            { title: "Methoden", levelIndex: 14 },
+            { title: "Abschluss", levelIndex: 16 }
+        ];
+
+        // Normalisierungsfunktion für Antworten
+        function normalizeAnswer(answer) {
+            // Sehr tolerant: entfernt Leerzeichen, ;, (), {}, macht alles klein
+            return answer.trim().toLowerCase()
+                         .replace(/;/g, '')
+                         .replace(/\(/g, '')
+                         .replace(/\)/g, '')
+                         .replace(/{/g, '')
+                         .replace(/}/g, '');
+        }
+
+        // Level-Daten (NEU: "Code-Fixer"-Szenario)
+        const levels = [
+            // --- Kapitel 1: Variablen-Fehler ---
+            { // Level 0
+                dialog: "Willkommen, Code-Hexenmeister! Das Zauberbuch ist kaputt. Dieser Zauber speichert Mana (eine Zahl), aber nutzt den falschen Datentyp `String`! Korrigiere ihn.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Korrigiere den Datentyp für eine Zahl.</span>
+<input type="text" id="input-0" class="code-input" style="width: 5rem;" value="String"> <span class="code-variable">mana</span> = <span class="code-value">100</span>;
+</pre>
+                `,
+                correctAnswers: [
+                    ['int']
+                ]
+            },
+            { // Level 1
+                dialog: "Der nächste Zauber hat einen Tippfehler. Der Datentyp <code>boolan</code> existiert nicht. Wie heißt der Datentyp für `true` (wahr) oder `false` (falsch) korrekt?",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Korrigiere den Tippfehler.</span>
+<input type="text" id="input-0" class="code-input" style="width: 7rem;" value="boolan"> <span class="code-variable">istVerflucht</span> = <span class="code-value">true</span>;
+</pre>
+                `,
+                correctAnswers: [
+                    ['boolean']
+                ]
+            },
+            { // Level 2
+                dialog: "Dieser Zauber funktioniert nicht. Text (Strings) muss in Anführungszeichen (<code>\"</code>) eingeschlossen werden. Korrigiere die Zuweisung.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Füge die fehlenden Anführungszeichen hinzu.</span>
+<span class="code-keyword">String</span> <span class="code-variable">zauberName</span> = <input type="text" id="input-0" class="code-input" style="width: 12rem;" value="Feuerball">;
+</pre>
+                `,
+                correctAnswers: [
+                    ['"feuerball"'] // normalizeAnswer entfernt "
+                ]
+            },
+            // --- Kapitel 2: Operator-Fehler ---
+            { // Level 3
+                dialog: "Ein klassischer Fluch! Das einzelne <code>=</code> ist eine *Zuweisung*. Wir brauchen aber einen *Vergleichs*-Operator, um zu prüfen, ob der Schaden 10 *ist*. ",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">schaden</span> = <span class="code-value">10</span>;
+
+<span class="code-comment">// Korrigiere den Zuweisungs-Fehler.</span>
+<span class="code-keyword">if</span> (<span class="code-variable">schaden</span> <input type="text" id="input-0" class="code-input" style="width: 2rem;" value="="> <span class="code-value">10</span>) {
+    <span class="code-comment">print("Kritischer Treffer!");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['==']
+                ]
+            },
+            { // Level 4
+                dialog: "Der Zauberer will prüfen, ob sein Mana *weniger* als 5 *oder* *genau* 0 ist. Der Operator für 'weniger als' fehlt. (Tipp: <code><</code>)",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Prüfe, ob Mana < 5 ODER == 0 ist.</span>
+<span class="code-keyword">if</span> (<span class="code-variable">mana</span> <input type="text" id="input-0" class="code-input" style="width: 2rem;"> <span class="code-value">5</span> || <span class="code-variable">mana</span> == <span class="code-value">0</span>) {
+    <span class="code-comment">print("Zu wenig Mana!");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['<']
+                ]
+            },
+            { // Level 5
+                dialog: "Manchmal müssen zwei Bedingungen wahr sein. Du bist nur sicher, wenn du einen `schild` hast UND (`&&`) deine `gesundheit` über 50 ist. Korrigiere den ODER-Operator (`||`).",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">boolean</span> <span class="code-variable">hatSchild</span> = <span class="code-value">true</span>;
+<span class="code-keyword">int</span> <span class="code-variable">gesundheit</span> = <span class="code-value">70</span>;
+
+<span class="code-comment">// Wir brauchen && (UND), nicht || (ODER).</span>
+<span class="code-keyword">if</span> (<span class="code-variable">hatSchild</span> <input type="text" id="input-0" class="code-input" style="width: 3rem;" value="||"> <span class="code-variable">gesundheit</span> > <span class="code-value">50</span>) {
+    <span class="code-comment">print("Sicher!");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['&&']
+                ]
+            },
+            // --- Kapitel 3: Verzweigungs-Fehler ---
+            { // Level 6
+                dialog: "Der <code>if</code>-Block ist korrekt, aber das Wort für 'SONST' fehlt. Wie lautet das Schlüsselwort, das ausgeführt wird, wenn die <code>if</code>-Bedingung `false` ist?",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">if</span> (<span class="code-variable">hatSchlüssel</span> == <span class="code-value">true</span>) {
+    <span class="code-comment">print("Tür geöffnet.");</span>
+} <input type="text" id="input-0" class="code-input" style="width: 4rem;"> {
+    <span class="code-comment">print("Tür ist verschlossen.");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['else']
+                ]
+            },
+            { // Level 7
+                dialog: "Die Logik ist verflucht! Es gibt drei Fälle: 'Eis', 'Feuer', 'SONST'. Das zweite <code>if</code> sollte ein <code>else if</code> sein, um die Kette zu bilden.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">String</span> <span class="code-variable">zauber</span> = <span class="code-string">"Blitz"</span>;
+
+<span class="code-keyword">if</span> (<span class="code-variable">zauber</span> == <span class="code-string">"Feuer"</span>) {
+    <span class="code-comment">print("Warm!");</span>
+} 
+<input type="text" id="input-0" class="code-input" style="width: 7rem;" value="if"> (<span class="code-variable">zauber</span> == <span class="code-string">"Eis"</span>) {
+    <span class="code-comment">print("Kalt!");</span>
+} <span class="code-keyword">else</span> {
+    <span class="code-comment">print("Weder Feuer noch Eis.");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['else if']
+                ]
+            },
+            { // Level 8
+                dialog: "Ein schlimmer Logik-Fluch! Die Reihenfolge ist falsch. Wenn `score > 50` ist, wird `score > 10` nie erreicht. Tausche die beiden Bedingungen aus.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Logik-Fehler: Tausche die Bedingungen.</span>
+<span class="code-keyword">int</span> <span class="code-variable">score</span> = <span class="code-value">100</span>;
+
+<span class="code-keyword">if</span> (<input type="text" id="input-0" class="code-input" style="width: 10rem;" value="score > 50">) {
+    <span class="code-comment">print("Rang B");</span>
+} <span class="code-keyword">else if</span> (<input type="text" id="input-1" class="code-input" style="width: 10rem;" value="score > 100">) {
+    <span class="code-comment">print("Rang A");</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['score > 100', 'score>100'],
+                    ['score > 50', 'score>50']
+                ]
+            },
+            // --- Kapitel 4: Schleifen-Fehler ---
+            { // Level 9
+                dialog: "Eine Endlosschleife! Der Drache wird nie besiegt, weil sein `drachenHP` (Lebenspunkte) nie sinkt. Füge die fehlende Zeile hinzu, um 10 HP pro Angriff abzuziehen.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">drachenHP</span> = <span class="code-value">100</span>;
+
+<span class="code-keyword">while</span> (<span class="code-variable">drachenHP</span> > <span class="code-value">0</span>) {
+    <span class="code-comment">print("Angriff!");</span>
+    
+    <span class="code-comment">// FIX: Ziehe 10 HP ab.</span>
+    <input type="text" id="input-0" class="code-input" style="width: 20rem;">;
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['drachenhp = drachenhp - 10', 'drachenhp -= 10']
+                ]
+            },
+            { // Level 10
+                dialog: "Die Bedingung dieser <code>while</code>-Schleife ist falsch. Sie soll laufen, *solange* <code>mana</code> *größer als* 0 ist. Korrigiere den Operator.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span> <span class="code-variable">mana</span> = <span class="code-value">50</span>;
+
+<span class="code-comment">// FIX: Schleife soll laufen, solange mana > 0</span>
+<span class="code-keyword">while</span> (<span class="code-variable">mana</span> <input type="text" id="input-0" class="code-input" style="width: 2rem;" value="<"> <span class="code-value">0</span>) {
+    <span class="code-comment">// ... zaubern ...</span>
+    <span class="code-variable">mana</span>--;
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['>']
+                ]
+            },
+            { // Level 11
+                dialog: "Diese <code>for</code>-Schleife soll 5 Runden (0 bis 4) laufen. Die Bedingung ist falsch und lässt sie nur bis 3 laufen (0, 1, 2, 3). Korrigiere die Bedingung.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// FIX: Schleife soll 5x laufen (i < 5)</span>
+<span class="code-keyword">for</span> (<span class="code-keyword">int</span> <span class="code-variable">i</span> = <span class="code-value">0</span>; <input type="text" id="input-0" class="code-input" style="width: 5rem;" value="i < 4">; <span class="code-variable">i</span>++) {
+    <span class="code-comment">print("Runde " + i);</span>
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['i < 5', 'i<=4']
+                ]
+            },
+            // --- Kapitel 5: Array-Fehler ---
+            { // Level 12
+                dialog: "Das Inventar (Array) hat 3 Plätze. Computer zählen bei 0! Die Plätze sind also 0, 1 und 2. Der Index <code>3</code> ist FALSCH. Korrigiere den Index, um das Schwert in den *letzten* Platz zu legen.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// Plätze: 0, 1, 2</span>
+<span class="code-keyword">String</span>[] <span class="code-variable">inventar</span> = <span class="code-keyword">new</span> <span class="code-keyword">String</span>[<span class="code-value">3</span>];
+
+<span class="code-comment">// FIX: Index 3 ist außerhalb des Arrays!</span>
+<span class="code-variable">inventar</span>[<input type="text" id="input-0" class="code-input" style="width: 2rem;" value="3">] = <span class="code-string">"Schwert"</span>;
+</pre>
+                `,
+                correctAnswers: [
+                    ['2']
+                ]
+            },
+            { // Level 13
+                dialog: "Wir wollen wissen, *wie viele* Tränke im Array sind. <code>.length</code> ist korrekt, aber es ist eine Eigenschaft (Property), keine Methode! Entferne die Klammern <code>()</code>.",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">int</span>[] <span class="code-variable">tränke</span> = { <span class="code-value">5</span>, <span class="code-value">8</span>, <span class="code-value">12</span> };
+
+<span class="code-comment">// FIX: .length ist keine Methode!</span>
+<span class="code-keyword">int</span> <span class="code-variable">anzahl</span> = <span class="code-variable">tränke</span>.<input type="text" id="input-0" class="code-input" style="width: 8rem;" value="length()">;
+</pre>
+                `,
+                correctAnswers: [
+                    ['length']
+                ]
+            },
+            // --- Kapitel 6: Methoden-Fehler ---
+            { // Level 14
+                dialog: "Die Methode <code>heilen</code> ist definiert, aber sie wird nie *aufgerufen*! Füge die Zeile hinzu, um die Methode aufzurufen (zu starten).",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-keyword">void</span> <span class="code-variable">heilen</span>() {
+    <span class="code-variable">gesundheit</span> = <span class="code-value">100</span>;
+    <span class="code-comment">print("Geheilt!");</span>
+}
+
+<span class="code-comment">// Hauptprogramm</span>
+<span class="code-keyword">if</span> (<span class="code-variable">gesundheit</span> < <span class="code-value">10</span>) {
+    <span class="code-comment">// FIX: Rufe die Methode hier auf!</span>
+    <input type="text" id="input-0" class="code-input" style="width: 8rem;">;
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['heilen'] // normalize entfernt () und ;
+                ]
+            },
+            { // Level 15
+                dialog: "Diese Methode soll den doppelten Schaden als <code>int</code> *zurückgeben*. Das Schlüsselwort <code>void</code> ist falsch. Was muss dort stehen? Und was fehlt vor <code>ergebnis</code>?",
+                taskHtml: `
+<pre class="code-block">
+<span class="code-comment">// FIX 1: Rückgabetyp (kein 'void')</span>
+<input type="text" id="input-0" class="code-input" style="width: 4rem;" value="void"> <span class="code-variable">doppelterSchaden</span>(<span class="code-keyword">int</span> <span class="code-variable">schaden</span>) {
+    <span class="code-keyword">int</span> <span class="code-variable">ergebnis</span> = <span class="code-variable">schaden</span> * <span class="code-value">2</span>;
+    
+    <span class="code-comment">// FIX 2: Schlüsselwort für Rückgabe</span>
+    <input type="text" id="input-1" class="code-input" style="width: 6rem;"> <span class="code-variable">ergebnis</span>;
+}
+</pre>
+                `,
+                correctAnswers: [
+                    ['int'],
+                    ['return']
+                ]
+            },
+            // --- Abschluss ---
+            { // Level 16 (Abschluss)
+                dialog: "Exzellent, Hexenmeister! Du hast alle Flüche gebannt und das Zauberbuch repariert. Du hast bewiesen, dass du Code nicht nur schreiben, sondern auch lesen und Fehler finden kannst. Das ist die wichtigste Fähigkeit von allen!",
+                taskHtml: `
+                    <div class="code-block text-center">
+                        <span class="text-3xl">📜✨</span><br><br>
+                        <span class="text-2xl text-green-400 font-semibold">Zauberbuch Repariert!</span><br><br>
+                        <span class="text-slate-300 text-lg">
+                        Gute Arbeit, Code-Fixer!
+                        </span>
+                    </div>
+                `,
+                correctAnswers: null // Dies ist ein Abschlusslevel
+            }
+        ];
+
+        // Funktion zum Laden eines Levels
+        function loadLevel(levelIndex) {
+            if (levelIndex >= levels.length) {
+                console.error("Level-Index außerhalb des Bereichs");
+                return;
+            }
+
+            const level = levels[levelIndex];
+            
+            // UI zurücksetzen
+            tutorialTextEl.innerHTML = level.dialog;
+            interactiveAreaEl.innerHTML = level.taskHtml;
+            feedbackMessageEl.textContent = "";
+            feedbackMessageEl.className = "h-6 text-base text-center flex-1 px-4";
+            
+            nextButtonEl.style.display = 'none';
+            checkButtonEl.style.display = 'inline-block';
+            prevButtonEl.style.display = (levelIndex > 0) ? 'inline-block' : 'none';
+
+            updateNavActive(levelIndex);
+
+            if (level.correctAnswers === null) {
+                checkButtonEl.style.display = 'none';
+                nextButtonEl.style.display = 'none'; 
+                prevButtonEl.style.display = (levelIndex > 0) ? 'inline-block' : 'none';
+            } else {
+                setTimeout(() => {
+                    const firstInput = interactiveAreaEl.querySelector('input[type="text"]');
+                    if (firstInput) {
+                        firstInput.focus();
+                        firstInput.select(); // Text im Input markieren
+                    }
+                }, 100);
+            }
+        }
+
+        // Funktion zur Überprüfung der Antworten
+        function checkAnswers() {
+            const level = levels[currentLevel];
+            if (level.correctAnswers === null) return;
+
+            const inputs = interactiveAreaEl.querySelectorAll('input[type="text"]');
+            let allCorrect = true;
+
+            inputs.forEach((input, index) => {
+                const userAnswer = normalizeAnswer(input.value);
+                // Erlaube mehrere richtige Antworten (z.B. mit/ohne Klammern)
+                const correctOptions = level.correctAnswers[index].map(normalizeAnswer);
+
+                if (correctOptions.includes(userAnswer)) {
+                    input.classList.remove('incorrect');
+                    input.classList.add('correct');
+                    input.disabled = true;
+                } else {
+                    input.classList.remove('correct');
+                    input.classList.add('incorrect');
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                feedbackMessageEl.textContent = "Zauber repariert! Sehr gut.";
+                feedbackMessageEl.className = "h-6 text-base text-center flex-1 px-4 text-green-400 font-semibold";
+                checkButtonEl.style.display = 'none';
+                nextButtonEl.style.display = 'inline-block';
+            } else {
+                feedbackMessageEl.textContent = "Der Fluch widersteht. Prüfe den Code nochmal!";
+                feedbackMessageEl.className = "h-6 text-base text-center flex-1 px-4 text-red-400 font-semibold";
+            }
+        }
+
+        // Funktion, um zum nächsten Level zu gelangen
+        function nextLevel() {
+            currentLevel++;
+            if (currentLevel < levels.length) {
+                loadLevel(currentLevel);
+            }
+        }
+
+        // Funktion, um zum vorherigen Level zu gelangen
+        function prevLevel() {
+            if (currentLevel > 0) {
+                currentLevel--;
+                loadLevel(currentLevel);
+            }
+        }
+
+        // Funktion, um direkt zu einem Level zu springen
+        function jumpToLevel(levelIndex) {
+            if (levelIndex >= 0 && levelIndex < levels.length) {
+                currentLevel = levelIndex;
+                loadLevel(currentLevel);
+            }
+        }
+
+        // Funktion, um die Kapitel-Navigation zu erstellen
+        function createNavigation() {
+            let navHtml = '';
+            chapters.slice(0, -1).forEach((chapter, index) => {
+                navHtml += `<button id="nav-btn-${index}" class="nav-btn" onclick="jumpToLevel(${chapter.levelIndex})">${chapter.title}</button>`;
+            });
+            navAreaEl.innerHTML = navHtml;
+        }
+
+        // Funktion, um den aktiven Navigations-Button hervorzuheben
+        function updateNavActive(activeIndex) {
+            const allNavButtons = document.querySelectorAll('.nav-btn');
+            
+            let activeChapterIndex = -1;
+            for (let i = chapters.length - 1; i >= 0; i--) {
+                if (activeIndex >= chapters[i].levelIndex) {
+                    activeChapterIndex = i;
+                    break;
+                }
+            }
+            
+            if (activeChapterIndex === chapters.length - 1) { 
+                activeChapterIndex = chapters.length - 2;
+            }
+
+            allNavButtons.forEach((btn, index) => {
+                if (index === activeChapterIndex) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Das Spiel beim Laden der Seite starten
+        window.onload = () => {
+            createNavigation();
+            loadLevel(0);
+        };
+
+    </script>
+</body>
+</html>
