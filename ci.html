@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE ahtml>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -231,6 +231,51 @@
                 requiredUniqueElements: 3,
                 correctSolution: "Schmidt Digital-Bäckerei UG (haftungsbeschränkt)",
             },
+            {
+                id: 3,
+                title: 'Spezialisierte IT-Beratung',
+                description: [
+                    'Ein junges Team von Gründern möchte eine IT-Beratungsfirma etablieren, die sich auf digitale Lösungen fokussiert.',
+                    'Sie wollen keinen Personennamen verwenden, sondern den Geschäftszweck hervorheben. Der Inhaber wählt die Rechtsform <strong>e.K. (eingetragene/r Kaufmann/-frau)</strong>.',
+                    'Der Name muss den digitalen Fokus betonen und darf nicht irreführend sein.'
+                ],
+                legalFormRequired: 'e.K.',
+                mustInclude: ['IT-Beratung', 'Digital'],
+                misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
+                existingCompanies: ['Digital IT-Service GmbH', 'Innovative IT-Beratung e.K.'],
+                requiredUniqueElements: 2, 
+                correctSolution: "Digital IT-Beratung e.K.",
+            },
+            {
+                id: 4,
+                title: 'Traditionelle Bäckerei mit Gesellschaftern',
+                description: [
+                    'Herr Huber und ein Kommanditist gründen gemeinsam eine Bäckerei. Sie wollen den traditionellen Namen Huber beibehalten.',
+                    'Die Rechtsform ist die <strong>Kommanditgesellschaft (KG)</strong>.',
+                    'Der Name soll klassisch bleiben und muss Huber und Bäckerei enthalten.'
+                ],
+                legalFormRequired: 'KG',
+                mustInclude: ['Huber', 'Bäckerei'],
+                misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
+                existingCompanies: ['Huber Bäckerei GmbH', 'Huber KG'],
+                requiredUniqueElements: 2,
+                correctSolution: "Huber Bäckerei KG",
+            },
+            {
+                id: 5,
+                title: 'Innovative Dienstleistung im Service-Bereich',
+                description: [
+                    'Eine Gruppe von Marketingspezialisten gründet ein Unternehmen, das neue Servicekonzepte entwickelt.',
+                    'Sie wollen einen modernen, fantasievollen Namen nutzen, der sofort Assoziationen zu Innovation weckt. Die Rechtsform ist die <strong>GmbH</strong>.',
+                    'Der Name sollte klar den Service-Bereich abdecken und einen einzigartigen Zusatz enthalten.'
+                ],
+                legalFormRequired: 'GmbH',
+                mustInclude: ['Innovative', 'Service'],
+                misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
+                existingCompanies: ['Innovative Service UG (haftungsbeschränkt)', 'Müller Service GmbH'],
+                requiredUniqueElements: 3,
+                correctSolution: "Innovative Exklusiv-Service GmbH",
+            }
         ];
 
         let currentScenarioIndex = 0;
@@ -352,7 +397,7 @@
 
         function renderAuftrag(scenario) {
             auftragTextElement.innerHTML = `
-                <h3 class="text-xl font-semibold">${scenario.title}</h3>
+                <h3 class="text-xl font-semibold">${scenario.title} (Auftrag ${scenario.id} von ${scenarios.length})</h3>
                 <p>${scenario.description.join('</p><p>')}</p>
                 <p class="mt-4 p-3 bg-indigo-50 border-l-4 border-indigo-500 italic text-sm">
                     <strong>Ziel:</strong> Erstellen Sie einen Firmennamen, der folgende Grundsätze beachtet:
@@ -445,32 +490,40 @@
             if (nameParts.length === 0) return 'Nicht definiert';
 
             let hasPersonalName = false; // Müller, Schmidt, Huber
-            let hasSubjectTerm = false; // Schreinerei, Öko, Digital, etc. (business/focus category)
+            let hasSubjectTerm = false; // Schreinerei, Öko, Digital, Handwerk, Service, Exklusiv (focus/business)
             let hasFantasyTerm = false; // Innovative (n4)
 
             nameParts.forEach(part => {
                 const text = part.text;
                 if (['Müller', 'Schmidt', 'Huber'].includes(text)) {
                     hasPersonalName = true;
-                } else if (part.category === 'business' || part.category === 'focus') {
+                } 
+                
+                // Wir definieren alle focus und business Begriffe als Sachbezug/SubjectTerm
+                if (part.category === 'business' || part.category === 'focus') {
                     hasSubjectTerm = true;
-                } else if (text === 'Innovative') {
+                } 
+                
+                // 'Innovative' (n4) wird als Fantasiebestandteil behandelt (da es nicht direkt Name oder Zweck ist)
+                if (part.id === 'n4') { 
                     hasFantasyTerm = true;
                 }
             });
 
-            if (hasPersonalName && (hasSubjectTerm || hasFantasyTerm)) {
-                return 'Mischfirma (Kombination aus Personenname und Sach-/Fantasiebestandteilen)';
-            } else if (hasPersonalName) {
+            if (hasPersonalName) {
+                if (hasSubjectTerm || hasFantasyTerm) {
+                    return 'Mischfirma (Kombination aus Personenname und Sach-/Fantasiebestandteilen)';
+                }
                 return 'Personenfirma (basiert auf dem Namen des Inhabers)';
-            } else if (hasSubjectTerm && hasFantasyTerm) {
-                 return 'Mischfirma (Kombination aus Sach- und Fantasiebestandteilen)';
             } else if (hasSubjectTerm) {
+                if (hasFantasyTerm) {
+                     return 'Mischfirma (Kombination aus Sach- und Fantasiebestandteilen)';
+                }
                 return 'Sachfirma (beschreibt den Geschäftszweck)';
             } else if (hasFantasyTerm) {
                 return 'Fantasiefirma (frei erfundenes Wort ohne direkten Sachbezug)';
             }
-            return 'Nicht definiert'; // Sollte nicht eintreten
+            return 'Nicht definiert'; 
         }
 
 
@@ -494,7 +547,7 @@
 
         function displayFeedback(type, message, firmierungstyp) {
             feedbackArea.classList.remove('hidden', 'bg-red-100', 'border-red-500', 'bg-green-100', 'border-green-500');
-            const typeText = type === 'success' ? 'Erfolg!' : 'Fehler:';
+            const typeText = type === 'success' ? 'Erfolg! Name ist geeignet.' : 'Fehler: Name ist ungeeignet.';
             
             let messageHtml = `<p class="font-bold">${typeText}</p>`;
             messageHtml += `<p>${message}</p>`;
@@ -507,7 +560,7 @@
             if (type === 'success') {
                 feedbackArea.className = 'p-4 rounded-lg shadow-inner bg-green-100 border border-green-500 text-green-800';
                 validateBtn.classList.replace('bg-green-600', 'bg-blue-600');
-                validateBtn.textContent = 'Nächster Auftrag';
+                validateBtn.textContent = (currentScenarioIndex === scenarios.length - 1) ? 'Spiel beenden' : 'Nächster Auftrag';
                 validateBtn.onclick = loadNextScenario;
             } else {
                 feedbackArea.className = 'p-4 rounded-lg shadow-inner bg-red-100 border border-red-500 text-red-800';
@@ -541,22 +594,25 @@
             
             // 3. Check: Unterscheidbarkeit (Klarheit und Eindeutigkeit)
             const requiredElementsPresent = currentOrder.mustInclude.every(req => parts.some(p => p.text.includes(req)));
-            const uniqueTerms = parts.filter(p => p.category !== 'legal' && p.text !== legalFormPart.text).length;
+            const nameWithoutLegal = parts.filter(p => p.category !== 'legal');
             
-            if (nameString.split(' ').length < 2) {
-                 displayFeedback('error', `Der Firmenname ist zu kurz. Ein Name erfordert mindestens einen Namensteil und die Rechtsform.`, firmierungstyp);
+            if (nameWithoutLegal.length < 1) {
+                 displayFeedback('error', `Der Firmenname ist zu kurz. Er erfordert mindestens einen Namensteil (Personen-, Sach- oder Fantasiebezeichnung) vor der Rechtsform.`, firmierungstyp);
                  return;
             }
 
+            // Wir zählen die Bestandteile, die zur Unterscheidbarkeit beitragen (alles außer der Rechtsform)
+            const uniqueTerms = nameWithoutLegal.length; 
+
             if (uniqueTerms < currentOrder.requiredUniqueElements) {
                 displayFeedback('error', 
-                    `Verstoß gegen den Grundsatz der Unterscheidbarkeit: Ihr Name (enthält ${uniqueTerms} Unterscheidungsmerkmale) ist generisch und muss sich von bereits eingetragenen Firmen unterscheiden. Fügen Sie einen spezifischen Fokus oder eine stärkere Bezeichnung hinzu.`,
+                    `Verstoß gegen den Grundsatz der Unterscheidbarkeit: Ihr Name (enthält ${uniqueTerms} Unterscheidungsmerkmale) ist zu generisch. Fügen Sie einen spezifischen Fokus oder eine stärkere Bezeichnung hinzu, um sich von bereits eingetragenen Firmen zu unterscheiden. Erforderlich: ${currentOrder.requiredUniqueElements}.`,
                     firmierungstyp);
                 return;
             }
 
             // Vereinfachte Prüfung der Unterscheidbarkeit (Muss sich von simulierten Namen unterscheiden)
-            const simplifiedName = parts.filter(p => p.category !== 'legal').map(p => p.text).join(' ').toLowerCase();
+            const simplifiedName = nameWithoutLegal.map(p => p.text).join(' ').toLowerCase();
 
             const isClash = currentOrder.existingCompanies.some(existingName => {
                 const existingSimplified = existingName.replace(/\s(GmbH|e\.K\.|UG\s\(haftungsbeschränkt\)|KG)$/i, '').toLowerCase();
@@ -580,8 +636,33 @@
         // --- Init und Spielstart ---
 
         function loadNextScenario() {
-            currentScenarioIndex = (currentScenarioIndex + 1) % scenarios.length;
-            startGame();
+            // Prüfen, ob das letzte Szenario abgeschlossen wurde
+            if (currentScenarioIndex === scenarios.length - 1) {
+                endGame();
+            } else {
+                currentScenarioIndex++;
+                startGame();
+            }
+        }
+
+        function endGame() {
+            // Drop Area leeren und Buttons deaktivieren
+            dropAreaElement.innerHTML = defaultDropText;
+            validateBtn.disabled = true;
+            validateBtn.classList.replace('bg-blue-600', 'bg-gray-400');
+            validateBtn.textContent = 'Spiel beendet';
+            validateBtn.onclick = null;
+            
+            feedbackArea.classList.remove('hidden');
+            feedbackArea.className = 'p-6 rounded-lg shadow-xl bg-yellow-100 border border-yellow-500 text-yellow-800 text-center';
+            feedbackArea.innerHTML = `
+                <h3 class="text-2xl font-bold">Gratulation! Alle Aufträge abgeschlossen!</h3>
+                <p class="mt-2 text-lg">Sie haben alle ${scenarios.length} Aufträge erfolgreich gelöst und beherrschen die Grundsätze des Firmenrechts.</p>
+                <p class="mt-4 text-sm">Für weitere Übungen laden Sie das Spiel bitte neu.</p>
+            `;
+            
+            auftragTextElement.innerHTML = `<p class="text-lg text-center font-semibold">Auftragsabschluss erreicht. Das Spiel ist beendet.</p>`;
+            baukastenElement.innerHTML = '';
         }
 
         function startGame() {
