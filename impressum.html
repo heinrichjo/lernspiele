@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impressum – Lernspiele</title>
+    <!-- Lade Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Spezifische Schriftart und Basis-Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f3f9;
+        }
+        /* Definiert eine benutzerdefinierte Tailwind-Farbe für das Design */
+        .blue-800 { background-color: #004080; }
+        .text-blue-800 { color: #004080; }
+        .hover\:bg-blue-700:hover { background-color: #003060; }
+        .primary-color { color: #004080; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#004080',
+                        secondary: '#f0f4ff',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen antialiased">
+
+    <!-- Header mit Link zur Hauptseite -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-6xl mx-auto p-4 flex justify-center">
+            <a href="index.html" class="text-primary hover:text-blue-600 font-medium">
+                &larr; Zurück zu den Lernspielen
+            </a>
+        </div>
+    </header>
+
+    <!-- Hauptinhalt: Impressum -->
+    <main class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-primary/10 space-y-6">
+
+            <h1 class="text-3xl font-bold text-center primary-color mb-8">Impressum</h1>
+
+            <!-- Verantwortliche Stelle -->
+            <div class="space-y-2">
+                <h2 class="text-xl font-semibold primary-color border-b pb-1">Verantwortlich für den Inhalt (V.i.S.d.P. und Projektleitung):</h2>
+                <div class="ml-4 p-3 bg-secondary rounded-lg border border-primary/20">
+                    <p class="font-bold">Herr Johannes Heinrich</p>
+                    <p class="mt-4 font-semibold">Zugehörige Institution:</p>
+                    <p>Kaufmännische Berufsschule IV (Welserschule)</p>
+                    <p>Jesuitengasse 14</p>
+                    <p>86152 Augsburg</p>
+                    <p class="mt-4 font-semibold">Kontakt (Projektverantwortlicher):</p>
+                    <p>E-Mail: <a href="mailto:johannes.heinrich@bs4-augsburg.de" class="text-primary hover:underline">johannes.heinrich@bs4-augsburg.de</a></p>
+                </div>
+            </div>
+
+            <!-- Haftungsausschluss -->
+            <div class="space-y-2 pt-6">
+                <h2 class="text-xl font-semibold primary-color border-b pb-1">Haftungsausschluss</h2>
+                <p class="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    Dieser Webauftritt dient ausschließlich **didaktischen, nicht-kommerziellen und schulischen Zwecken** und stellt ein **schulisches Projekt** dar. Für die Inhalte extern verlinkter Spiele und Websites, die von Dritten betrieben werden, wird keine Haftung übernommen.
+                </p>
+            </div>
+            
+            <!-- Hinweis zur Vollständigkeit (optional, aber empfohlen) -->
+            <div class="mt-8 p-4 bg-yellow-50 border border-yellow-300 rounded-lg text-sm text-yellow-800">
+                <strong>HINWEIS:</strong> Für eine vollständige Rechtssicherheit, insbesondere hinsichtlich der **Angaben zur Institution (Schulträger)** und der **zuständigen Aufsichtsbehörde**, muss dieses Impressum von der Schulleitung oder einem Rechtsberater überprüft und ergänzt werden.
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-10 py-6 text-center text-gray-500 text-sm border-t border-gray-200">
+        &copy; 2024 Lernspiele BS4 Augsburg | Alle Rechte vorbehalten.
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datenschutzerklärung – Lernspiele</title>
+    <!-- Lade Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Spezifische Schriftart und Basis-Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f3f9;
+        }
+        /* Definiert eine benutzerdefinierte Tailwind-Farbe für das Design */
+        .blue-800 { background-color: #004080; }
+        .text-blue-800 { color: #004080; }
+        .hover\:bg-blue-700:hover { background-color: #003060; }
+        .primary-color { color: #004080; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#004080',
+                        secondary: '#f0f4ff',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen antialiased">
+
+    <!-- Header mit Logo (Optional, hier weggelassen für ein sauberes Dokumenten-Layout) -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-6xl mx-auto p-4 flex justify-center">
+            <!-- Link zurück zur Hauptseite -->
+            <a href="index.html" class="text-primary hover:text-blue-600 font-medium">
+                &larr; Zurück zu den Lernspielen
+            </a>
+        </div>
+    </header>
+
+    <!-- Hauptinhalt: Datenschutzerklärung -->
+    <main class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-primary/10 space-y-6">
+
+            <h1 class="text-3xl font-bold text-center primary-color mb-8">Datenschutzerklärung (Muster)</h1>
+
+            <!-- Abschnitt 1: Verantwortliche Stelle -->
+            <div class="space-y-2">
+                <h2 class="text-xl font-semibold primary-color border-b pb-1">1. Verantwortliche Stelle im Sinne der DSGVO</h2>
+                <p>Verantwortlich für die Datenverarbeitung auf dieser Website ist:</p>
+                <div class="ml-4 p-3 bg-secondary rounded-lg border border-primary/20">
+                    <p class="font-bold">Herr Johannes Heinrich</p>
+                    <p>Kaufmännische Berufsschule IV (Welserschule)</p>
+                    <p>Jesuitengasse 14</p>
+                    <p>86152 Augsburg</p>
+                    <p class="mt-2">E-Mail: <a href="mailto:johannes.heinrich@bs4-augsburg.de" class="text-primary hover:underline">johannes.heinrich@bs4-augsburg.de</a></p>
+                </div>
+            </div>
+
+            <!-- Abschnitt 2: Grundsätze -->
+            <div class="space-y-2">
+                <h2 class="text-xl font-semibold primary-color border-b pb-1">2. Grundsätze</h2>
+                <p>Diese Website dient rein schulischen Zwecken zur Bereitstellung von Lernspielen (Prototypen). Es werden von uns **keine aktiven personenbezogenen Daten** (wie Namen, Adressen oder ähnliches) erhoben, gespeichert oder verarbeitet.</p>
+            </div>
+
+            <!-- Abschnitt 3: Datenverarbeitung durch externe Dienste -->
+            <div class="space-y-4">
+                <h2 class="text-xl font-semibold primary-color border-b pb-1">3. Datenverarbeitung durch externe Dienste</h2>
+                <p>Beim Besuch unserer Website werden aufgrund der technischen Einbindung externer Inhalte oder Links Daten an Dritte übermittelt:</p>
+
+                <!-- Unterabschnitt a) Tailwind CSS -->
+                <div class="ml-4 space-y-3 p-4 border-l-4 border-primary/50 bg-gray-50 rounded-md">
+                    <h3 class="text-lg font-medium primary-color">a) Tailwind CSS (CDN-Nutzung)</h3>
+                    <p>Zur optimalen Darstellung der Website-Elemente und Stylesheets wird die Bibliothek Tailwind CSS über ein Content Delivery Network (CDN) geladen.</p>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li><strong>Verarbeitete Daten:</strong> Hierbei wird Ihre IP-Adresse an den Betreiber des CDN übermittelt, damit die Stylesheets an Ihren Browser gesendet werden können.</li>
+                        <li><strong>Zweck:</strong> Bereitstellung der notwendigen Design-Elemente für eine funktionale Website.</li>
+                        <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der technischen Funktionsfähigkeit und der Optimierung der Darstellung).</li>
+                    </ul>
+                </div>
+
+                <!-- Unterabschnitt b) Externe Bildquelle -->
+                <div class="ml-4 space-y-3 p-4 border-l-4 border-primary/50 bg-gray-50 rounded-md">
+                    <h3 class="text-lg font-medium primary-color">b) Externe Bildquelle (Logo)</h3>
+                    <p>Das Logo wird von der externen Website der Welserschule (<code class="font-mono text-sm">www.welserschule.de</code>) geladen.</p>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li><strong>Verarbeitete Daten:</strong> Ihre IP-Adresse wird an den Server der Welserschule übermittelt, um das Bild zu laden.</li>
+                    </ul>
+                </div>
+
+                <!-- Unterabschnitt c) GitHub Pages -->
+                <div class="ml-4 space-y-3 p-4 border-l-4 border-primary/50 bg-gray-50 rounded-md">
+                    <h3 class="text-lg font-medium primary-color">c) Verlinkte Lernspiele (Hosting über GitHub Pages)</h3>
+                    <p>Alle "Spiel starten"-Links auf dieser Website führen zu den auf **GitHub Pages** gehosteten Lernspielen (z. B. auf der Domain <code class="font-mono text-sm">https://heinrichjo.github.io/lernspiele/...</code>).</p>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li><strong>Verarbeitete Daten beim Klick:</strong> Beim Klick auf den Link verlassen Sie unseren Verantwortungsbereich. Die Übermittlung von Daten (insbesondere Ihrer IP-Adresse) an die Server von GitHub (ein Dienst von Microsoft) erfolgt erst, wenn Sie das jeweilige Spiel aufrufen.</li>
+                        <li><strong>Zweck:</strong> Bereitstellung der Spiele-Prototypen auf einer stabilen Hosting-Plattform.</li>
+                        <li><strong>Hinweis:</strong> Sobald Sie die externe Seite aufgerufen haben, gelten die Datenschutzbestimmungen von GitHub.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Abschnitt 4: Rechte -->
+            <div class="space-y-2">
+                <h2 class="text-xl font-semibold primary-color border-b pb-1">4. Ihre Rechte (Betroffenenrechte)</h2>
+                <p>Sie haben jederzeit das Recht, unentgeltlich Auskunft über Herkunft, Empfänger und Zweck Ihrer gespeicherten personenbezogenen Daten zu erhalten. Sie haben außerdem ein Recht auf Berichtigung, Sperrung oder Löschung dieser Daten. Bei Fragen wenden Sie sich bitte an die oben genannte E-Mail-Adresse.</p>
+            </div>
+
+            <!-- Wichtiger Hinweis -->
+            <div class="mt-8 p-4 bg-red-50 border border-red-300 rounded-lg text-sm text-red-800">
+                <strong>WICHTIGER HINWEIS:</strong> Dies ist ein Mustertext. Eine professionelle, rechtssichere Datenschutzerklärung ist bei einem dauerhaften öffentlichen Betrieb der Website erforderlich und muss von einem Datenschutzbeauftragten oder einem Fachanwalt geprüft werden.
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-10 py-6 text-center text-gray-500 text-sm border-t border-gray-200">
+        &copy; 2024 Lernspiele BS4 Augsburg | Alle Rechte vorbehalten.
+    </footer>
+
+</body>
+</html>
