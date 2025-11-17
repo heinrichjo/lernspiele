@@ -211,6 +211,7 @@
                 ],
                 legalFormRequired: 'GmbH',
                 mustInclude: ['Müller', 'Schreinerei'],
+                businessRequired: ['Schreinerei'], // Neu: Erfordert diese Branche
                 misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
                 existingCompanies: ['Müller Schreinerei GmbH', 'Öko-Möbel Huber e.K.'], // Sollte eine Unterscheidbarkeit erzwingen
                 requiredUniqueElements: 3, // Muss mindestens 3 Unterscheidungsmerkmale haben (z.B. Name, Branche, Fokus)
@@ -226,6 +227,7 @@
                 ],
                 legalFormRequired: 'UG (haftungsbeschränkt)',
                 mustInclude: ['Schmidt', 'Bäckerei'],
+                businessRequired: ['Bäckerei'], // Neu
                 misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
                 existingCompanies: ['Schmidt Bäckerei GmbH', 'Digital-Bäcker Schmidt e.K.'],
                 requiredUniqueElements: 3,
@@ -241,6 +243,7 @@
                 ],
                 legalFormRequired: 'e.K.',
                 mustInclude: ['IT-Beratung', 'Digital'],
+                businessRequired: ['IT-Beratung'], // Neu
                 misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
                 existingCompanies: ['Digital IT-Service GmbH', 'Innovative IT-Beratung e.K.'],
                 requiredUniqueElements: 2, 
@@ -256,6 +259,7 @@
                 ],
                 legalFormRequired: 'KG',
                 mustInclude: ['Huber', 'Bäckerei'],
+                businessRequired: ['Bäckerei'], // Neu
                 misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
                 existingCompanies: ['Huber Bäckerei GmbH', 'Huber KG'],
                 requiredUniqueElements: 2,
@@ -271,6 +275,7 @@
                 ],
                 legalFormRequired: 'GmbH',
                 mustInclude: ['Innovative', 'Service'],
+                businessRequired: ['Service'], // Neu
                 misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
                 existingCompanies: ['Innovative Service UG (haftungsbeschränkt)', 'Müller Service GmbH'],
                 requiredUniqueElements: 3,
@@ -403,7 +408,7 @@
                     <strong>Ziel:</strong> Erstellen Sie einen Firmennamen, der folgende Grundsätze beachtet:
                     <ul class="list-disc ml-4 mt-1">
                         <li><strong>Zwangszusatz (Rechtsform):</strong> Muss enthalten sein.</li>
-                        <li><strong>Firmenwahrheit:</strong> Darf nicht irreführend sein.</li>
+                        <li><strong>Firmenwahrheit/Klarheit:</strong> Darf nicht irreführend sein und muss den Geschäftszweck eindeutig abbilden.</li>
                         <li><strong>Firmenunterscheidbarkeit:</strong> Muss sich von anderen abheben.</li>
                     </ul>
                 </p>
@@ -490,7 +495,7 @@
             if (nameParts.length === 0) return 'Nicht definiert';
 
             let hasPersonalName = false; // Müller, Schmidt, Huber
-            let hasSubjectTerm = false; // Schreinerei, Öko, Digital, Handwerk, Service, Exklusiv (focus/business)
+            let hasSubjectTerm = false; // Schreinerei, Bäckerei, IT-Beratung, Service (business/focus category)
             let hasFantasyTerm = false; // Innovative (n4)
 
             nameParts.forEach(part => {
@@ -501,10 +506,13 @@
                 
                 // Wir definieren alle focus und business Begriffe als Sachbezug/SubjectTerm
                 if (part.category === 'business' || part.category === 'focus') {
-                    hasSubjectTerm = true;
+                    // Ausschluss von 'Innovative' (n4) da es separat als Fantasie gewertet wird
+                    if (part.id !== 'n4') {
+                        hasSubjectTerm = true;
+                    }
                 } 
                 
-                // 'Innovative' (n4) wird als Fantasiebestandteil behandelt (da es nicht direkt Name oder Zweck ist)
+                // 'Innovative' (n4) wird als Fantasiebestandteil behandelt 
                 if (part.id === 'n4') { 
                     hasFantasyTerm = true;
                 }
@@ -547,14 +555,14 @@
 
         function displayFeedback(type, message, firmierungstyp) {
             feedbackArea.classList.remove('hidden', 'bg-red-100', 'border-red-500', 'bg-green-100', 'border-green-500');
-            const typeText = type === 'success' ? 'Erfolg! Name ist geeignet.' : 'Fehler: Name ist ungeeignet.';
+            const typeText = type === 'success' ? 'Auftrag erfolgreich abgeschlossen! Name ist geeignet.' : 'Fehler: Name ist ungeeignet.';
             
-            let messageHtml = `<p class="font-bold">${typeText}</p>`;
-            messageHtml += `<p>${message}</p>`;
+            let messageHtml = `<p class="text-xl font-bold">${typeText}</p>`;
+            messageHtml += `<p class="mt-2">${message}</p>`;
             
-            // Füge den Firmierungstyp hinzu, außer wenn er nicht definiert ist
+            // Füge den Firmierungstyp prominent hinzu
             if (firmierungstyp && firmierungstyp !== 'Nicht definiert') {
-                 messageHtml += `<p class="mt-2 text-sm italic">Ihr Entwurf ist eine <strong>${firmierungstyp}</strong>.</p>`;
+                 messageHtml += `<p class="mt-4 text-base italic p-2 bg-white rounded-lg shadow-sm">Identifizierter Firmierungstyp: <strong>${firmierungstyp}</strong>.</p>`;
             }
 
             if (type === 'success') {
@@ -592,8 +600,37 @@
                 return;
             }
             
-            // 3. Check: Unterscheidbarkeit (Klarheit und Eindeutigkeit)
+            // 3. NEU: Check: Firmenklarheit (Relevanter Geschäftszweck)
+            const businessParts = parts.filter(p => p.category === 'business');
+            const allowedBusiness = currentOrder.businessRequired || [];
+            
+            // Finde alle verwendeten Business-Begriffe, die NICHT erlaubt sind
+            const conflictingBusiness = businessParts.filter(p => !allowedBusiness.includes(p.text));
+
+            // Finde heraus, ob die benötigte Branche überhaupt enthalten ist
+            const requiredBusinessMissing = allowedBusiness.some(req => !businessParts.some(p => p.text === req));
+
+
+            if (conflictingBusiness.length > 0) {
+                 displayFeedback('error', 
+                    `Verstoß gegen den Grundsatz der Firmenklarheit: Sie verwenden irrelevante Geschäftsbezeichnungen (${conflictingBusiness.map(p => p.text).join(', ')}). Das Unternehmen fokussiert sich ausschließlich auf ${allowedBusiness.join(' oder ')}.`,
+                    firmierungstyp);
+                return;
+            }
+            
+            if (requiredBusinessMissing) {
+                displayFeedback('error', 
+                    `Verstoß gegen den Grundsatz der Firmenklarheit: Die im Auftrag geforderte Hauptbranche (${allowedBusiness.join(' oder ')}) fehlt komplett oder ist nicht klar erkennbar.`,
+                    firmierungstyp);
+                return;
+            }
+
+
+            // 4. Check: Unterscheidbarkeit (Klarheit und Eindeutigkeit)
+            
+            // Prüfen, ob die required Elements (Personenname, Fokus etc.) enthalten sind
             const requiredElementsPresent = currentOrder.mustInclude.every(req => parts.some(p => p.text.includes(req)));
+            
             const nameWithoutLegal = parts.filter(p => p.category !== 'legal');
             
             if (nameWithoutLegal.length < 1) {
@@ -629,7 +666,7 @@
 
             // --- Wenn alle Prüfungen bestanden sind ---
             displayFeedback('success', 
-                `Der Firmenname <strong>"${nameString}"</strong> erfüllt alle Grundsätze des Firmenrechts: Klarheit, Wahrheit und Unterscheidbarkeit sind gewährleistet.`, 
+                `Der Firmenname <strong>"${nameString}"</strong> erfüllt alle Grundsätze des Firmenrechts: Klarheit, Wahrheit und Unterscheidbarkeit sind gewährleistet. Der Name kann beim Handelsregister eingereicht werden!`, 
                 firmierungstyp);
         }
 
