@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speditionsrecht-Lernspiel: Vergütung & Verzug</title>
+    <!-- Tailwind CSS laden für responsives, modernes Design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Styles für das Game, inkl. Inter-Font und Barrierefreiheit */
+        :root {
+            --primary: #004d99; /* Dunkles Blau (Corporate/Spedition) */
+            --secondary: #ffc300; /* Akzent (Gelb/Orange) */
+            --bg-light: #f7f9fb;
+            --bg-dark: #e1e7ec;
+        }
+
+        /* Setze Inter-Font als Standard (Tailwind default) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #1f2937;
+        }
+
+        .game-card {
+            background-color: white;
+            border: 1px solid var(--bg-dark);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            border-radius: 0.75rem;
+        }
+
+        /* Stil für Hauptbuttons */
+        .primary-button {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .primary-button:hover:not(:disabled) {
+            background-color: #003366;
+        }
+        .primary-button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        .primary-button:focus {
+            outline: 2px solid var(--secondary);
+            outline-offset: 2px;
+        }
+        .primary-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Stil für Zweitbuttons/Modulwahl */
+        .secondary-button {
+            background-color: var(--bg-dark);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .secondary-button.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Spezielle Stile für das Pfandrecht-Modul (Swipe-Karten) */
+        .swipe-card {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            height: 400px;
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            touch-action: none; /* Wichtig für Touch-Gesten */
+        }
+        .swipe-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            padding: 0.5rem 1rem;
+            font-size: 2rem;
+            font-weight: 900;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            border-radius: 0.5rem;
+        }
+        .swipe-feedback.right {
+            color: #10b981; /* Grün */
+            border: 4px solid #10b981;
+            transform: translate(-50%, -50%) rotate(-15deg);
+        }
+        .swipe-feedback.left {
+            color: #ef4444; /* Rot */
+            border: 4px solid #ef4444;
+            transform: translate(-50%, -50%) rotate(15deg);
+        }
+
+        /* Stil für die Verjährungs-Timeline */
+        .timeline-bar {
+            height: 8px;
+            background-color: var(--bg-dark);
+            border-radius: 4px;
+            margin: 1rem 0;
+            position: relative;
+        }
+        .timeline-marker {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%) translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .timeline-marker-label {
+            position: absolute;
+            top: -2.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            width: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Tooltip Style (Helfer) */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 300px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 20;
+            bottom: 125%; /* Platz über dem Element */
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip-container:hover .tooltip-text, .tooltip-container:focus-within .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Ergebnis-Feedback Box */
+        .feedback-box {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        .feedback-box.correct {
+            background-color: #d1fae5; /* Green 100 */
+            border: 1px solid #10b981; /* Green 500 */
+            color: #065f46; /* Green 800 */
+        }
+        .feedback-box.partial {
+            background-color: #fffbeb; /* Yellow 100 */
+            border: 1px solid #f59e0b; /* Yellow 500 */
+            color: #92400e; /* Yellow 800 */
+        }
+        .feedback-box.wrong {
+            background-color: #fee2e2; /* Red 100 */
+            border: 1px solid #ef4444; /* Red 500 */
+            color: #991b1b; /* Red 800 */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <!-- Header und Disclaimer -->
+    <header class="mb-6 pb-4 border-b border-gray-300">
+        <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
+            <svg class="w-8 h-8 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM6.5 9A1.5 1.5 0 018 7.5h4A1.5 1.5 0 0113.5 9v2A1.5 1.5 0 0112 12.5H8A1.5 1.5 0 016.5 11V9z"></path></svg>
+            Speditionsrecht-Training: Vergütung & Verzug
+        </h1>
+        <p class="text-sm text-red-600 mt-1 font-semibold italic">
+            Wichtiger Hinweis: Rechtliche Inhalte zu Übungszwecken – keine Rechtsberatung.
+        </p>
+    </header>
+
+    <!-- Fortschritts- und Punkteanzeige -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 p-4 game-card">
+        <div class="w-full md:w-1/3 mb-4 md:mb-0">
+            <div class="text-sm font-semibold mb-1">Gesamtfortschritt (<span id="progress-percent">0</span>%)</div>
+            <div class="h-2 bg-gray-200 rounded-full">
+                <div id="progress-bar" class="h-2 bg-yellow-500 rounded-full transition-all duration-500" style="width: 0%;"></div>
+            </div>
+        </div>
+        <div class="flex space-x-6">
+            <div class="text-lg font-bold text-gray-700">Punkte: <span id="current-points" class="text-primary">0</span></div>
+            <div class="text-lg font-bold text-gray-700">Badges: <span id="current-badges" class="text-yellow-600">0</span></div>
+        </div>
+    </div>
+
+    <!-- Modul-Navigation -->
+    <div id="module-navigation" class="flex flex-wrap gap-3 mb-8 justify-center">
+        <!-- Buttons werden hier von JS generiert -->
+    </div>
+
+    <!-- Haupt-Spielbereich -->
+    <main id="game-container" class="game-card p-6 md:p-8 min-h-[500px]">
+        <!-- Modul-Content wird hier geladen -->
+    </main>
+    
+    <!-- Modale für Feedback und Helfer (Tooltips) -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+        <div id="modal-content" class="bg-white p-6 rounded-lg max-w-lg w-full shadow-2xl">
+            <h3 id="modal-title" class="text-xl font-bold mb-4 text-primary"></h3>
+            <div id="modal-body" class="mb-6 text-gray-700"></div>
+            <button onclick="closeModal()" class="primary-button w-full">Schließen</button>
+        </div>
+    </div>
+
+    <!-- NEUE FUSSZEILE -->
+    <footer class="mt-8 pt-4 border-t border-gray-300 text-center text-sm text-gray-600">
+        <div class="mb-2">
+            <!-- Logo mit Fallback -->
+            <img 
+                src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                alt="Logo Welserschule" 
+                class="mx-auto h-12 mb-2" 
+                onerror="this.onerror=null; this.src='https://placehold.co/150x50/004d99/ffffff?text=Logo+BS4'">
+        </div>
+        <p>Erstellt von Johannes Heinrich</p>
+        <p>— mit großer Unterstützung von Copilot und Gemini — 2025</p>
+    </footer>
+
+    <!-- Skripte -->
+    <script>
+        // Setze Tailwind-Konfiguration für Primary/Secondary Farben
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#004d99',
+                        secondary: '#ffc300',
+                    }
+                }
+            }
+        }
+
+        // --- Globale Spiel-Variablen ---
+        const gameContainer = document.getElementById('game-container');
+        const modules = {
+            'workflow': { name: '1. Fälligkeit & Ablauf', func: initWorkflow, done: false, points: 0, total: 100, badge: 'Ablauf-Ass' },
+            'interest': { name: '2. Zins-Werkstatt', func: initInterestWorkshop, done: false, points: 0, total: 200, badge: 'Zins-Meister:in' },
+            'lien': { name: '3. Pfandrecht-Check', func: initLienCheck, done: false, points: 0, total: 150, badge: 'Pfand-Profi' },
+            'statute': { name: '4. Verjährungs-Timeline', func: initStatuteTimeline, done: false, total: 100, done: false, badge: 'Fristen-Fuchs' },
+            'whopays': { name: '5. Kurzfall: Wer zahlt?', func: initWhoPaysSimulation, done: false, points: 0, total: 150, badge: 'ADSp-Kenner' },
+            'report': { name: '6. Abschluss-Report', func: initReport, done: false, points: 0, total: 0, badge: 'Abschluss-Experte' }
+        };
+        let currentModuleKey = 'workflow';
+        let points = 0;
+        let badges = [];
+        const TOTAL_POINTS = Object.values(modules).reduce((sum, mod) => sum + mod.total, 0);
+
+        // Basiszinssatz (parametrisierbar, Stand 11/2025)
+        const BASE_INTEREST_RATE = 1.27; // in %
+
+        // --- Hilfsfunktionen für Speichern/Laden und UI ---
+
+        /**
+         * Zeigt ein modales Fenster an.
+         * @param {string} title - Titel des Modals.
+         * @param {string} bodyHtml - HTML-Inhalt des Modals.
+         * @param {string} type - Typ des Modals ('helper' oder 'feedback').
+         */
+        function showModal(title, bodyHtml, type = 'feedback') {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = bodyHtml;
+            document.getElementById('modal-container').classList.remove('hidden');
+            document.getElementById('modal-container').classList.add('flex');
+            
+            // Setze Fokus auf Schließen-Button für Barrierefreiheit
+            document.getElementById('modal-content').querySelector('button').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').classList.add('hidden');
+            document.getElementById('modal-container').classList.remove('flex');
+        }
+
+        /**
+         * Zeigt ein kurzes Helper-Tooltip mit Rechtsinformation.
+         * @param {string} law - Gesetzesparagraph (z.B. "§ 286 BGB").
+         * @param {string} description - Kurze Erklärung in Alltagssprache.
+         */
+        function showHelper(law, description) {
+            showModal(`Helfer-Tool: ${law}`, `<p class="text-base">${description}</p>`, 'helper');
+        }
+
+        /**
+         * Speichert den aktuellen Spielfortschritt in localStorage.
+         */
+        function saveProgress() {
+            const data = {
+                points: points,
+                badges: badges,
+                modules: Object.fromEntries(Object.entries(modules).map(([key, mod]) => [key, { done: mod.done, points: mod.points }])),
+                baseRate: BASE_INTEREST_RATE
+            };
+            localStorage.setItem('speditionsspiel_progress', JSON.stringify(data));
+            updateUI();
+        }
+
+        /**
+         * Lädt den Spielfortschritt aus localStorage.
+         */
+        function loadProgress() {
+            const savedData = localStorage.getItem('speditionsspiel_progress');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                points = data.points || 0;
+                badges = data.badges || [];
+                
+                // Fortschritt in Modul-Objekt übernehmen
+                if (data.modules) {
+                    Object.entries(data.modules).forEach(([key, savedMod]) => {
+                        if (modules[key]) {
+                            modules[key].done = savedMod.done;
+                            modules[key].points = savedMod.points;
+                        }
+                    });
+                }
+                updateUI();
+            }
+        }
+
+        /**
+         * Aktualisiert die Anzeige von Punkten, Badges und Fortschrittsbalken.
+         */
+        function updateUI() {
+            const currentTotalPoints = Object.values(modules).reduce((sum, mod) => sum + mod.points, 0);
+            
+            document.getElementById('current-points').textContent = currentTotalPoints;
+            document.getElementById('current-badges').textContent = badges.length;
+            
+            const progress = Object.values(modules).filter(m => m.done).length;
+            const totalModules = Object.keys(modules).length - 1; // Ohne Report
+            const progressPercent = Math.round((progress / totalModules) * 100);
+            
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            document.getElementById('progress-percent').textContent = progressPercent;
+
+            updateNavigation();
+        }
+
+        /**
+         * Aktualisiert die Navigationsbuttons.
+         */
+        function updateNavigation() {
+            const nav = document.getElementById('module-navigation');
+            nav.innerHTML = '';
+            Object.entries(modules).forEach(([key, mod]) => {
+                const button = document.createElement('button');
+                button.textContent = mod.name + (mod.done ? ' ✅' : '');
+                button.onclick = () => switchModule(key);
+                button.classList.add('secondary-button', 'text-sm', 'md:text-base');
+                if (key === currentModuleKey) {
+                    button.classList.add('active');
+                }
+                nav.appendChild(button);
+            });
+        }
+
+        /**
+         * Wechselt das aktuell angezeigte Modul.
+         * @param {string} key - Schlüssel des zu ladenden Moduls.
+         */
+        function switchModule(key) {
+            currentModuleKey = key;
+            modules[key].func(); // Führt die Initialisierungsfunktion des Moduls aus
+            updateNavigation();
+            saveProgress();
+        }
+
+        /**
+         * Vergibt Punkte und speichert den Fortschritt.
+         * @param {number} pointsToAdd - Hinzuzufügende Punkte.
+         * @param {string} message - Feedback-Nachricht.
+         * @param {boolean} isCorrect - Ob die Antwort richtig war.
+         */
+        function giveFeedbackAndScore(pointsToAdd, message, isCorrect = true) {
+            const module = modules[currentModuleKey];
+            module.points += pointsToAdd;
+            points = Object.values(modules).reduce((sum, mod) => sum + mod.points, 0); // Gesamtpunkte aktualisieren
+
+            const type = isCorrect ? (pointsToAdd > 0 ? 'correct' : 'partial') : 'wrong';
+            const statusText = isCorrect ? (pointsToAdd > 0 ? 'Korrekt!' : 'Teilweise Korrekt.') : 'Falsch.';
+            
+            const feedbackHTML = `
+                <div class="feedback-box ${type}">
+                    <h4 class="font-bold text-lg mb-2">${statusText} (+${pointsToAdd} Pkt.)</h4>
+                    <p>${message}</p>
+                </div>
+            `;
+            return feedbackHTML;
+        }
+
+        /**
+         * Prüft, ob ein Badge verdient wurde.
+         * @param {string} key - Modulschlüssel.
+         */
+        function checkBadge(key) {
+            const mod = modules[key];
+            if (mod.points >= mod.total * 0.8 && !badges.includes(mod.badge)) {
+                badges.push(mod.badge);
+                showModal('Glückwunsch!', `Sie haben das Badge "${mod.badge}" freigeschaltet!`, 'badge');
+            }
+        }
+
+        // --- Modul 1: Workflow und Fälligkeit (§ 456 HGB) ---
+
+        let workflowCase = {
+            id: 1,
+            scenario: 'Ihr Kunde beauftragt Sie mit dem Transport von Bauteilen. Die Übergabe an Ihren Hauptfrachtführer erfolgt am 03.02.2025. Sie schicken die Rechnung am 05.02.2025 per E-Mail an den Kunden.',
+            questions: [
+                {
+                    text: 'Wann ist die Vergütung gemäß § 456 HGB fällig?',
+                    type: 'date',
+                    correctAnswer: '2025-02-03', // Fälligkeit bei Übergabe an Frachtführer
+                    points: 50,
+                    feedback: (input) => {
+                        const date = new Date(input).toLocaleDateString('de-DE');
+                        const isCorrect = input === '2025-02-03';
+                        if (isCorrect) {
+                            return giveFeedbackAndScore(50, `Korrekt! Die Vergütung wird nach § 456 HGB fällig, sobald das Gut dem Frachtführer übergeben wurde, d.h. am ${date}. Der Rechnungsversand hat keinen Einfluss auf die Fälligkeit.`, true);
+                        } else {
+                            return giveFeedbackAndScore(0, `Falsch. Fälligkeit tritt nach § 456 HGB bereits bei Übergabe des Gutes an den Frachtführer ein (03.02.2025), nicht erst bei Rechnungszugang (${date}).`, false);
+                        }
+                    }
+                },
+                {
+                    text: 'Der Kunde ist ein anderes B2B-Unternehmen (kein Verbraucher). Ab wann tritt der Zahlungsverzug ein, wenn keine Zahlung erfolgt ist? (Hinweis: Rechnungszugang am 05.02.2025)',
+                    type: 'date',
+                    correctAnswer: '2025-03-07', // 30 Tage nach Rechnungszugang (05.02. + 30 Tage = 07.03.)
+                    points: 50,
+                    feedback: (input) => {
+                        const date = new Date(input).toLocaleDateString('de-DE');
+                        const isCorrect = input === '2025-03-07';
+                        if (isCorrect) {
+                            return giveFeedbackAndScore(50, `Korrekt! Gemäß § 286 Abs. 3 BGB tritt bei B2B-Geschäften der Verzug spätestens 30 Tage nach Fälligkeit und Zugang der Rechnung ein. In diesem Fall am 07.03.2025.`, true);
+                        } else {
+                            return giveFeedbackAndScore(0, `Falsch. Der Verzug tritt bei B2B-Geschäften spätestens 30 Tage nach Rechnungszugang (05.02.2025) ein, also am 07.03.2025. Beachten Sie § 286 Abs. 3 BGB.`, false);
+                        }
+                    }
+                }
+            ],
+            currentStep: 0
+        };
+
+        function initWorkflow() {
+            modules.workflow.done = false; // Zurücksetzen für Replay
+            workflowCase.currentStep = 0;
+            renderWorkflowStep();
+        }
+
+        function renderWorkflowStep() {
+            const mod = modules.workflow;
+            const currentQ = workflowCase.questions[workflowCase.currentStep];
+            
+            if (!currentQ) {
+                mod.done = true;
+                checkBadge('workflow');
+                switchModule('interest'); // Automatisch zum nächsten Modul
+                return;
+            }
+
+            gameContainer.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-primary">Modul 1: Fälligkeit & Verzug (§ 456 HGB, § 286 BGB)</h2>
+                <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-primary mb-6">
+                    <h3 class="font-semibold text-lg mb-2">Szenario:</h3>
+                    <p class="text-gray-700">${workflowCase.scenario}</p>
+                </div>
+
+                <div class="mb-4 tooltip-container">
+                    <span class="text-lg font-semibold">${currentQ.text}</span>
+                    <button class="ml-2 text-primary font-bold hover:text-secondary focus:ring" onclick="showHelper('§ 456 HGB', 'Die Vergütung für den Spediteur wird fällig, sobald das Gut dem Frachtführer oder Verfrachter zur Beförderung übergeben wurde. Das ist oft vor dem Rechnungsversand!')" aria-label="Hilfe zu § 456 HGB">
+                        [Helfer: § 456 HGB]
+                    </button>
+                    ${workflowCase.currentStep === 1 ? `<button class="ml-2 text-primary font-bold hover:text-secondary focus:ring" onclick="showHelper('§ 286 BGB', 'Der Verzug tritt nach einer Mahnung, durch kalendarische Frist oder spätestens 30 Tage nach Fälligkeit und Rechnungszugang ein. Bei Verbrauchern muss dies besonders hingewiesen werden (Abs. 3).')" aria-label="Hilfe zu § 286 BGB">
+                        [Helfer: § 286 BGB]
+                    </button>` : ''}
+                </div>
+                
+                <input type="date" id="date-input" class="p-3 border border-gray-300 rounded-lg text-lg w-full md:w-1/3 mb-4 focus:border-primary focus:ring focus:ring-primary/50">
+                
+                <div id="workflow-feedback"></div>
+
+                <button id="submit-workflow" class="primary-button" onclick="checkWorkflowStep()">Prüfen</button>
+                <button id="next-workflow" class="primary-button hidden ml-4" onclick="nextWorkflowStep()">Weiter</button>
+            `;
+            document.getElementById('date-input').focus();
+        }
+
+        function checkWorkflowStep() {
+            const input = document.getElementById('date-input').value;
+            const currentQ = workflowCase.questions[workflowCase.currentStep];
+            const feedbackDiv = document.getElementById('workflow-feedback');
+
+            if (!input) {
+                feedbackDiv.innerHTML = giveFeedbackAndScore(0, 'Bitte wählen Sie ein Datum aus.', false);
+                return;
+            }
+
+            const pointsBefore = modules.workflow.points;
+            feedbackDiv.innerHTML = currentQ.feedback(input);
+            const pointsAfter = modules.workflow.points;
+            
+            if (pointsAfter > pointsBefore) {
+                document.getElementById('submit-workflow').classList.add('hidden');
+                document.getElementById('next-workflow').classList.remove('hidden');
+                document.getElementById('date-input').disabled = true;
+            }
+        }
+
+        function nextWorkflowStep() {
+            workflowCase.currentStep++;
+            renderWorkflowStep();
+        }
+
+
+        // --- Modul 2: Zins-Werkstatt (§ 288 BGB) ---
+
+        const interestCase = {
+            capital: 8000, // Netto 8.000 €
+            rate_pp: 9,    // 9 pp bei B2B
+            startDate: '2025-03-15',
+            endDate: '2025-04-28',
+            targetDays: 43, // 30-15=15 Tage im März + 28 Tage im April. (15+28=43). Richtig nach 30/360
+            targetInterest: 8000 * (BASE_INTEREST_RATE + 9) * 43 / (360 * 100) // 8000 * 10.27 * 43 / 36000 = 98.24355... €
+        };
+
+        /**
+         * Berechnet die Zinstage nach der kaufmännischen 30/360 Methode.
+         * Regeln: Monat = 30 Tage. Jahr = 360 Tage. 31. nie zählen.
+         * @param {string} date1 - Startdatum (yyyy-mm-dd).
+         * @param {string} date2 - Enddatum (yyyy-mm-dd).
+         * @returns {number} - Anzahl der Zinstage.
+         */
+        function calculateDays30_360(date1, date2) {
+            const d1 = new Date(date1);
+            const d2 = new Date(date2);
+
+            let Y1 = d1.getFullYear();
+            let M1 = d1.getMonth() + 1; // 1-basiert
+            let D1 = d1.getDate();
+            let Y2 = d2.getFullYear();
+            let M2 = d2.getMonth() + 1;
+            let D2 = d2.getDate();
+
+            // Regel: 31. nie zählen (wird zu 30)
+            if (D1 === 31) D1 = 30;
+            if (D2 === 31) D2 = 30;
+
+            // t = 360 * ΔY + 30 * ΔM + ΔD
+            const days = 360 * (Y2 - Y1) + 30 * (M2 - M1) + (D2 - D1);
+
+            return days;
+        }
+
+        function initInterestWorkshop() {
+            modules.interest.done = false;
+            const currentRate = (BASE_INTEREST_RATE + interestCase.rate_pp).toFixed(2);
+            
+            gameContainer.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-primary">Modul 2: Zins-Werkstatt (§ 288 BGB)</h2>
+                <p class="mb-4 text-gray-700">Berechnen Sie die Verzugszinsen für den folgenden B2B-Fall:</p>
+
+                <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-yellow-500 mb-6">
+                    <h3 class="font-semibold text-lg mb-2">Basis-Daten</h3>
+                    <p><strong>Kapital (K):</strong> Netto € ${interestCase.capital.toLocaleString('de-DE')} </p>
+                    <p><strong>Verzugs-Zeitraum:</strong> ${new Date(interestCase.startDate).toLocaleDateString('de-DE')} bis ${new Date(interestCase.endDate).toLocaleDateString('de-DE')} </p>
+                    <p><strong>Basiszinssatz (aktuell):</strong> <input type="number" id="base-rate-input" value="${BASE_INTEREST_RATE.toFixed(2)}" step="0.01" class="w-20 p-1 border rounded" onchange="BASE_INTEREST_RATE = parseFloat(this.value) || 1.27"> %</p>
+                    <p><strong>Anwendbarer Zinssatz B2B:</strong> Basiszinssatz + 9 pp = <span id="current-rate-display">${currentRate}</span> %</p>
+                    <p class="mt-2 text-sm italic">Formel: Z = K $\\cdot$ p $\\cdot$ t / (360 $\\cdot$ 100)</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="game-card p-4">
+                        <h4 class="font-semibold mb-2">Schritt 1: Zinstage (t) berechnen (30/360)</h4>
+                        <p class="mb-2 text-sm text-gray-600">Verwenden Sie die kaufmännische Methode (30/360): 31. wird nicht gezählt, erster Tag zählt nicht, letzter zählt.</p>
+                        <label for="input-days" class="block mb-1">Ihre berechneten Zinstage (t):</label>
+                        <input type="number" id="input-days" class="p-2 border rounded w-full md:w-1/4" placeholder="Tage">
+                        <button class="primary-button mt-2" onclick="checkDays()">Tage prüfen</button>
+                        <div id="days-feedback" class="mt-2"></div>
+                        <div id="days-calculation-explanation" class="mt-3 text-sm italic text-gray-600 hidden"></div>
+                    </div>
+
+                    <div class="game-card p-4">
+                        <h4 class="font-semibold mb-2">Schritt 2: Zinsen (Z) berechnen (in €)</h4>
+                        <label for="input-interest" class="block mb-1">Ihre berechneten Zinsen (Z in €):</label>
+                        <input type="number" id="input-interest" step="0.01" class="p-2 border rounded w-full md:w-1/4" placeholder="Betrag in €" disabled>
+                        <button id="check-interest-btn" class="primary-button mt-2" onclick="checkInterest()" disabled>Zinsen prüfen</button>
+                        <div id="interest-feedback" class="mt-2"></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('base-rate-input').oninput = () => {
+                document.getElementById('current-rate-display').textContent = (parseFloat(document.getElementById('base-rate-input').value) + interestCase.rate_pp).toFixed(2);
+            };
+        }
+
+        function checkDays() {
+            const input = parseInt(document.getElementById('input-days').value);
+            const feedbackDiv = document.getElementById('days-feedback');
+            const explanationDiv = document.getElementById('days-calculation-explanation');
+            const targetDays = calculateDays30_360(interestCase.startDate, interestCase.endDate);
+            let score = 0;
+            let feedbackText = '';
+            
+            const [Y1, M1, D1] = interestCase.startDate.split('-').map(Number);
+            const [Y2, M2, D2] = interestCase.endDate.split('-').map(Number);
+            
+            const D1_eff = (D1 === 31) ? 30 : D1;
+            const D2_eff = (D2 === 31) ? 30 : D2;
+
+            explanationDiv.innerHTML = `
+                <p><strong>Berechnung der Zinstage (t) nach 30/360:</strong></p>
+                <ul class="list-disc ml-4">
+                    <li>Start: ${D1}.0${M1}. / Ende: ${D2}.0${M2}.</li>
+                    <li>Tageskorrektur (31. wird zu 30.): ${D1}. $\\to$ ${D1_eff} / ${D2}. $\\to$ ${D2_eff}</li>
+                    <li>Jahre: (${Y2} - ${Y1}) $\\cdot$ 360 = 0</li>
+                    <li>Monate: (${M2} - ${M1}) $\\cdot$ 30 = (${M2-M1}) $\\cdot$ 30 = ${30 * (M2 - M1)}</li>
+                    <li>Tage: (${D2_eff} - ${D1_eff}) = ${D2_eff - D1_eff}</li>
+                    <li>Gesamt: $0 + ${30 * (M2 - M1)} + ${D2_eff - D1_eff}$ = <strong>${targetDays} Tage</strong></li>
+                </ul>
+            `;
+            explanationDiv.classList.remove('hidden');
+
+            if (input === targetDays) {
+                score = 50;
+                feedbackText = `Ausgezeichnet! Die Zinstage t sind korrekt ${targetDays}.`;
+                document.getElementById('input-interest').disabled = false;
+                document.getElementById('check-interest-btn').disabled = false;
+                document.getElementById('input-days').disabled = true;
+            } else if (Math.abs(input - targetDays) <= 2) {
+                score = 25;
+                feedbackText = `Knapp daneben. Achten Sie auf die 30/360-Regel! Die korrekte Anzahl Zinstage ist ${targetDays}. Sie erhalten Teilpunkte.`;
+            } else {
+                score = 0;
+                feedbackText = `Falsch. Überprüfen Sie Ihre Berechnung der Zinstage (Monat = 30 Tage, Jahr = 360 Tage). Sehen Sie sich die korrekte Rechnung an.`;
+            }
+            
+            feedbackDiv.innerHTML = giveFeedbackAndScore(score, feedbackText, score > 0);
+            saveProgress();
+        }
+
+        function checkInterest() {
+            const input = parseFloat(document.getElementById('input-interest').value);
+            const feedbackDiv = document.getElementById('interest-feedback');
+            const currentRate = parseFloat(document.getElementById('base-rate-input').value) + interestCase.rate_pp;
+            
+            const calculatedTarget = interestCase.capital * currentRate * interestCase.targetDays / (360 * 100);
+            const target = parseFloat(calculatedTarget.toFixed(2));
+            
+            let score = 0;
+            let feedbackText = '';
+
+            if (input.toFixed(2) === target.toFixed(2)) {
+                score = 150;
+                feedbackText = `Perfekt! Der Verzugszins beträgt € ${target.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Beachten Sie: Bei B2B-Entgeltforderungen gilt ein hoher Satz von 9 pp über Basiszinssatz (§ 288 Abs. 2 BGB).`;
+                document.getElementById('input-interest').disabled = true;
+                document.getElementById('check-interest-btn').disabled = true;
+                modules.interest.done = true;
+            } else if (Math.abs(input - target) < 1.0) {
+                score = 75;
+                feedbackText = `Gute Annäherung, aber die Rundung oder der Zinssatz ist leicht falsch. Das korrekte Ergebnis ist € ${target.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Bitte überprüfen Sie Ihre Eingabe.`;
+            } else {
+                score = 0;
+                feedbackText = `Leider falsch. Überprüfen Sie die Formel (Z = K $\\cdot$ p $\\cdot$ t / (360 $\\cdot$ 100)) und den korrekten Zinssatz (${currentRate.toFixed(2)} %).`;
+            }
+
+            feedbackDiv.innerHTML = giveFeedbackAndScore(score, feedbackText, score > 0);
+            checkBadge('interest');
+            saveProgress();
+        }
+
+
+        // --- Modul 3: Pfandrecht-Check (§ 464 HGB) ---
+
+        const lienCases = [
+            {
+                id: 1,
+                scenario: 'Sie haben eine offene Forderung von 500 € aus einem *früheren* Speditionsvertrag. Nun lagert der Versender bei Ihnen neues Gut ein, das in 1 Woche weitertransportiert werden soll.',
+                question: 'Dürfen Sie das neue Gut zurückbehalten (Pfandrecht ausüben)?',
+                correct: 'Ja',
+                law: '§ 464 Satz 2 HGB',
+                explanation: 'Korrekt! Nach § 464 Satz 2 HGB erstreckt sich das Pfandrecht des Spediteurs auf *alle* Güter des Versenders, die sich in seiner Verfügungsgewalt befinden, auch wenn sie *nicht* mit der offenen Forderung zusammenhängen (Ausnahme: Verbraucher oder Konkursverfahren).'
+            },
+            {
+                id: 2,
+                scenario: 'Der Empfänger (nicht der Versender) hat die Frachtkosten für die aktuelle Sendung nicht bezahlt. Das Gut befindet sich noch im Lager des Empfängers (Sie haben es abgeliefert).',
+                question: 'Dürfen Sie das Gut zurückbehalten (Pfandrecht ausüben)?',
+                correct: 'Nein',
+                law: '§ 464 Satz 1 HGB',
+                explanation: 'Falsch. Das Pfandrecht setzt voraus, dass Sie das Gut in Ihrer *unmittelbaren* Verfügungsgewalt haben. Da Sie es bereits beim Empfänger abgeliefert haben, ist das Pfandrecht erloschen.'
+            },
+            {
+                id: 3,
+                scenario: 'Der Versender schuldet Ihnen Geld aus einem laufenden Lagervertrag (kein Speditionsvertrag). Sie haben das Gut aus einem Speditionsauftrag, dessen Rechnung bezahlt ist, in Ihrem Depot.',
+                question: 'Dürfen Sie das Gut zurückbehalten (Pfandrecht ausüben)?',
+                correct: 'Nein',
+                law: '§ 464 Satz 1 HGB (eng)',
+                explanation: 'Falsch. Das Pfandrecht des Spediteurs nach § 464 HGB besteht nur wegen Forderungen aus *Speditionsverträgen* und verwandten Leistungen (Lagerung, Zoll, etc.). Eine Forderung aus einem reinen, unabhängigen Lagervertrag fällt nicht darunter. Hier gilt nur das allgemeine Zurückbehaltungsrecht des BGB, das aber keinen Zugriff auf *andere* Güter ermöglicht.'
+            }
+        ];
+        let currentLienCaseIndex = 0;
+
+        function initLienCheck() {
+            modules.lien.done = false;
+            currentLienCaseIndex = 0;
+            lienCases.sort(() => Math.random() - 0.5); // Mischen
+            renderLienCase();
+        }
+
+        function renderLienCase() {
+            const currentCase = lienCases[currentLienCaseIndex];
+            
+            if (!currentCase) {
+                modules.lien.done = true;
+                checkBadge('lien');
+                switchModule('statute');
+                return;
+            }
+
+            const currentModPoints = modules.lien.points;
+            const maxPoints = modules.lien.total;
+
+            gameContainer.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-primary">Modul 3: Pfandrecht-Check (§ 464 HGB)</h2>
+                <p class="mb-6 text-gray-700">Wischen Sie oder klicken Sie, um zu entscheiden: Pfandrecht Ja oder Nein?</p>
+
+                <div class="flex justify-center">
+                    <div id="swipe-area" class="swipe-card game-card p-6 flex flex-col justify-between shadow-xl" 
+                         data-case-id="${currentCase.id}">
+                        <div class="text-xl font-bold text-gray-800 mb-4">Fall ${currentLienCaseIndex + 1} von ${lienCases.length}</div>
+                        <div class="text-lg mb-6">${currentCase.scenario}</div>
+                        <div class="text-2xl font-extrabold text-primary">${currentCase.question}</div>
+                        <div id="pfand-feedback" class="mt-4"></div>
+                        <div class="swipe-feedback right">JA</div>
+                        <div class="swipe-feedback left">NEIN</div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center mt-6 space-x-4">
+                    <button class="primary-button bg-red-600 hover:bg-red-700" onclick="handleLienDecision('Nein')">
+                        <span class="text-xl">Nein</span>
+                    </button>
+                    <button class="primary-button bg-green-600 hover:bg-green-700" onclick="handleLienDecision('Ja')">
+                        <span class="text-xl">Ja</span>
+                    </button>
+                </div>
+
+                <p class="mt-6 text-sm text-gray-600">Erreichte Punkte: ${currentModPoints} / ${maxPoints}</p>
+            `;
+            
+            // Initialisiere Swipe-Gesten (Touch & Maus)
+            setupSwipeListener();
+        }
+        
+        function setupSwipeListener() {
+            const swipeArea = document.getElementById('swipe-area');
+            let startX, currentX, isDragging = false;
+
+            const updateCardPosition = (x) => {
+                const diff = x - startX;
+                swipeArea.style.transform = `translateX(${diff}px) rotate(${diff / 20}deg)`;
+                
+                const feedbackRight = swipeArea.querySelector('.swipe-feedback.right');
+                const feedbackLeft = swipeArea.querySelector('.swipe-feedback.left');
+                
+                feedbackRight.style.opacity = Math.min(1, diff / 100);
+                feedbackLeft.style.opacity = Math.min(1, -diff / 100);
+            };
+
+            const endDrag = (x) => {
+                isDragging = false;
+                swipeArea.style.cursor = 'grab';
+                const diff = x - startX;
+
+                if (diff > 100) {
+                    handleLienDecision('Ja', true);
+                } else if (diff < -100) {
+                    handleLienDecision('Nein', true);
+                } else {
+                    // Zurücksetzen
+                    swipeArea.style.transform = '';
+                    swipeArea.querySelector('.swipe-feedback.right').style.opacity = 0;
+                    swipeArea.querySelector('.swipe-feedback.left').style.opacity = 0;
+                }
+            };
+            
+            // --- Maus-Events ---
+            swipeArea.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                swipeArea.style.cursor = 'grabbing';
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                currentX = e.clientX;
+                updateCardPosition(currentX);
+            });
+            document.addEventListener('mouseup', (e) => {
+                if (!isDragging) return;
+                endDrag(e.clientX);
+            });
+
+            // --- Touch-Events ---
+            swipeArea.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                startX = e.touches[0].clientX;
+            }, { passive: true });
+            swipeArea.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentX = e.touches[0].clientX;
+                updateCardPosition(currentX);
+            }, { passive: true });
+            swipeArea.addEventListener('touchend', (e) => {
+                if (!isDragging) return;
+                endDrag(currentX);
+            });
+        }
+
+        function handleLienDecision(decision, isSwipe = false) {
+            const currentCase = lienCases[currentLienCaseIndex];
+            const isCorrect = currentCase.correct === decision;
+            let score = 0;
+
+            if (isCorrect) {
+                score = 50;
+                // Optional: Füge den Fade-Out/Swipe-Effekt hinzu
+                if (isSwipe) {
+                    const swipeArea = document.getElementById('swipe-area');
+                    swipeArea.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+                    swipeArea.style.transform = `translateX(${decision === 'Ja' ? 500 : -500}px) rotate(${decision === 'Ja' ? 20 : -20}deg)`;
+                    swipeArea.style.opacity = 0;
+                    setTimeout(() => {
+                        currentLienCaseIndex++;
+                        renderLienCase();
+                    }, 500);
+                }
+            }
+            
+            const feedbackHTML = giveFeedbackAndScore(score, `<strong>${currentCase.law}:</strong> ${currentCase.explanation}`, isCorrect);
+            document.getElementById('pfand-feedback').innerHTML = feedbackHTML;
+            
+            if (!isSwipe) {
+                // Bei Klick: Feedback anzeigen und dann weiter
+                setTimeout(() => {
+                    currentLienCaseIndex++;
+                    renderLienCase();
+                }, 3000);
+            }
+            
+            saveProgress();
+        }
+
+        // --- Modul 4: Verjährungs-Timeline (§§ 439, 463 HGB) ---
+
+        const statuteCase = {
+            id: 1,
+            eventDate: new Date('2025-05-15'), // Tag des Schadens
+            cases: [
+                { type: 'Schaden/Verlust', condition: 'Normales Verschulden', targetYears: 1, law: '§ 439 Abs. 1 HGB' },
+                { type: 'Verzögerung/Verspätung', condition: 'Grobes Verschulden', targetYears: 3, law: '§ 439 Abs. 3, § 463 HGB' },
+                { type: 'Beschädigung des Gutes', condition: 'Vorsatz', targetYears: 3, law: '§ 439 Abs. 3, § 463 HGB' }
+            ]
+        };
+
+        function initStatuteTimeline() {
+            modules.statute.done = false;
+            let currentModPoints = modules.statute.points;
+            let maxPoints = modules.statute.total;
+            
+            gameContainer.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-primary">Modul 4: Verjährungs-Timeline (§§ 439, 463 HGB)</h2>
+                <p class="mb-6 text-gray-700">Setzen Sie die korrekte Verjährungsfrist für die folgenden Schadensfälle. Fristbeginn: <strong>${statuteCase.eventDate.toLocaleDateString('de-DE')}</strong> (Schadenereignis).</p>
+                
+                <div class="bg-gray-100 p-4 rounded-lg mb-6">
+                    <p class="text-sm font-semibold mb-2">Basis-Regeln:</p>
+                    <ul class="list-disc ml-4 text-sm text-gray-700">
+                        <li>I.d.R. 1 Jahr (§ 439 Abs. 1 HGB).</li>
+                        <li>Bei Vorsatz oder grober Fahrlässigkeit: 3 Jahre (§ 439 Abs. 3 HGB i.V.m. § 463 HGB).</li>
+                    </ul>
+                </div>
+
+                ${statuteCase.cases.map((c, index) => `
+                    <div id="statute-case-${index}" class="game-card p-4 mb-4">
+                        <h4 class="font-semibold text-lg text-gray-800">${c.type} (${c.condition})</h4>
+                        <div class="timeline-bar relative" data-index="${index}">
+                            <div class="timeline-marker" style="left: 0%;" data-years="1">
+                                <div class="timeline-marker-label text-green-700">1 Jahr</div>
+                            </div>
+                            <div class="timeline-marker" style="left: 50%;" data-years="2">
+                                <div class="timeline-marker-label">2 Jahre</div>
+                            </div>
+                            <div class="timeline-marker" style="left: 100%;" data-years="3">
+                                <div class="timeline-marker-label text-red-700">3 Jahre</div>
+                            </div>
+                            <div id="user-marker-${index}" class="timeline-marker bg-secondary cursor-grabbing" style="left: 20%;" data-years-set="1">
+                                <div class="timeline-marker-label">Ihre Frist</div>
+                            </div>
+                        </div>
+                        <div id="statute-feedback-${index}" class="mt-2 text-sm"></div>
+                    </div>
+                `).join('')}
+                
+                <button class="primary-button mt-4" onclick="checkStatuteCases()">Alle Fristen prüfen</button>
+                <p class="mt-4 text-sm text-gray-600">Erreichte Punkte: ${currentModPoints} / ${maxPoints}</p>
+            `;
+            
+            // Marker-Steuerung initialisieren
+            document.querySelectorAll('.timeline-bar').forEach(bar => {
+                const marker = bar.querySelector('.cursor-grabbing');
+                setupMarkerDrag(bar, marker);
+            });
+        }
+
+        function setupMarkerDrag(bar, marker) {
+            let isDragging = false;
+            
+            const getYearFromPosition = (pos) => {
+                const barRect = bar.getBoundingClientRect();
+                let percentage = (pos - barRect.left) / barRect.width;
+                percentage = Math.max(0, Math.min(1, percentage)); // Begrenzen 0-1
+                let year = 1 + (percentage * 2); // Bereich 1 bis 3
+                return Math.round(year);
+            };
+
+            const updateMarker = (year) => {
+                const yearPercentage = (year - 1) * 50; // 1->0%, 2->50%, 3->100%
+                marker.style.left = `${yearPercentage}%`;
+                marker.dataset.yearsSet = year;
+            };
+
+            const startDrag = (pos) => {
+                isDragging = true;
+                bar.style.cursor = 'grabbing';
+                const year = getYearFromPosition(pos);
+                updateMarker(year);
+            };
+
+            const doDrag = (pos) => {
+                if (!isDragging) return;
+                const year = getYearFromPosition(pos);
+                updateMarker(year);
+            };
+
+            const endDrag = () => {
+                isDragging = false;
+                bar.style.cursor = 'pointer';
+            };
+
+            // Maus Events
+            marker.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                startDrag(e.clientX);
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            // Touch Events
+            marker.addEventListener('touchstart', (e) => {
+                startDrag(e.touches[0].clientX);
+            }, { passive: true });
+            marker.addEventListener('touchmove', (e) => {
+                doDrag(e.touches[0].clientX);
+            }, { passive: true });
+            marker.addEventListener('touchend', endDrag);
+
+            const onMouseMove = (e) => doDrag(e.clientX);
+            const onMouseUp = () => {
+                endDrag();
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+        }
+
+
+        function checkStatuteCases() {
+            let totalScore = 0;
+            let allCorrect = true;
+
+            statuteCase.cases.forEach((c, index) => {
+                const marker = document.getElementById(`user-marker-${index}`);
+                const feedbackDiv = document.getElementById(`statute-feedback-${index}`);
+                const selectedYears = parseInt(marker.dataset.yearsSet);
+                const targetYears = c.targetYears;
+                
+                let score = 0;
+                let feedbackText = '';
+                let eventDate = statuteCase.eventDate;
+                let targetDate = new Date(eventDate);
+                targetDate.setFullYear(eventDate.getFullYear() + targetYears);
+                const targetDateString = targetDate.toLocaleDateString('de-DE');
+
+                if (selectedYears === targetYears) {
+                    score = 33; // 100 Punkte / 3 Fälle = 33 Pkt pro Fall
+                    totalScore += score;
+                    feedbackText = `Korrekt! Die Verjährungsfrist beträgt ${targetYears} Jahr(e). Die Frist endet am ${targetDateString}. (${c.law})`;
+                    feedbackDiv.innerHTML = `<div class="feedback-box correct">${feedbackText}</div>`;
+                } else {
+                    allCorrect = false;
+                    feedbackText = `Falsch. Die korrekte Frist ist ${targetYears} Jahr(e). Bei Vorsatz/Grober Fahrlässigkeit sind es 3 Jahre, ansonsten 1 Jahr. (${c.law})`;
+                    feedbackDiv.innerHTML = `<div class="feedback-box wrong">${feedbackText}</div>`;
+                }
+            });
+
+            if (allCorrect) {
+                modules.statute.points += totalScore;
+                modules.statute.done = true;
+                checkBadge('statute');
+                showModal('Modul Abgeschlossen', 'Alle Fristen wurden korrekt gesetzt! Sie sind ein echter "Fristen-Fuchs".', 'feedback');
+            } else {
+                 showModal('Überprüfung abgeschlossen', 'Bitte überprüfen Sie die falschen Fristen und versuchen Sie es erneut, um volle Punkte zu erhalten.', 'feedback');
+            }
+            saveProgress();
+        }
+
+        // --- Modul 5: Kurzfall: Wer zahlt? (ADSp 2017 Ziff. 10) ---
+        
+        const whoPaysCase = {
+            scenario: 'Ein Versender (A) beauftragt Sie, Gut an einen Empfänger (B) zu liefern. Es wurde vereinbart, dass Empfänger (B) die Frachtkosten trägt (Unfrei-Sendung). Nachdem Sie die Ware erfolgreich geliefert haben, verweigert der Empfänger (B) die Zahlung der Rechnung.',
+            options: [
+                {
+                    text: 'Sie müssen die Forderung abschreiben, da der Empfänger (B) laut Auftrag zur Zahlung verpflichtet war.',
+                    isCorrect: false,
+                    feedback: 'Falsch. Die Vereinbarung, dass der Empfänger zahlt, entbindet den Versender nicht von seiner *sekundären* Zahlungspflicht.'
+                },
+                {
+                    text: 'Sie fordern die Zahlung nun vom ursprünglichen Versender (A).',
+                    isCorrect: true,
+                    feedback: 'Korrekt! Gemäß ADSp 2017 Ziffer 10 bleibt der Versender (A) verpflichtet, die Forderung zu begleichen, falls der Empfänger (B) dies nicht tut.'
+                },
+                {
+                    text: 'Sie warten 30 Tage und mahnen dann den Empfänger (B) erneut, da er der einzige Vertragspartner ist.',
+                    isCorrect: false,
+                    feedback: 'Falsch. Obwohl der Empfänger derjenige ist, der zahlen soll, ist der Versender der Vertragspartner. Nach fruchtlosem Verzug muss der Versender kontaktiert werden.'
+                }
+            ]
+        };
+
+        function initWhoPaysSimulation() {
+            modules.whopays.done = false;
+            const currentModPoints = modules.whopays.points;
+            const maxPoints = modules.whopays.total;
+
+            gameContainer.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-primary">Modul 5: Kurzfall: Wer zahlt? (ADSp 2017 Ziff. 10)</h2>
+                <p class="mb-6 text-gray-700">Wählen Sie die korrekte handlungsorientierte Antwort in diesem Praxis-Szenario.</p>
+
+                <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-primary mb-6">
+                    <h3 class="font-semibold text-lg mb-2">Kurzfall: Unfrei-Sendung</h3>
+                    <p class="text-gray-700">${whoPaysCase.scenario}</p>
+                </div>
+
+                <h4 class="font-semibold text-xl mb-4 text-gray-800">Was ist Ihr nächster Schritt?</h4>
+                
+                <div id="whopays-options" class="space-y-3">
+                    ${whoPaysCase.options.map((opt, index) => `
+                        <button class="w-full text-left p-4 game-card hover:bg-gray-50 transition-colors primary-button !bg-transparent !text-gray-800 border-2 border-primary" 
+                                onclick="checkWhoPays(${index})">
+                            ${opt.text}
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <div id="whopays-feedback" class="mt-4"></div>
+                <p class="mt-4 text-sm text-gray-600">Erreichte Punkte: ${currentModPoints} / ${maxPoints}</p>
+            `;
+        }
+
+        function checkWhoPays(selectedIndex) {
+            const selectedOption = whoPaysCase.options[selectedIndex];
+            const feedbackDiv = document.getElementById('whopays-feedback');
+            const buttons = document.querySelectorAll('#whopays-options button');
+
+            buttons.forEach(btn => btn.disabled = true);
+            
+            let score = 0;
+            let feedbackText = '';
+
+            if (selectedOption.isCorrect) {
+                score = 150;
+                feedbackText = `Ausgezeichnet! ${selectedOption.feedback} Dies ist die klare Regelung in den <strong>ADSp 2017, Ziffer 10</strong>. Der Versender haftet immer für die Vergütung, falls der Empfänger nicht zahlt.`;
+                modules.whopays.done = true;
+                checkBadge('whopays');
+                setTimeout(() => switchModule('report'), 3000);
+            } else {
+                score = 0;
+                feedbackText = `Falsch. ${selectedOption.feedback} (Hinweis: ADSp 2017, Ziff. 10). Die Zahlungspflicht des Versenders bleibt bestehen.`;
+                setTimeout(() => buttons.forEach(btn => btn.disabled = false), 2000);
+            }
+            
+            feedbackDiv.innerHTML = giveFeedbackAndScore(score, feedbackText, selectedOption.isCorrect);
+            saveProgress();
+        }
+
+        // --- Modul 6: Abschluss-Report ---
+
+        function initReport() {
+            const currentTotalPoints = Object.values(modules).reduce((sum, mod) => sum + mod.points, 0);
+            const maxPoints = TOTAL_POINTS;
+            const overallProgress = Math.round((currentTotalPoints / maxPoints) * 100);
+            
+            gameContainer.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-primary">Abschluss-Report</h2>
+                <div class="p-6 game-card mb-6 text-center">
+                    <p class="text-lg">Ihr Gesamtergebnis:</p>
+                    <p class="text-6xl font-extrabold text-primary my-4">${currentTotalPoints} / ${maxPoints} Pkt.</p>
+                    <p class="text-3xl font-bold text-gray-700">(${overallProgress} %)</p>
+                </div>
+
+                <h3 class="text-xl font-bold mb-3">Ergebnisse je Lernziel:</h3>
+                <div class="space-y-2 mb-6">
+                    ${Object.entries(modules).filter(([key, mod]) => key !== 'report').map(([key, mod]) => `
+                        <div class="flex justify-between items-center p-3 game-card bg-gray-50">
+                            <span class="font-semibold">${mod.name}</span>
+                            <span>${mod.points} / ${mod.total} Pkt. ${mod.done ? '✅' : '❌'}</span>
+                            ${mod.badge && badges.includes(mod.badge) ? `<span class="text-yellow-600 font-bold">⭐ ${mod.badge}</span>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <h3 class="text-xl font-bold mb-3">Empfehlungen:</h3>
+                <p class="mb-4">Basierend auf Ihren Ergebnissen:</p>
+                <ul class="list-disc ml-6 space-y-2 text-gray-700">
+                    <li>${modules.workflow.points < modules.workflow.total ? '<strong>Fälligkeit (§ 456 HGB):</strong> Wiederholen Sie, dass die Fälligkeit bereits mit Übergabe an den Frachtführer beginnt.' : 'Fälligkeit: Gut verstanden.'}</li>
+                    <li>${modules.interest.points < modules.interest.total * 0.8 ? '<strong>Zinsrechnung (30/360):</strong> Üben Sie die Berechnung der Zinstage, insbesondere die Regel "31. wird zu 30.". Nutzen Sie die Zins-Werkstatt erneut.' : 'Zinsrechnung: Sehr gut, Sie beherrschen die 30/360-Methode.'}</li>
+                    <li>${modules.lien.points < modules.lien.total * 0.8 ? '<strong>Pfandrecht (§ 464 HGB):</strong> Klären Sie ab, wann das Pfandrecht auch für andere Forderungen gilt (B2B-Geschäfte).' : 'Pfandrecht: Sie sind ein Profi im Zurückbehaltungsrecht.'}</li>
+                    <li>${modules.statute.points < modules.statute.total ? '<strong>Verjährung (§§ 439, 463 HGB):</strong> Merken Sie sich die Unterscheidung zwischen 1 Jahr (Regelfall) und 3 Jahren (Vorsatz/grobe Fahrlässigkeit).' : 'Verjährung: Sie kennen Ihre Fristen!'}</li>
+                    <li>${modules.whopays.points < modules.whopays.total ? '<strong>ADSp (Ziff. 10):</strong> Verinnerlichen Sie, dass der Versender immer die primäre Haftung für die Vergütung trägt, auch wenn der Empfänger zahlen soll.' : 'ADSp: Die Haftungsfrage ist Ihnen klar.'}</li>
+                </ul>
+                
+                <div class="mt-8 flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                    <button class="primary-button bg-green-600 hover:bg-green-700" onclick="exportResults()">
+                        Ergebnisse als CSV herunterladen
+                    </button>
+                    <button class="secondary-button" onclick="resetGame()">
+                        Spiel zurücksetzen (Achtung: Punkte gehen verloren)
+                    </button>
+                    <button class="secondary-button" onclick="switchModule('workflow')">
+                        Zurück zur Modulübersicht
+                    </button>
+                </div>
+            `;
+        }
+
+        /**
+         * Exportiert die Ergebnisse als client-seitige CSV-Datei.
+         */
+        function exportResults() {
+            const now = new Date().toLocaleString('de-DE');
+            const totalPoints = Object.values(modules).reduce((sum, mod) => sum + mod.points, 0);
+            
+            let csv = "Lernmodul;Erreichte Punkte;Maximale Punkte;Status\n";
+            Object.entries(modules).filter(([key, mod]) => key !== 'report').forEach(([key, mod]) => {
+                csv += `${mod.name};${mod.points};${mod.total};${mod.done ? 'Abgeschlossen' : 'Offen'}\n`;
+            });
+            csv += `\nGesamtpunkte;${totalPoints};${TOTAL_POINTS};\n`;
+            csv += `Badges;${badges.join(', ')};\n`;
+            csv += `Exportdatum;${now};\n`;
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `Speditionsspiel_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        /**
+         * Setzt den Spielstand zurück (localStorage löschen).
+         */
+        function resetGame() {
+            if (confirm('Wollen Sie wirklich Ihren Fortschritt löschen? Alle Punkte und Badges gehen verloren!')) {
+                localStorage.removeItem('speditionsspiel_progress');
+                window.location.reload();
+            }
+        }
+
+        // --- Initialisierung ---
+        window.onload = function() {
+            loadProgress();
+            switchModule(currentModuleKey); // Starte mit dem ersten Modul oder dem letzten Stand
+            updateUI();
+        }
+    </script>
+</body>
+</html>
