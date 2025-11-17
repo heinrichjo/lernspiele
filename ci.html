@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Identity Designer</title>
+    <!-- Tailwind CSS (für das Styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Angepasste Tailwind-Konfiguration */
+        :root {
+            --color-primary: #1e40af; /* Blue-800 */
+            --color-secondary: #fcd34d; /* Amber-300 */
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-container {
+            flex-grow: 1;
+            padding: 1rem;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Styling für die Drag-Elemente */
+        .draggable-block {
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            margin: 0.5rem;
+            display: inline-block;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        .draggable-block:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Farb-Kategorien */
+        .category-name { background-color: #d1fae5; color: #065f46; border: 1px solid #10b981; } /* Green */
+        .category-business { background-color: #dbeafe; color: #1e40af; border: 1px solid #3b82f6; } /* Blue */
+        .category-focus { background-color: #fef3c7; color: #92400e; border: 1px solid #f59e0b; } /* Yellow */
+        .category-legal { background-color: #fecaca; color: #991b1b; border: 1px solid #ef4444; } /* Red */
+
+        /* Drop Area */
+        #drop-area {
+            min-height: 150px;
+            border: 3px dashed var(--color-primary);
+            background-color: #ffffff;
+            border-radius: 1rem;
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 0.5rem;
+        }
+
+        .dropped-block {
+            cursor: move; /* Für Sortierung */
+            border-radius: 0.375rem;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            transition: all 0.2s;
+        }
+
+        .dropped-block:hover {
+            opacity: 0.9;
+        }
+
+        /* Footer Styling (Heller gemacht) */
+        footer {
+            background-color: #ffffff; /* Weiß/Hell */
+            color: #4b5563; /* Dunkler Text */
+            padding: 1rem 0;
+            text-align: center;
+            margin-top: 2rem;
+            border-top: 4px solid var(--color-primary);
+            box-shadow: 0 -2px 4px -1px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <header class="text-center py-4 bg-white rounded-xl shadow-lg mb-6">
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Corporate Identity Designer (Logik/Puzzle)</h1>
+            <p class="text-gray-600 mt-1">Entwerfen Sie rechtskonforme und kreative Firmennamen.</p>
+        </header>
+
+        <main class="grid lg:grid-cols-3 gap-6">
+
+            <!-- 1. Kundenauftrag -->
+            <div id="auftrag-card" class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-full">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-primary pb-2">Kundenauftrag</h2>
+                <div id="auftrag-text" class="text-gray-700 space-y-3">
+                    <!-- Inhalt wird per JS geladen -->
+                </div>
+            </div>
+
+            <!-- 2. Baukasten & Drop Area -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Drop Area (Firmenname) -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex justify-between items-center">
+                        Firmenname-Entwurf
+                        <button id="validate-btn" class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-150 transform hover:scale-105" disabled>
+                            Entwurf prüfen
+                        </button>
+                    </h2>
+                    <p class="text-gray-500 mb-3">Ziehen Sie die Bausteine hierher und ordnen Sie sie an.</p>
+                    <div id="drop-area" class="text-lg">
+                        <span class="text-gray-400 font-light italic">Hier Blöcke ablegen...</span>
+                    </div>
+                </div>
+
+                <!-- Feedback Area -->
+                <div id="feedback-area" class="p-4 rounded-lg shadow-inner transition duration-300 min-h-12 hidden" role="alert">
+                    <!-- Feedback wird hier eingefügt -->
+                </div>
+
+                <!-- Baukasten (Bausteine) -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Verfügbare Bausteine (Baukasten)</h2>
+                    <div id="baukasten" class="flex flex-wrap gap-2">
+                        <!-- Bausteine werden per JS geladen -->
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Fußzeile -->
+    <footer class="mt-auto">
+        <div class="flex flex-col sm:flex-row justify-center items-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                 alt="" 
+                 class="h-10 w-auto object-contain mr-4 mb-2 sm:mb-0"
+                 onerror="this.onerror=null;this.src='https://placehold.co/150x40/ffffff/4b5563?text=Logo+BS4';"
+            >
+            <p class="text-sm">Johannes Heinrich - Berufsschule 4 Welserschule - 2025</p>
+        </div>
+    </footer>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const auftragTextElement = document.getElementById('auftrag-text');
+        const baukastenElement = document.getElementById('baukasten');
+        const dropAreaElement = document.getElementById('drop-area');
+        const validateBtn = document.getElementById('validate-btn');
+        const feedbackArea = document.getElementById('feedback-area');
+        const defaultDropText = dropAreaElement.innerHTML;
+
+        // Globale Spiel-Daten
+        let currentOrder = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // --- Vordefinierte Bausteine und Szenarien ---
+        const blocks = {
+            names: [
+                { id: 'n1', text: 'Müller', category: 'name' },
+                { id: 'n2', text: 'Schmidt', category: 'name' },
+                { id: 'n3', text: 'Huber', category: 'name' },
+                { id: 'n4', text: 'Innovative', category: 'name' }, // Wird als Fantasie/Wortbestandteil behandelt
+            ],
+            business: [
+                { id: 'b1', text: 'Schreinerei', category: 'business' },
+                { id: 'b2', text: 'IT-Beratung', category: 'business' },
+                { id: 'b3', text: 'Bäckerei', category: 'business' },
+                { id: 'b4', text: 'Service', category: 'business' },
+            ],
+            focus: [
+                { id: 'f1', text: 'Öko', category: 'focus' },
+                { id: 'f2', text: 'Digital', category: 'focus' },
+                { id: 'f3', text: 'Handwerk', category: 'focus' },
+                { id: 'f4', text: 'Weltweit', category: 'focus', misleading: true }, // Irreführend
+                { id: 'f5', text: 'Marktführer', category: 'focus', misleading: true }, // Irreführend
+                { id: 'f6', text: 'Exklusiv', category: 'focus' },
+            ],
+            legal: [
+                { id: 'l1', text: 'GmbH', category: 'legal' },
+                { id: 'l2', text: 'e.K.', category: 'legal' },
+                { id: 'l3', text: 'UG (haftungsbeschränkt)', category: 'legal' },
+                { id: 'l4', text: 'KG', category: 'legal' },
+            ]
+        };
+
+        const scenarios = [
+            {
+                id: 1,
+                title: 'Ökologische Schreinerei',
+                description: [
+                    'Der Kunde, Herr Müller, möchte seine neue Schreinerei im Handelsregister eintragen lassen.',
+                    'Er legt den Fokus auf ökologische und nachhaltige Möbel.',
+                    'Als Rechtsform soll eine <strong>Gesellschaft mit beschränkter Haftung (GmbH)</strong> gewählt werden.'
+                ],
+                legalFormRequired: 'GmbH',
+                mustInclude: ['Müller', 'Schreinerei'],
+                misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
+                existingCompanies: ['Müller Schreinerei GmbH', 'Öko-Möbel Huber e.K.'], // Sollte eine Unterscheidbarkeit erzwingen
+                requiredUniqueElements: 3, // Muss mindestens 3 Unterscheidungsmerkmale haben (z.B. Name, Branche, Fokus)
+                correctSolution: "Müller Öko-Schreinerei GmbH",
+            },
+            {
+                id: 2,
+                title: 'Digitale Bäckerei',
+                description: [
+                    'Frau Schmidt eröffnet eine moderne Bäckerei, die ausschließlich online liefert und sich auf digitale Bestellungen spezialisiert.',
+                    'Sie möchte sich so schnell wie möglich eintragen lassen, um ihre Haftung zu begrenzen. Die Rechtsform soll die <strong>Unternehmergesellschaft (haftungsbeschränkt)</strong> sein.',
+                    'Der Name muss Klarheit über das digitale Geschäftsmodell schaffen.'
+                ],
+                legalFormRequired: 'UG (haftungsbeschränkt)',
+                mustInclude: ['Schmidt', 'Bäckerei'],
+                misleadingTerms: blocks.focus.filter(b => b.misleading).map(b => b.text),
+                existingCompanies: ['Schmidt Bäckerei GmbH', 'Digital-Bäcker Schmidt e.K.'],
+                requiredUniqueElements: 3,
+                correctSolution: "Schmidt Digital-Bäckerei UG (haftungsbeschränkt)",
+            },
+        ];
+
+        let currentScenarioIndex = 0;
+        
+        // Fügt alle Blöcke zu einer Liste zusammen
+        const allBlocks = [...blocks.names, ...blocks.business, ...blocks.focus, ...blocks.legal];
+
+        // --- Drag-and-Drop Handler ---
+
+        // Macht einen Baustein ziehbar
+        function createDraggableBlock(block) {
+            const div = document.createElement('div');
+            div.className = `draggable-block category-${block.category} cursor-grab`;
+            div.draggable = true;
+            div.dataset.id = block.id;
+            div.dataset.text = block.text;
+            div.dataset.category = block.category;
+            div.textContent = block.text;
+
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', block.id);
+                e.dataTransfer.effectAllowed = 'move';
+                // Temporäre Klasse, um das Original auszublenden
+                setTimeout(() => div.style.opacity = '0.5', 0);
+            });
+            div.addEventListener('dragend', () => {
+                div.style.opacity = '1';
+            });
+            return div;
+        }
+
+        // Macht einen Baustein im Entwurfsfeld sortierbar und entfernbar
+        function createDroppedBlock(blockId, blockText, blockCategory) {
+            const blockData = allBlocks.find(b => b.id === blockId) || {};
+
+            const div = document.createElement('div');
+            div.className = `dropped-block category-${blockCategory} flex items-center gap-2`;
+            div.dataset.id = blockId;
+            div.dataset.text = blockText;
+            div.dataset.category = blockCategory;
+            div.draggable = true;
+
+            const textSpan = document.createElement('span');
+            textSpan.textContent = blockText;
+            div.appendChild(textSpan);
+
+            // Löschen-Button
+            const removeBtn = document.createElement('button');
+            removeBtn.innerHTML = '&#x2715;'; // X-Symbol
+            removeBtn.className = 'text-xs text-red-600 hover:text-red-800 ml-1 font-bold';
+            removeBtn.onclick = () => {
+                dropAreaElement.removeChild(div);
+                updateDropAreaState();
+            };
+            div.appendChild(removeBtn);
+
+            // Drag/Sortier-Logik
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/sort', blockId);
+                e.dataTransfer.effectAllowed = 'move';
+                div.classList.add('opacity-50', 'shadow-xl');
+            });
+
+            div.addEventListener('dragend', () => {
+                div.classList.remove('opacity-50', 'shadow-xl');
+            });
+
+            div.addEventListener('dragover', (e) => {
+                e.preventDefault(); // Ermöglicht das Ablegen
+                const draggingId = e.dataTransfer.getData('text/sort');
+                if (draggingId && draggingId !== blockId) {
+                    const draggingElement = document.querySelector(`.dropped-block[data-id="${draggingId}"]`);
+                    const rect = div.getBoundingClientRect();
+                    const isBefore = e.clientX < rect.left + rect.width / 2;
+
+                    if (isBefore) {
+                        div.style.borderLeft = '2px solid var(--color-primary)';
+                        div.style.borderRight = 'none';
+                    } else {
+                        div.style.borderRight = '2px solid var(--color-primary)';
+                        div.style.borderLeft = 'none';
+                    }
+                }
+            });
+            
+            div.addEventListener('dragleave', () => {
+                div.style.borderLeft = 'none';
+                div.style.borderRight = 'none';
+            });
+
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                div.style.borderLeft = 'none';
+                div.style.borderRight = 'none';
+
+                const draggingId = e.dataTransfer.getData('text/sort');
+                if (draggingId) {
+                    const draggingElement = document.querySelector(`.dropped-block[data-id="${draggingId}"]`);
+                    if (draggingElement) {
+                        const rect = div.getBoundingClientRect();
+                        const isBefore = e.clientX < rect.left + rect.width / 2;
+
+                        if (isBefore) {
+                            dropAreaElement.insertBefore(draggingElement, div);
+                        } else {
+                            dropAreaElement.insertBefore(draggingElement, div.nextSibling);
+                        }
+                        // Verhindern, dass Blöcke aus dem Baukasten hier landen
+                        e.stopPropagation();
+                    }
+                }
+                updateDropAreaState();
+            });
+
+            return div;
+        }
+
+        // --- UI Rendering ---
+
+        function renderAuftrag(scenario) {
+            auftragTextElement.innerHTML = `
+                <h3 class="text-xl font-semibold">${scenario.title}</h3>
+                <p>${scenario.description.join('</p><p>')}</p>
+                <p class="mt-4 p-3 bg-indigo-50 border-l-4 border-indigo-500 italic text-sm">
+                    <strong>Ziel:</strong> Erstellen Sie einen Firmennamen, der folgende Grundsätze beachtet:
+                    <ul class="list-disc ml-4 mt-1">
+                        <li><strong>Zwangszusatz (Rechtsform):</strong> Muss enthalten sein.</li>
+                        <li><strong>Firmenwahrheit:</strong> Darf nicht irreführend sein.</li>
+                        <li><strong>Firmenunterscheidbarkeit:</strong> Muss sich von anderen abheben.</li>
+                    </ul>
+                </p>
+            `;
+        }
+
+        function renderBaukasten() {
+            baukastenElement.innerHTML = '';
+            // Render Blöcke in kategorisierten Gruppen
+            const categories = [
+                { key: 'names', title: 'Namen/Bezeichnungen' },
+                { key: 'business', title: 'Geschäftszweck/Branche' },
+                { key: 'focus', title: 'Fokus/Zusatz' },
+                { key: 'legal', title: 'Rechtsform (Zwangszusatz)' }
+            ];
+
+            categories.forEach(category => {
+                const group = document.createElement('div');
+                group.className = 'w-full mb-3';
+                group.innerHTML = `<h4 class="text-sm font-semibold mb-1 text-gray-600">${category.title}</h4>`;
+                
+                const blockContainer = document.createElement('div');
+                blockContainer.className = 'flex flex-wrap gap-2';
+                
+                blocks[category.key].forEach(block => {
+                    blockContainer.appendChild(createDraggableBlock(block));
+                });
+
+                group.appendChild(blockContainer);
+                baukastenElement.appendChild(group);
+            });
+        }
+
+        // --- Drop Area Logic ---
+
+        dropAreaElement.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Ermöglicht das Ablegen
+            dropAreaElement.classList.add('bg-blue-50');
+        });
+
+        dropAreaElement.addEventListener('dragleave', () => {
+            dropAreaElement.classList.remove('bg-blue-50');
+        });
+
+        dropAreaElement.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropAreaElement.classList.remove('bg-blue-50');
+
+            // 1. Check for Drag-from-Baukasten (ID is plain text)
+            const blockId = e.dataTransfer.getData('text/plain');
+            if (blockId) {
+                const blockData = allBlocks.find(b => b.id === blockId);
+                if (blockData) {
+                    const newBlock = createDroppedBlock(blockData.id, blockData.text, blockData.category);
+                    
+                    // Füge das neue Element vor dem Platzhalter ein, falls vorhanden
+                    const placeholder = dropAreaElement.querySelector('span.text-gray-400');
+                    if (placeholder) {
+                        dropAreaElement.removeChild(placeholder);
+                    }
+
+                    // Logik zum automatischen Einfügen (optional: an den Mauszeiger, hier einfach ans Ende)
+                    dropAreaElement.appendChild(newBlock);
+                    updateDropAreaState();
+                }
+            }
+            
+            // 2. Drag-for-Sorting is handled by the dropped-block's drop listener
+        });
+
+        function updateDropAreaState() {
+            const droppedBlocks = dropAreaElement.querySelectorAll('.dropped-block');
+            if (droppedBlocks.length === 0) {
+                dropAreaElement.innerHTML = defaultDropText;
+                validateBtn.disabled = true;
+            } else {
+                validateBtn.disabled = false;
+            }
+        }
+
+        // --- Hilfsfunktion: Firmierungstyp bestimmen ---
+        function identifyFirmierungstyp(parts) {
+            const nameParts = parts.filter(p => p.category !== 'legal');
+            if (nameParts.length === 0) return 'Nicht definiert';
+
+            let hasPersonalName = false; // Müller, Schmidt, Huber
+            let hasSubjectTerm = false; // Schreinerei, Öko, Digital, etc. (business/focus category)
+            let hasFantasyTerm = false; // Innovative (n4)
+
+            nameParts.forEach(part => {
+                const text = part.text;
+                if (['Müller', 'Schmidt', 'Huber'].includes(text)) {
+                    hasPersonalName = true;
+                } else if (part.category === 'business' || part.category === 'focus') {
+                    hasSubjectTerm = true;
+                } else if (text === 'Innovative') {
+                    hasFantasyTerm = true;
+                }
+            });
+
+            if (hasPersonalName && (hasSubjectTerm || hasFantasyTerm)) {
+                return 'Mischfirma (Kombination aus Personenname und Sach-/Fantasiebestandteilen)';
+            } else if (hasPersonalName) {
+                return 'Personenfirma (basiert auf dem Namen des Inhabers)';
+            } else if (hasSubjectTerm && hasFantasyTerm) {
+                 return 'Mischfirma (Kombination aus Sach- und Fantasiebestandteilen)';
+            } else if (hasSubjectTerm) {
+                return 'Sachfirma (beschreibt den Geschäftszweck)';
+            } else if (hasFantasyTerm) {
+                return 'Fantasiefirma (frei erfundenes Wort ohne direkten Sachbezug)';
+            }
+            return 'Nicht definiert'; // Sollte nicht eintreten
+        }
+
+
+        // --- Validation Logic ---
+
+        validateBtn.addEventListener('click', () => {
+            validateName();
+        });
+
+        function getCurrentNameParts() {
+            const blocks = dropAreaElement.querySelectorAll('.dropped-block');
+            const parts = Array.from(blocks).map(block => ({
+                text: block.dataset.text,
+                category: block.dataset.category,
+                id: block.dataset.id,
+                isMisleading: allBlocks.find(b => b.id === block.dataset.id)?.misleading || false
+            }));
+            const nameString = parts.map(p => p.text).join(' ');
+            return { parts, nameString };
+        }
+
+        function displayFeedback(type, message, firmierungstyp) {
+            feedbackArea.classList.remove('hidden', 'bg-red-100', 'border-red-500', 'bg-green-100', 'border-green-500');
+            const typeText = type === 'success' ? 'Erfolg!' : 'Fehler:';
+            
+            let messageHtml = `<p class="font-bold">${typeText}</p>`;
+            messageHtml += `<p>${message}</p>`;
+            
+            // Füge den Firmierungstyp hinzu, außer wenn er nicht definiert ist
+            if (firmierungstyp && firmierungstyp !== 'Nicht definiert') {
+                 messageHtml += `<p class="mt-2 text-sm italic">Ihr Entwurf ist eine <strong>${firmierungstyp}</strong>.</p>`;
+            }
+
+            if (type === 'success') {
+                feedbackArea.className = 'p-4 rounded-lg shadow-inner bg-green-100 border border-green-500 text-green-800';
+                validateBtn.classList.replace('bg-green-600', 'bg-blue-600');
+                validateBtn.textContent = 'Nächster Auftrag';
+                validateBtn.onclick = loadNextScenario;
+            } else {
+                feedbackArea.className = 'p-4 rounded-lg shadow-inner bg-red-100 border border-red-500 text-red-800';
+            }
+            feedbackArea.innerHTML = messageHtml;
+        }
+        
+        function validateName() {
+            if (!currentOrder) return;
+            const { parts, nameString } = getCurrentNameParts();
+            const firmierungstyp = identifyFirmierungstyp(parts);
+
+
+            // 1. Check: Zwangszusatz (Rechtsform)
+            const legalFormPart = parts.findLast(p => p.category === 'legal');
+            if (!legalFormPart || legalFormPart.text !== currentOrder.legalFormRequired) {
+                displayFeedback('error', 
+                    `Verstoß gegen den Grundsatz der Firmenklarheit und des Zwangszusatzes: Die erforderliche Rechtsform <strong>(${currentOrder.legalFormRequired})</strong> fehlt oder ist falsch platziert. Sie muss als letzter Bestandteil im Namen stehen.`,
+                    firmierungstyp);
+                return;
+            }
+
+            // 2. Check: Firmenwahrheit (Irreführender Zusatz)
+            const misleadingPart = parts.find(p => p.isMisleading);
+            if (misleadingPart) {
+                displayFeedback('error', 
+                    `Verstoß gegen den Grundsatz der Firmenwahrheit: Der Zusatz <strong>'${misleadingPart.text}'</strong> ist irreführend, da er einen unzutreffenden Eindruck von den tatsächlichen Verhältnissen erweckt (z.B. Größe, Stellung).`,
+                    firmierungstyp);
+                return;
+            }
+            
+            // 3. Check: Unterscheidbarkeit (Klarheit und Eindeutigkeit)
+            const requiredElementsPresent = currentOrder.mustInclude.every(req => parts.some(p => p.text.includes(req)));
+            const uniqueTerms = parts.filter(p => p.category !== 'legal' && p.text !== legalFormPart.text).length;
+            
+            if (nameString.split(' ').length < 2) {
+                 displayFeedback('error', `Der Firmenname ist zu kurz. Ein Name erfordert mindestens einen Namensteil und die Rechtsform.`, firmierungstyp);
+                 return;
+            }
+
+            if (uniqueTerms < currentOrder.requiredUniqueElements) {
+                displayFeedback('error', 
+                    `Verstoß gegen den Grundsatz der Unterscheidbarkeit: Ihr Name (enthält ${uniqueTerms} Unterscheidungsmerkmale) ist generisch und muss sich von bereits eingetragenen Firmen unterscheiden. Fügen Sie einen spezifischen Fokus oder eine stärkere Bezeichnung hinzu.`,
+                    firmierungstyp);
+                return;
+            }
+
+            // Vereinfachte Prüfung der Unterscheidbarkeit (Muss sich von simulierten Namen unterscheiden)
+            const simplifiedName = parts.filter(p => p.category !== 'legal').map(p => p.text).join(' ').toLowerCase();
+
+            const isClash = currentOrder.existingCompanies.some(existingName => {
+                const existingSimplified = existingName.replace(/\s(GmbH|e\.K\.|UG\s\(haftungsbeschränkt\)|KG)$/i, '').toLowerCase();
+                return simplifiedName === existingSimplified;
+            });
+            
+            if (isClash) {
+                displayFeedback('error', 
+                    `Verstoß gegen den Grundsatz der Unterscheidbarkeit: Der Name ist zu ähnlich zu einem bereits existierenden Namen (${currentOrder.existingCompanies.join(' oder ')}). Fügen Sie ein eindeutiges Merkmal (z.B. Branche oder Fokus) hinzu.`,
+                    firmierungstyp);
+                return;
+            }
+
+
+            // --- Wenn alle Prüfungen bestanden sind ---
+            displayFeedback('success', 
+                `Der Firmenname <strong>"${nameString}"</strong> erfüllt alle Grundsätze des Firmenrechts: Klarheit, Wahrheit und Unterscheidbarkeit sind gewährleistet.`, 
+                firmierungstyp);
+        }
+
+        // --- Init und Spielstart ---
+
+        function loadNextScenario() {
+            currentScenarioIndex = (currentScenarioIndex + 1) % scenarios.length;
+            startGame();
+        }
+
+        function startGame() {
+            currentOrder = scenarios[currentScenarioIndex];
+            renderAuftrag(currentOrder);
+            renderBaukasten();
+
+            // Drop Area leeren und zurücksetzen
+            dropAreaElement.innerHTML = defaultDropText;
+            feedbackArea.classList.add('hidden');
+            validateBtn.classList.replace('bg-blue-600', 'bg-green-600');
+            validateBtn.textContent = 'Entwurf prüfen';
+            validateBtn.onclick = validateName;
+            validateBtn.disabled = true;
+
+            updateDropAreaState();
+        }
+
+        // Starte das Spiel beim Laden
+        startGame();
+    });
+</script>
+
+</body>
+</html>
