@@ -104,34 +104,18 @@
             transform: translate(-50%, -50%) rotate(15deg);
         }
 
-        /* Stil für die Verjährungs-Timeline */
-        .timeline-bar {
-            height: 8px;
-            background-color: var(--bg-dark);
-            border-radius: 4px;
-            margin: 1rem 0;
-            position: relative;
-        }
-        .timeline-marker {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%) translateX(-50%);
-            width: 16px;
-            height: 16px;
-            background-color: var(--primary);
-            border-radius: 50%;
+        /* Stil für die Verjährungs-Timeline (jetzt Radio-Buttons) */
+        .statute-option {
             cursor: pointer;
-            z-index: 10;
+            transition: all 0.2s;
         }
-        .timeline-marker-label {
-            position: absolute;
-            top: -2.5rem;
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: 600;
-            width: 80px;
-            left: 50%;
-            transform: translateX(-50%);
+        .statute-option:hover {
+            background-color: #f0f0f0;
+        }
+        input[type="radio"]:checked + .statute-label {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
 
         /* Tooltip Style (Helfer) */
@@ -273,7 +257,7 @@
         const TOTAL_POINTS = Object.values(modules).reduce((sum, mod) => sum + mod.total, 0);
 
         // Basiszinssatz (parametrisierbar, Stand 11/2025)
-        const BASE_INTEREST_RATE = 1.27; // in %
+        let BASE_INTEREST_RATE = 1.27; // in %
 
         // --- Hilfsfunktionen für Speichern/Laden und UI ---
 
@@ -330,6 +314,7 @@
                 const data = JSON.parse(savedData);
                 points = data.points || 0;
                 badges = data.badges || [];
+                BASE_INTEREST_RATE = data.baseRate !== undefined ? data.baseRate : 1.27;
                 
                 // Fortschritt in Modul-Objekt übernehmen
                 if (data.modules) {
@@ -546,8 +531,8 @@
             startDate: '2025-03-15',
             endDate: '2025-04-28',
             targetDays: 43, // 30-15=15 Tage im März + 28 Tage im April. (15+28=43). Richtig nach 30/360
-            targetInterest: 8000 * (BASE_INTEREST_RATE + 9) * 43 / (360 * 100) // 8000 * 10.27 * 43 / 36000 = 98.24355... €
         };
+        const TARGET_INTEREST_RATE = 10.27; // 1.27 + 9
 
         /**
          * Berechnet die Zinstage nach der kaufmännischen 30/360 Methode.
@@ -589,7 +574,7 @@
                     <h3 class="font-semibold text-lg mb-2">Basis-Daten</h3>
                     <p><strong>Kapital (K):</strong> Netto € ${interestCase.capital.toLocaleString('de-DE')} </p>
                     <p><strong>Verzugs-Zeitraum:</strong> ${new Date(interestCase.startDate).toLocaleDateString('de-DE')} bis ${new Date(interestCase.endDate).toLocaleDateString('de-DE')} </p>
-                    <p><strong>Basiszinssatz (aktuell):</strong> <input type="number" id="base-rate-input" value="${BASE_INTEREST_RATE.toFixed(2)}" step="0.01" class="w-20 p-1 border rounded" onchange="BASE_INTEREST_RATE = parseFloat(this.value) || 1.27"> %</p>
+                    <p><strong>Basiszinssatz (aktuell):</strong> <input type="number" id="base-rate-input" value="${BASE_INTEREST_RATE.toFixed(2)}" step="0.01" class="w-20 p-1 border rounded" onchange="updateBaseRate(this.value)"> %</p>
                     <p><strong>Anwendbarer Zinssatz B2B:</strong> Basiszinssatz + 9 pp = <span id="current-rate-display">${currentRate}</span> %</p>
                     <p class="mt-2 text-sm italic">Formel: Z = K $\\cdot$ p $\\cdot$ t / (360 $\\cdot$ 100)</p>
                 </div>
@@ -614,24 +599,31 @@
                     </div>
                 </div>
             `;
-            document.getElementById('base-rate-input').oninput = () => {
-                document.getElementById('current-rate-display').textContent = (parseFloat(document.getElementById('base-rate-input').value) + interestCase.rate_pp).toFixed(2);
-            };
+        }
+
+        function updateBaseRate(value) {
+            BASE_INTEREST_RATE = parseFloat(value) || 1.27;
+            document.getElementById('current-rate-display').textContent = (BASE_INTEREST_RATE + interestCase.rate_pp).toFixed(2);
+            saveProgress(); // Basiszinssatz speichern
         }
 
         function checkDays() {
             const input = parseInt(document.getElementById('input-days').value);
             const feedbackDiv = document.getElementById('days-feedback');
             const explanationDiv = document.getElementById('days-calculation-explanation');
-            const targetDays = calculateDays30_360(interestCase.startDate, interestCase.endDate);
+            // Die Zinstage werden immer nach dem Fall-Datum berechnet, unabhängig vom aktuellen Basiszinssatz.
+            const targetDays = calculateDays30_360(interestCase.startDate, interestCase.endDate); 
             let score = 0;
             let feedbackText = '';
             
             const [Y1, M1, D1] = interestCase.startDate.split('-').map(Number);
             const [Y2, M2, D2] = interestCase.endDate.split('-').map(Number);
             
+            // Korrektur für Darstellung der Berechnung (Monatstag 31 wird zu 30)
             const D1_eff = (D1 === 31) ? 30 : D1;
             const D2_eff = (D2 === 31) ? 30 : D2;
+            const diffM = M2 - M1;
+            const diffD = D2_eff - D1_eff;
 
             explanationDiv.innerHTML = `
                 <p><strong>Berechnung der Zinstage (t) nach 30/360:</strong></p>
@@ -639,9 +631,9 @@
                     <li>Start: ${D1}.0${M1}. / Ende: ${D2}.0${M2}.</li>
                     <li>Tageskorrektur (31. wird zu 30.): ${D1}. $\\to$ ${D1_eff} / ${D2}. $\\to$ ${D2_eff}</li>
                     <li>Jahre: (${Y2} - ${Y1}) $\\cdot$ 360 = 0</li>
-                    <li>Monate: (${M2} - ${M1}) $\\cdot$ 30 = (${M2-M1}) $\\cdot$ 30 = ${30 * (M2 - M1)}</li>
-                    <li>Tage: (${D2_eff} - ${D1_eff}) = ${D2_eff - D1_eff}</li>
-                    <li>Gesamt: $0 + ${30 * (M2 - M1)} + ${D2_eff - D1_eff}$ = <strong>${targetDays} Tage</strong></li>
+                    <li>Monate: (${M2} - ${M1}) $\\cdot$ 30 = ${diffM} $\\cdot$ 30 = ${30 * diffM}</li>
+                    <li>Tage: (${D2_eff} - ${D1_eff}) = ${diffD}</li>
+                    <li>Gesamt: $0 + ${30 * diffM} + ${diffD}$ = <strong>${targetDays} Tage</strong></li>
                 </ul>
             `;
             explanationDiv.classList.remove('hidden');
@@ -667,23 +659,28 @@
         function checkInterest() {
             const input = parseFloat(document.getElementById('input-interest').value);
             const feedbackDiv = document.getElementById('interest-feedback');
-            const currentRate = parseFloat(document.getElementById('base-rate-input').value) + interestCase.rate_pp;
+            const currentRate = BASE_INTEREST_RATE + interestCase.rate_pp;
             
+            // Korrigierte Berechnung: Nutzung des BASE_INTEREST_RATE-Wertes aus dem Input/State
             const calculatedTarget = interestCase.capital * currentRate * interestCase.targetDays / (360 * 100);
-            const target = parseFloat(calculatedTarget.toFixed(2));
-            
+            const target = calculatedTarget; // Berechnung behält alle Dezimalstellen bei
+
             let score = 0;
             let feedbackText = '';
 
-            if (input.toFixed(2) === target.toFixed(2)) {
+            // Prüfen, ob die Eingabe innerhalb von 0.01 € des korrekten Ergebnisses liegt (Toleranz für Rundung)
+            if (Math.abs(input - target) < 0.01) {
                 score = 150;
-                feedbackText = `Perfekt! Der Verzugszins beträgt € ${target.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Beachten Sie: Bei B2B-Entgeltforderungen gilt ein hoher Satz von 9 pp über Basiszinssatz (§ 288 Abs. 2 BGB).`;
+                // Ausgabe des Ergebnisses auf zwei Dezimalstellen gerundet
+                const targetRounded = target.toFixed(2); 
+                feedbackText = `Perfekt! Der Verzugszins beträgt € ${targetRounded.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Beachten Sie: Bei B2B-Entgeltforderungen gilt ein hoher Satz von 9 pp über Basiszinssatz (§ 288 Abs. 2 BGB).`;
                 document.getElementById('input-interest').disabled = true;
                 document.getElementById('check-interest-btn').disabled = true;
                 modules.interest.done = true;
             } else if (Math.abs(input - target) < 1.0) {
                 score = 75;
-                feedbackText = `Gute Annäherung, aber die Rundung oder der Zinssatz ist leicht falsch. Das korrekte Ergebnis ist € ${target.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Bitte überprüfen Sie Ihre Eingabe.`;
+                const targetRounded = target.toFixed(2); 
+                feedbackText = `Gute Annäherung, aber die Rundung oder der Zinssatz ist leicht falsch. Das korrekte Ergebnis ist € ${targetRounded.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Sie erhalten Teilpunkte.`;
             } else {
                 score = 0;
                 feedbackText = `Leider falsch. Überprüfen Sie die Formel (Z = K $\\cdot$ p $\\cdot$ t / (360 $\\cdot$ 100)) und den korrekten Zinssatz (${currentRate.toFixed(2)} %).`;
@@ -712,7 +709,7 @@
                 question: 'Dürfen Sie das Gut zurückbehalten (Pfandrecht ausüben)?',
                 correct: 'Nein',
                 law: '§ 464 Satz 1 HGB',
-                explanation: 'Falsch. Das Pfandrecht setzt voraus, dass Sie das Gut in Ihrer *unmittelbaren* Verfügungsgewalt haben. Da Sie es bereits beim Empfänger abgeliefert haben, ist das Pfandrecht erloschen.'
+                explanation: 'Korrekt! Das Pfandrecht setzt voraus, dass Sie das Gut in Ihrer *unmittelbaren* Verfügungsgewalt haben. Da Sie es bereits beim Empfänger abgeliefert haben, ist das Pfandrecht erloschen.' // Korrektur der Feedback-Logik
             },
             {
                 id: 3,
@@ -720,7 +717,7 @@
                 question: 'Dürfen Sie das Gut zurückbehalten (Pfandrecht ausüben)?',
                 correct: 'Nein',
                 law: '§ 464 Satz 1 HGB (eng)',
-                explanation: 'Falsch. Das Pfandrecht des Spediteurs nach § 464 HGB besteht nur wegen Forderungen aus *Speditionsverträgen* und verwandten Leistungen (Lagerung, Zoll, etc.). Eine Forderung aus einem reinen, unabhängigen Lagervertrag fällt nicht darunter. Hier gilt nur das allgemeine Zurückbehaltungsrecht des BGB, das aber keinen Zugriff auf *andere* Güter ermöglicht.'
+                explanation: 'Korrekt! Das Pfandrecht des Spediteurs nach § 464 HGB besteht nur wegen Forderungen aus *Speditionsverträgen* und verwandten Leistungen. Eine Forderung aus einem reinen, unabhängigen Lagervertrag fällt nicht darunter. Hier gilt nur das allgemeine Zurückbehaltungsrecht des BGB, das aber keinen Zugriff auf *andere* Güter ermöglicht.' // Korrektur der Feedback-Logik
             }
         ];
         let currentLienCaseIndex = 0;
@@ -747,7 +744,7 @@
 
             gameContainer.innerHTML = `
                 <h2 class="text-2xl font-bold mb-4 text-primary">Modul 3: Pfandrecht-Check (§ 464 HGB)</h2>
-                <p class="mb-6 text-gray-700">Wischen Sie oder klicken Sie, um zu entscheiden: Pfandrecht Ja oder Nein?</p>
+                <p class="mb-6 text-gray-700">Wischen Sie oder klicken Sie, um zu entscheiden: Dürfen Sie das Gut aufgrund des Speditionspfandrechts zurückbehalten?</p>
 
                 <div class="flex justify-center">
                     <div id="swipe-area" class="swipe-card game-card p-6 flex flex-col justify-between shadow-xl" 
@@ -762,10 +759,10 @@
                 </div>
 
                 <div class="flex justify-center mt-6 space-x-4">
-                    <button class="primary-button bg-red-600 hover:bg-red-700" onclick="handleLienDecision('Nein')">
+                    <button id="btn-no" class="primary-button bg-red-600 hover:bg-red-700" onclick="handleLienDecision('Nein', false)">
                         <span class="text-xl">Nein</span>
                     </button>
-                    <button class="primary-button bg-green-600 hover:bg-green-700" onclick="handleLienDecision('Ja')">
+                    <button id="btn-yes" class="primary-button bg-green-600 hover:bg-green-700" onclick="handleLienDecision('Ja', false)">
                         <span class="text-xl">Ja</span>
                     </button>
                 </div>
@@ -779,6 +776,8 @@
         
         function setupSwipeListener() {
             const swipeArea = document.getElementById('swipe-area');
+            if (!swipeArea) return; // Exit if element is not found
+            
             let startX, currentX, isDragging = false;
 
             const updateCardPosition = (x) => {
@@ -788,11 +787,14 @@
                 const feedbackRight = swipeArea.querySelector('.swipe-feedback.right');
                 const feedbackLeft = swipeArea.querySelector('.swipe-feedback.left');
                 
-                feedbackRight.style.opacity = Math.min(1, diff / 100);
-                feedbackLeft.style.opacity = Math.min(1, -diff / 100);
+                if (feedbackRight && feedbackLeft) {
+                    feedbackRight.style.opacity = Math.min(1, diff / 100);
+                    feedbackLeft.style.opacity = Math.min(1, -diff / 100);
+                }
             };
 
             const endDrag = (x) => {
+                if (!isDragging) return;
                 isDragging = false;
                 swipeArea.style.cursor = 'grab';
                 const diff = x - startX;
@@ -804,13 +806,16 @@
                 } else {
                     // Zurücksetzen
                     swipeArea.style.transform = '';
-                    swipeArea.querySelector('.swipe-feedback.right').style.opacity = 0;
-                    swipeArea.querySelector('.swipe-feedback.left').style.opacity = 0;
+                    const feedbackRight = swipeArea.querySelector('.swipe-feedback.right');
+                    const feedbackLeft = swipeArea.querySelector('.swipe-feedback.left');
+                    if (feedbackRight) feedbackRight.style.opacity = 0;
+                    if (feedbackLeft) feedbackLeft.style.opacity = 0;
                 }
             };
             
             // --- Maus-Events ---
             swipeArea.addEventListener('mousedown', (e) => {
+                e.preventDefault();
                 isDragging = true;
                 startX = e.clientX;
                 swipeArea.style.cursor = 'grabbing';
@@ -841,42 +846,46 @@
             });
         }
 
-        function handleLienDecision(decision, isSwipe = false) {
+        function handleLienDecision(decision, isSwipe) {
             const currentCase = lienCases[currentLienCaseIndex];
             const isCorrect = currentCase.correct === decision;
             let score = 0;
+            const swipeArea = document.getElementById('swipe-area');
+            const feedbackDiv = document.getElementById('pfand-feedback');
+            const buttons = document.querySelectorAll('#btn-no, #btn-yes');
 
+            // Deaktiviere Buttons
+            buttons.forEach(btn => btn.disabled = true);
+            
             if (isCorrect) {
                 score = 50;
-                // Optional: Füge den Fade-Out/Swipe-Effekt hinzu
-                if (isSwipe) {
-                    const swipeArea = document.getElementById('swipe-area');
-                    swipeArea.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
-                    swipeArea.style.transform = `translateX(${decision === 'Ja' ? 500 : -500}px) rotate(${decision === 'Ja' ? 20 : -20}deg)`;
-                    swipeArea.style.opacity = 0;
-                    setTimeout(() => {
-                        currentLienCaseIndex++;
-                        renderLienCase();
-                    }, 500);
-                }
             }
             
             const feedbackHTML = giveFeedbackAndScore(score, `<strong>${currentCase.law}:</strong> ${currentCase.explanation}`, isCorrect);
-            document.getElementById('pfand-feedback').innerHTML = feedbackHTML;
+            feedbackDiv.innerHTML = feedbackHTML;
             
-            if (!isSwipe) {
-                // Bei Klick: Feedback anzeigen und dann weiter
-                setTimeout(() => {
-                    currentLienCaseIndex++;
-                    renderLienCase();
-                }, 3000);
+            // Übergang zum nächsten Fall
+            const nextCase = () => {
+                currentLienCaseIndex++;
+                renderLienCase();
+            }
+
+            if (isSwipe) {
+                // Bei Swipe: Karte animieren und dann entfernen
+                swipeArea.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+                swipeArea.style.transform = `translateX(${decision === 'Ja' ? 500 : -500}px) rotate(${decision === 'Ja' ? 20 : -20}deg)`;
+                swipeArea.style.opacity = 0;
+                setTimeout(nextCase, 500);
+            } else {
+                // Bei Klick: Feedback anzeigen und nach 3s weiter
+                setTimeout(nextCase, 3000);
             }
             
             saveProgress();
         }
 
         // --- Modul 4: Verjährungs-Timeline (§§ 439, 463 HGB) ---
-
+        // VERBESSERT: Von Drag-and-Drop zu Radio Buttons für bessere UX/Mobile
         const statuteCase = {
             id: 1,
             eventDate: new Date('2025-05-15'), // Tag des Schadens
@@ -894,117 +903,64 @@
             
             gameContainer.innerHTML = `
                 <h2 class="text-2xl font-bold mb-4 text-primary">Modul 4: Verjährungs-Timeline (§§ 439, 463 HGB)</h2>
-                <p class="mb-6 text-gray-700">Setzen Sie die korrekte Verjährungsfrist für die folgenden Schadensfälle. Fristbeginn: <strong>${statuteCase.eventDate.toLocaleDateString('de-DE')}</strong> (Schadenereignis).</p>
+                <p class="mb-6 text-gray-700">Wählen Sie die korrekte Verjährungsfrist für die folgenden Schadensfälle. Fristbeginn: <strong>${statuteCase.eventDate.toLocaleDateString('de-DE')}</strong> (Schadenereignis).</p>
                 
                 <div class="bg-gray-100 p-4 rounded-lg mb-6">
                     <p class="text-sm font-semibold mb-2">Basis-Regeln:</p>
                     <ul class="list-disc ml-4 text-sm text-gray-700">
-                        <li>I.d.R. 1 Jahr (§ 439 Abs. 1 HGB).</li>
-                        <li>Bei Vorsatz oder grober Fahrlässigkeit: 3 Jahre (§ 439 Abs. 3 HGB i.V.m. § 463 HGB).</li>
+                        <li>I.d.R. **1 Jahr** (Regelfall) nach **§ 439 Abs. 1 HGB**.</li>
+                        <li>Bei **Vorsatz** oder **grober Fahrlässigkeit**: **3 Jahre** (§ 439 Abs. 3 HGB i.V.m. § 463 HGB).</li>
                     </ul>
                 </div>
 
-                ${statuteCase.cases.map((c, index) => `
-                    <div id="statute-case-${index}" class="game-card p-4 mb-4">
-                        <h4 class="font-semibold text-lg text-gray-800">${c.type} (${c.condition})</h4>
-                        <div class="timeline-bar relative" data-index="${index}">
-                            <div class="timeline-marker" style="left: 0%;" data-years="1">
-                                <div class="timeline-marker-label text-green-700">1 Jahr</div>
+                <form id="statute-form">
+                    ${statuteCase.cases.map((c, index) => `
+                        <div id="statute-case-${index}" class="game-card p-4 mb-4">
+                            <h4 class="font-semibold text-lg text-gray-800">${c.type} (${c.condition})</h4>
+                            <div class="flex flex-wrap gap-4 mt-3">
+                                <label class="statute-option flex items-center p-3 border-2 border-gray-300 rounded-lg">
+                                    <input type="radio" name="case-${index}" value="1" class="hidden">
+                                    <span class="statute-label font-medium p-2 rounded-md">1 Jahr</span>
+                                </label>
+                                <label class="statute-option flex items-center p-3 border-2 border-gray-300 rounded-lg">
+                                    <input type="radio" name="case-${index}" value="3" class="hidden">
+                                    <span class="statute-label font-medium p-2 rounded-md">3 Jahre</span>
+                                </label>
                             </div>
-                            <div class="timeline-marker" style="left: 50%;" data-years="2">
-                                <div class="timeline-marker-label">2 Jahre</div>
-                            </div>
-                            <div class="timeline-marker" style="left: 100%;" data-years="3">
-                                <div class="timeline-marker-label text-red-700">3 Jahre</div>
-                            </div>
-                            <div id="user-marker-${index}" class="timeline-marker bg-secondary cursor-grabbing" style="left: 20%;" data-years-set="1">
-                                <div class="timeline-marker-label">Ihre Frist</div>
-                            </div>
+                            <div id="statute-feedback-${index}" class="mt-2 text-sm"></div>
                         </div>
-                        <div id="statute-feedback-${index}" class="mt-2 text-sm"></div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </form>
                 
                 <button class="primary-button mt-4" onclick="checkStatuteCases()">Alle Fristen prüfen</button>
                 <p class="mt-4 text-sm text-gray-600">Erreichte Punkte: ${currentModPoints} / ${maxPoints}</p>
             `;
             
-            // Marker-Steuerung initialisieren
-            document.querySelectorAll('.timeline-bar').forEach(bar => {
-                const marker = bar.querySelector('.cursor-grabbing');
-                setupMarkerDrag(bar, marker);
+            // Setzt Event Listener für Klicks auf die Label/Optionen
+            document.querySelectorAll('.statute-option').forEach(label => {
+                label.addEventListener('click', function() {
+                    this.querySelector('input[type="radio"]').checked = true;
+                });
             });
         }
-
-        function setupMarkerDrag(bar, marker) {
-            let isDragging = false;
-            
-            const getYearFromPosition = (pos) => {
-                const barRect = bar.getBoundingClientRect();
-                let percentage = (pos - barRect.left) / barRect.width;
-                percentage = Math.max(0, Math.min(1, percentage)); // Begrenzen 0-1
-                let year = 1 + (percentage * 2); // Bereich 1 bis 3
-                return Math.round(year);
-            };
-
-            const updateMarker = (year) => {
-                const yearPercentage = (year - 1) * 50; // 1->0%, 2->50%, 3->100%
-                marker.style.left = `${yearPercentage}%`;
-                marker.dataset.yearsSet = year;
-            };
-
-            const startDrag = (pos) => {
-                isDragging = true;
-                bar.style.cursor = 'grabbing';
-                const year = getYearFromPosition(pos);
-                updateMarker(year);
-            };
-
-            const doDrag = (pos) => {
-                if (!isDragging) return;
-                const year = getYearFromPosition(pos);
-                updateMarker(year);
-            };
-
-            const endDrag = () => {
-                isDragging = false;
-                bar.style.cursor = 'pointer';
-            };
-
-            // Maus Events
-            marker.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                startDrag(e.clientX);
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            });
-
-            // Touch Events
-            marker.addEventListener('touchstart', (e) => {
-                startDrag(e.touches[0].clientX);
-            }, { passive: true });
-            marker.addEventListener('touchmove', (e) => {
-                doDrag(e.touches[0].clientX);
-            }, { passive: true });
-            marker.addEventListener('touchend', endDrag);
-
-            const onMouseMove = (e) => doDrag(e.clientX);
-            const onMouseUp = () => {
-                endDrag();
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            };
-        }
-
 
         function checkStatuteCases() {
             let totalScore = 0;
             let allCorrect = true;
+            let allAnswered = true;
 
             statuteCase.cases.forEach((c, index) => {
-                const marker = document.getElementById(`user-marker-${index}`);
+                const selectedRadio = document.querySelector(`input[name="case-${index}"]:checked`);
                 const feedbackDiv = document.getElementById(`statute-feedback-${index}`);
-                const selectedYears = parseInt(marker.dataset.yearsSet);
+
+                if (!selectedRadio) {
+                    feedbackDiv.innerHTML = `<div class="feedback-box wrong">Bitte wählen Sie eine Frist aus.</div>`;
+                    allAnswered = false;
+                    allCorrect = false;
+                    return;
+                }
+                
+                const selectedYears = parseInt(selectedRadio.value);
                 const targetYears = c.targetYears;
                 
                 let score = 0;
@@ -1017,21 +973,21 @@
                 if (selectedYears === targetYears) {
                     score = 33; // 100 Punkte / 3 Fälle = 33 Pkt pro Fall
                     totalScore += score;
-                    feedbackText = `Korrekt! Die Verjährungsfrist beträgt ${targetYears} Jahr(e). Die Frist endet am ${targetDateString}. (${c.law})`;
+                    feedbackText = `Korrekt! Die Verjährungsfrist beträgt ${targetYears} Jahr(e). Ende: ${targetDateString}. (${c.law})`;
                     feedbackDiv.innerHTML = `<div class="feedback-box correct">${feedbackText}</div>`;
                 } else {
                     allCorrect = false;
-                    feedbackText = `Falsch. Die korrekte Frist ist ${targetYears} Jahr(e). Bei Vorsatz/Grober Fahrlässigkeit sind es 3 Jahre, ansonsten 1 Jahr. (${c.law})`;
+                    feedbackText = `Falsch. Die korrekte Frist ist ${targetYears} Jahr(e). Bei Vorsatz/Grober Fahrlässigkeit 3 Jahre, ansonsten 1 Jahr. (${c.law})`;
                     feedbackDiv.innerHTML = `<div class="feedback-box wrong">${feedbackText}</div>`;
                 }
             });
 
-            if (allCorrect) {
+            if (allAnswered && allCorrect) {
                 modules.statute.points += totalScore;
                 modules.statute.done = true;
                 checkBadge('statute');
                 showModal('Modul Abgeschlossen', 'Alle Fristen wurden korrekt gesetzt! Sie sind ein echter "Fristen-Fuchs".', 'feedback');
-            } else {
+            } else if (allAnswered && !allCorrect) {
                  showModal('Überprüfung abgeschlossen', 'Bitte überprüfen Sie die falschen Fristen und versuchen Sie es erneut, um volle Punkte zu erhalten.', 'feedback');
             }
             saveProgress();
