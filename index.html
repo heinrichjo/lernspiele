@@ -67,8 +67,121 @@
                 </p>
             </div>
             
-            <!-- JavaScript-Daten: Spiele und Kategorien -->
-            <script>
+            <!-- JavaScript-Daten, Firebase und Logik -->
+            <script type="module">
+                // Firebase Importe
+                import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+                import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+                import { getFirestore, doc, onSnapshot, setDoc, increment, collection, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+                // WICHTIG: Die Umgebungsvariablen werden automatisch in diesem Kontext bereitgestellt.
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                let db, auth;
+                let isAuthReady = false;
+                
+                // Firestore Logging für Debugging
+                setLogLevel('error'); // Setzt das Logging-Level auf 'error'
+
+                // Initialisierung und Authentifizierung (Wird asynchron ausgeführt, um das Rendering nicht zu blockieren)
+                async function initializeFirebase() {
+                    if (!firebaseConfig) {
+                        console.error("Firebase Konfiguration nicht gefunden.");
+                        return;
+                    }
+                    
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                        isAuthReady = true;
+                        console.log("Firebase Authentifizierung erfolgreich. Starte Zähler...");
+
+                        // Starte die Zähler
+                        setupVisitorCounter();
+                        
+                    } catch (error) {
+                        console.error("Firebase Authentifizierung fehlgeschlagen:", error);
+                        isAuthReady = true; // Trotz Fehler Zähler starten
+                        setupVisitorCounter();
+                    }
+                }
+
+                // --- Besucherzähler (Tracking im Hintergrund) ---
+                function setupVisitorCounter() {
+                    if (!isAuthReady || !db) return;
+
+                    // Pfad zur öffentlichen Zähldatenbank
+                    const countDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'analytics', 'page_views');
+
+                    // Zählung auf eine Zählung pro Sitzung beschränken
+                    if (sessionStorage.getItem('visited')) {
+                        console.log("Besucher bereits in dieser Sitzung gezählt.");
+                        return;
+                    }
+
+                    // Transaktion zum inkrementieren der Besucherzahl
+                    setDoc(countDocRef, { total_visitors: increment(1) }, { merge: true })
+                        .then(() => {
+                            sessionStorage.setItem('visited', 'true');
+                            console.log("Besucherzahl erfolgreich inkrementiert.");
+                        })
+                        .catch(e => {
+                            console.error("Fehler beim Inkrementieren des Besucherzählers:", e);
+                        });
+
+                    // Live-Update für Entwickler in der Konsole
+                    onSnapshot(countDocRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const count = docSnap.data().total_visitors || 0;
+                            // Dies zeigt den Wert nur in der Entwicklerkonsole an (F12)
+                            console.log(`[FIREBASE] Aktuelle Gesamtbesucherzahl: ${count}`);
+                        } else {
+                            console.log("[FIREBASE] Dokument für Besucherzähler existiert noch nicht.");
+                        }
+                    }, (error) => {
+                        console.error("[FIREBASE] Fehler beim Abrufen des Besucherzählers:", error);
+                    });
+                }
+
+                // --- Klick-Zähler für Spiele ---
+                function trackGameClick(gameId, gameTitle, link) {
+                    if (!isAuthReady || !db) {
+                        // Wenn Firebase nicht bereit ist, trotzdem zum Spiel weiterleiten
+                        window.location.href = link;
+                        return;
+                    }
+                    
+                    // Pfad zur öffentlichen Klick-Datenbank
+                    const clickDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'game_clicks', gameId.toString());
+
+                    setDoc(clickDocRef, { 
+                        title: gameTitle,
+                        total_clicks: increment(1),
+                        last_clicked: new Date().toISOString()
+                    }, { merge: true })
+                    .then(() => {
+                        console.log(`[FIREBASE] Klick für Spiel ${gameId} gezählt.`);
+                    })
+                    .catch(e => {
+                        console.error(`Fehler beim Zählen des Klicks für Spiel ${gameId}:`, e);
+                    })
+                    .finally(() => {
+                        // Immer zum Spiel weiterleiten, auch wenn das Zählen fehlschlägt
+                        window.location.href = link;
+                    });
+                }
+
+
+                // --- Hauptlogik für Navigation und Rendering ---
                 const categories = [
                     "Alle",
                     "Spedition- und Logistikdienstleistungen",
@@ -84,28 +197,28 @@
                         title: "Wo liegt was?! – Das große Autobahnen-Geo-Raten", 
                         category: "Spedition- und Logistikdienstleistungen", 
                         description: "Ein Geo-Quiz zum Raten von Autobahnen und zur Vertiefung des geografischen Wissens für die Routenplanung.", 
-                        link: "woliegtwas.html" 
+                        link: "https://heinrichjo.github.io/lernspiele/woliegtwas.html" 
                     },
                     { 
                         id: 2, 
                         title: "Autobahn-Quiz und Routenplanung", 
                         category: "Spedition- und Logistikdienstleistungen", 
                         description: "Testen Sie Ihr Wissen über Autobahnen und üben Sie die effiziente Routenplanung.", 
-                        link: "autobahnenroutenplaner.html" 
+                        link: "https://heinrichjo.github.io/lernspiele/autobahnenroutenplaner.html" 
                     },
                     { 
                         id: 3, 
                         title: "Speditionsrecht: Vergütung & Verzug", 
                         category: "Spedition- und Logistikdienstleistungen", 
-                        description: "Lernspiel zu rechtlichen Aspekten der Vergütung und des Verzugs im Speditionsgewerbe. Hinweis: Spiel noch nicht getestet.", 
-                        link: "zinsquiz.html" 
+                        description: "Lernspiel zu rechtlichen Aspekten der Vergütung und des Verzugs im Speditionsgewerbe.", 
+                        link: "https://heinrichjo.github.io/lernspiele/speditionsrecht_verguetung_verzug.html" 
                     },
                     { 
                         id: 4, 
                         title: "ADSp 2017 Quiz", 
                         category: "Spedition- und Logistikdienstleistungen", 
                         description: "Testen Sie Ihr Wissen über die Allgemeinen Deutschen Spediteurbedingungen (ADSp).", 
-                        link: "adspquiz.html" 
+                        link: "https://heinrichjo.github.io/lernspiele/adspquiz.html" 
                     },
                     
                     // IT-Systemmanagement (spezifische Coding-Spiele, Zielgruppe: Kaufl. f. IT-Systemmanagement)
@@ -114,33 +227,40 @@
                         title: "Code-Abenteuer Blackjack", 
                         category: "IT-Systemmanagement", 
                         description: "Ein Coding-Spiel, bei dem die Logik von Code-Abschnitten erkannt werden muss.", 
-                        link: "blackjack_v3.html" 
+                        link: "https://heinrichjo.github.io/lernspiele/blackjack_v3.html" 
                     },
                     { 
                         id: 6, 
                         title: "Hi-Lo Coding", 
                         category: "IT-Systemmanagement", 
                         description: "Ein Spiel, um sich Code-Strukturen und Algorithmen schnell einzuprägen (Code erinnern).", 
-                        link: "hi-lo_v2.html" 
+                        link: "https://heinrichjo.github.io/lernspiele/hi-lo_v2.html" 
                     },
                     { 
                         id: 7, 
                         title: "Code fixer", 
                         category: "IT-Systemmanagement", 
                         description: "Analysieren und beheben Sie Fehler in kurzen Code-Abschnitten (Code analysieren und anwenden).", 
-                        link: "codefixer.html" 
+                        link: "https://heinrichjo.github.io/lernspiele/codefixer.html" 
                     },
                     { 
                         id: 8, 
                         title: "Der OOP-Lehrpfad", 
                         category: "IT-Systemmanagement", 
                         description: "Ein interaktiver Pfad zum Erlernen und Vertiefen der Objektorientierten Programmierung (OOP).", 
-                        link: "oop.html" 
+                        link: "https://heinrichjo.github.io/lernspiele/oop.html" 
                     },
                     
                     // Wirtschaftsthemen allgemein (Aus der vorherigen Version beibehalten)
                     { 
                         id: 9, 
+                        title: "Zinsrechen-Quiz", 
+                        category: "Wirtschaftsthemen allgemein", 
+                        description: "Testen Sie Ihr Wissen über Zinsberechnungen und die Grundlagen der Finanzwirtschaft.", 
+                        link: "https://heinrichjo.github.io/lernspiele/zinsquiz.html" 
+                    },
+                    { 
+                        id: 10, 
                         title: "Bilanzen-Meister", 
                         category: "Wirtschaftsthemen allgemein", 
                         description: "Lernen Sie, Bilanzen und GuV-Rechnungen richtig zu lesen und zu interpretieren. (Platzhalter)", 
@@ -153,6 +273,9 @@
                 // Funktion zum Rendern der Tabs
                 function renderCategories() {
                     const navContainer = document.getElementById('category-nav');
+                    // Sicherstellen, dass der Container existiert
+                    if (!navContainer) return; 
+
                     navContainer.innerHTML = '';
 
                     categories.forEach(cat => {
@@ -176,6 +299,9 @@
                 // Funktion zum Rendern der Spielkarten
                 function renderGames() {
                     const gamesContainer = document.getElementById('games-list');
+                    // Sicherstellen, dass der Container existiert
+                    if (!gamesContainer) return;
+
                     gamesContainer.innerHTML = '';
                     
                     const filteredGames = activeCategory === "Alle" 
@@ -194,23 +320,43 @@
                     filteredGames.forEach(game => {
                         const card = document.createElement('div');
                         card.className = "bg-secondary p-5 rounded-lg border border-primary/20 shadow-md flex flex-col justify-between transition transform hover:shadow-xl hover:scale-[1.02] cursor-pointer";
+                        
+                        // Erstelle den Button, der den Klick triggert
+                        const buttonHtml = `
+                            <button data-id="${game.id}" data-title="${game.title}" data-link="${game.link}" 
+                                class="game-link mt-auto px-4 py-2 blue-800 text-white rounded-lg font-medium hover:bg-blue-700 transition duration-150 text-center shadow-md w-full">
+                                Spiel starten
+                            </button>
+                        `;
+
                         card.innerHTML = `
                             <div>
                                 <h3 class="text-xl font-semibold text-primary mb-2">${game.title}</h3>
                                 <p class="text-gray-700 mb-4 text-sm">${game.description}</p>
                             </div>
-                            <a href="${game.link}" class="mt-auto px-4 py-2 blue-800 text-white rounded-lg font-medium hover:bg-blue-700 transition duration-150 text-center shadow-md">
-                                Spiel starten
-                            </a>
+                            ${buttonHtml}
                         `;
                         gamesContainer.appendChild(card);
+                    });
+
+                    // Füge Event Listener für die Klickverfolgung hinzu
+                    gamesContainer.querySelectorAll('.game-link').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const link = e.currentTarget.dataset.link;
+                            const id = parseInt(e.currentTarget.dataset.id);
+                            const title = e.currentTarget.dataset.title;
+                            trackGameClick(id, title, link);
+                        });
                     });
                 }
 
                 // Initialisierung nach dem Laden des DOM
                 window.onload = () => {
-                    renderCategories();
-                    renderGames();
+                    // UI-Elemente sofort rendern, um die Sichtbarkeit zu gewährleisten
+                    renderCategories(); 
+                    renderGames(); 
+                    // Firebase asynchron im Hintergrund starten
+                    initializeFirebase(); 
                 };
             </script>
             
@@ -227,14 +373,23 @@
         </div>
     </main>
 
-    <!-- Footer -->
+    <!-- Footer mit Links zu Impressum und Datenschutzerklärung -->
     <footer class="mt-10 py-6 text-center text-gray-500 text-sm border-t border-gray-200">
-        &copy; 2025 - Johannes Heinrich – Berufsschule 4 Welserschule Augsburg
+        <div class="max-w-6xl mx-auto px-4">
+            <p class="mb-2">
+                &copy; 2025 - Johannes Heinrich – Berufsschule 4 Welserschule Augsburg
+            </p>
+            <div class="space-x-4">
+                <a href="impressum.html" target="_blank" class="text-primary hover:text-blue-600 font-medium underline-offset-4 hover:underline transition duration-150">
+                    Impressum
+                </a>
+                <span class="text-gray-400">|</span>
+                <a href="datenschutzerklaerung.html" target="_blank" class="text-primary hover:text-blue-600 font-medium underline-offset-4 hover:underline transition duration-150">
+                    Datenschutzerklärung
+                </a>
+            </div>
+        </div>
     </footer>
 
 </body>
 </html>
-
-
-
-
