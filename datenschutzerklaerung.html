@@ -33,7 +33,7 @@
 </head>
 <body class="min-h-screen antialiased">
 
-    <!-- Header mit Logo (Optional, hier weggelassen für ein sauberes Dokumenten-Layout) -->
+    <!-- Header mit Link zur Hauptseite -->
     <header class="bg-white shadow-md">
         <div class="max-w-6xl mx-auto p-4 flex justify-center">
             <!-- Link zurück zur Hauptseite -->
@@ -93,7 +93,7 @@
                     </ul>
                 </div>
 
-                <!-- Unterabschnitt c) GitHub Pages -->
+                <!-- Unterabschnitt c) Verlinkte Lernspiele -->
                 <div class="ml-4 space-y-3 p-4 border-l-4 border-primary/50 bg-gray-50 rounded-md">
                     <h3 class="text-lg font-medium primary-color">c) Verlinkte Lernspiele (Hosting über GitHub Pages)</h3>
                     <p>Alle "Spiel starten"-Links auf dieser Website führen zu den auf **GitHub Pages** gehosteten Lernspielen (z. B. auf der Domain <code class="font-mono text-sm">https://heinrichjo.github.io/lernspiele/...</code>).</p>
@@ -103,6 +103,19 @@
                         <li><strong>Hinweis:</strong> Sobald Sie die externe Seite aufgerufen haben, gelten die Datenschutzbestimmungen von GitHub.</li>
                     </ul>
                 </div>
+
+                <!-- Unterabschnitt d) Besucher- und Klickzähler -->
+                <div class="ml-4 space-y-3 p-4 border-l-4 border-primary/50 bg-gray-50 rounded-md">
+                    <h3 class="text-lg font-medium primary-color">d) Besucher- und Klickzähler (Firebase Firestore)</h3>
+                    <p>Die Website verwendet Firebase Firestore (ein Dienst von Google) zur internen, pseudonymen Erfolgsmessung und Nutzungsanalyse, um die didaktische Relevanz der Inhalte zu prüfen.</p>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li><strong>Verarbeitete Daten:</strong> Es werden lediglich aggregierte Zählungen (Anzahl der Seitenaufrufe, Anzahl der Klicks auf einzelne Spiele) gespeichert. Es erfolgt **keine Speicherung von IP-Adressen, Nutzer-IDs oder sonstigen personenbezogenen Daten** in Firestore.</li>
+                        <li><strong>Cookies/Speicher:</strong> Es wird der **Session Storage** Ihres Browsers verwendet, um zu verhindern, dass die Seitenaufrufe innerhalb einer Sitzung mehrfach gezählt werden. Dieser temporäre Speicher wird beim Schließen des Browsers gelöscht.</li>
+                        <li><strong>Zweck:</strong> Statistische Auswertung zur Optimierung des Lehrangebots.</li>
+                        <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Optimierung der Dienste, da die Verarbeitung pseudonymisiert erfolgt).</li>
+                    </ul>
+                </div>
+
             </div>
 
             <!-- Abschnitt 4: Rechte -->
@@ -111,17 +124,13 @@
                 <p>Sie haben jederzeit das Recht, unentgeltlich Auskunft über Herkunft, Empfänger und Zweck Ihrer gespeicherten personenbezogenen Daten zu erhalten. Sie haben außerdem ein Recht auf Berichtigung, Sperrung oder Löschung dieser Daten. Bei Fragen wenden Sie sich bitte an die oben genannte E-Mail-Adresse.</p>
             </div>
 
-            <!-- Wichtiger Hinweis -->
-            <div class="mt-8 p-4 bg-red-50 border border-red-300 rounded-lg text-sm text-red-800">
-                <strong>WICHTIGER HINWEIS:</strong> Dies ist ein Mustertext. Eine professionelle, rechtssichere Datenschutzerklärung ist bei einem dauerhaften öffentlichen Betrieb der Website erforderlich und muss von einem Datenschutzbeauftragten oder einem Fachanwalt geprüft werden.
-            </div>
 
         </div>
     </main>
 
     <!-- Footer -->
     <footer class="mt-10 py-6 text-center text-gray-500 text-sm border-t border-gray-200">
-        &copy; 2024 Lernspiele BS4 Augsburg | Alle Rechte vorbehalten.
+        &copy; 2025 Johannes Heinrich - Berufsschule 4 Welserschule Augsburg 
     </footer>
 
 </body>
