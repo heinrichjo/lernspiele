@@ -3,138 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lernspiele</title>
+    <title>Lernspiele für Azubis</title>
+    <!-- Lade Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Spezifische Schriftart und Basis-Styling */
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f9f9f9;
-            color: #333;
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f3f9;
         }
-        header {
-            background-color: white;
-            text-align: center;
-            padding: 15px;
-            border-bottom: 2px solid #004080;
-        }
-        header img {
-            max-height: 80px;
-        }
-        main {
-            max-width: 900px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #004080;
-            text-align: center;
-        }
-        .info {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .cards {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-        .card {
-            background-color: #f0f4ff;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            width: 260px;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: scale(1.05);
-        }
-        .card a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 8px 12px;
-            background-color: #004080;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .card a:hover {
-            background-color: #003060;
-        }
-        footer {
-            text-align: center;
-            padding: 10px;
-            font-size: 0.9em;
-            color: #666;
-        }
+        /* Definiert eine benutzerdefinierte Tailwind-Farbe für das Design */
+        .blue-800 { background-color: #004080; }
+        .text-blue-800 { color: #004080; }
+        .hover\:bg-blue-700:hover { background-color: #003060; }
     </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#004080',
+                        secondary: '#f0f4ff',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-    <header>
-        <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="BS4 Augsburg Logo">
+<body class="min-h-screen antialiased">
+
+    <!-- Header mit Logo -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-center">
+            <!-- Verwenden des bereitgestellten Logos -->
+            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                 alt="BS4 Augsburg Logo" 
+                 class="h-16 object-contain rounded-md"
+                 onerror="this.onerror=null; this.src='https://placehold.co/150x64/004080/ffffff?text=BS4+Logo';">
+        </div>
     </header>
 
-    <main>
-        <h1>Lernspiele für Azubis</h1>
-        <div class="info">
-            <p>Willkommen! Auf dieser Website finden Sie <strong>Lernspiele für kaufmännische Auszubildende</strong>.</p>
-            <p>Alle Spiele sind derzeit <strong>Prototypen</strong> für den Einsatz im Unterricht und wurden mit Unterstützung von Künstlicher Intelligenz (Google Gemini und Microsoft Copilot) erstellt.</p>
-            <p>Ich freuen mich <stong>sehr</stong> über Ihr Feedback: johannes.heinrich@bs4-augsburg.de</p>
-        </div>
+    <!-- Hauptinhalt -->
+    <main class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
 
-        <h3>Bisher entwickelte Spiele:</h3>
-        <div class="cards">
-            <div class="card">
-                <h3>Wo liegt was?! – Das große Autobahnen-Geo-Raten</h3>
-                <p>Zielgruppe: Kaufleute für Spedition & Logistikdienstleistungen</p>
-                <a href="woliegtwas.html" target="_blank">Spiel starten</a>
-            </div>
-            <div class="card">
-                <h3>Autobahn-Quiz und Routenplanung</h3>
-                <p>Zielgruppe: Kaufleute für Spedition & Logistikdienstleistungen</p>
-                <a href="autobahnenroutenplaner.html" target="_blank">Spiel starten</a>
-            </div>
-            <div class="card">
-                <h3>Blackjack-Coding</h3>
-                <p>Zielgruppe: Kaufleute für IT-Systemmanagement (Code erkennen) </p>
-                <a href="blackjack_v3.html">Spiel starten</a>
-            </div>
+            <h1 class="text-4xl font-extrabold text-center text-primary mb-2">
+                Digitale Lernspiele für Azubis
+            </h1>
+            <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
+                Wählen Sie Ihren Ausbildungsbereich, um themenspezifische Lernspiele zu entdecken.
+            </p>
             
-            <div class="card">
-                <h3>Hi-Lo Coding</h3>
-                <p>Zielgruppe: Kaufleute für IT-Systemmanagement (Code erinnern)</p>
-                <a href="hi-lo_v2.html">Spiel starten</a>
+            <!-- JavaScript-Daten: Spiele und Kategorien -->
+            <script>
+                const categories = [
+                    "Alle",
+                    "Spedition- und Logistikdienstleistungen",
+                    "IT-Systemmanagement",
+                    "Wirtschaftsthemen allgemein",
+                    "Datenverarbeitung und IT allgemein"
+                ];
+
+                const games = [
+                    // Spedition- und Logistikdienstleistungen
+                    { 
+                        id: 1, 
+                        title: "Wo liegt was?! – Das große Autobahnen-Geo-Raten", 
+                        category: "Spedition- und Logistikdienstleistungen", 
+                        description: "Ein Geo-Quiz zum Raten von Autobahnen und zur Vertiefung des geografischen Wissens für die Routenplanung.", 
+                        link: "https://heinrichjo.github.io/lernspiele/woliegtwas.html" 
+                    },
+                    { 
+                        id: 2, 
+                        title: "Autobahn-Quiz und Routenplanung", 
+                        category: "Spedition- und Logistikdienstleistungen", 
+                        description: "Testen Sie Ihr Wissen über Autobahnen und üben Sie die effiziente Routenplanung.", 
+                        link: "https://heinrichjo.github.io/lernspiele/autobahnenroutenplaner.html" 
+                    },
+                    { 
+                        id: 3, 
+                        title: "Speditionsrecht: Vergütung & Verzug", 
+                        category: "Spedition- und Logistikdienstleistungen", 
+                        description: "Lernspiel zu rechtlichen Aspekten der Vergütung und des Verzugs im Speditionsgewerbe. Hinweis: Spiel noch nicht getestet.", 
+                        link: "#https://heinrichjo.github.io/lernspiele/zinsquiz.html" 
+                    },
+                    { 
+                        id: 4, 
+                        title: "ADSp 2017 Quiz", 
+                        category: "Spedition- und Logistikdienstleistungen", 
+                        description: "Testen Sie Ihr Wissen über die Allgemeinen Deutschen Spediteurbedingungen (ADSp).", 
+                        link: "https://heinrichjo.github.io/lernspiele/adspquiz.html" 
+                    },
+                    
+                    // IT-Systemmanagement (spezifische Coding-Spiele, Zielgruppe: Kaufl. f. IT-Systemmanagement)
+                    { 
+                        id: 5, 
+                        title: "Code-Abenteuer Blackjack", 
+                        category: "IT-Systemmanagement", 
+                        description: "Ein Coding-Spiel, bei dem die Logik von Code-Abschnitten erkannt werden muss.", 
+                        link: "https://heinrichjo.github.io/lernspiele/blackjack_v3.html" 
+                    },
+                    { 
+                        id: 6, 
+                        title: "Hi-Lo Coding", 
+                        category: "IT-Systemmanagement", 
+                        description: "Ein Spiel, um sich Code-Strukturen und Algorithmen schnell einzuprägen (Code erinnern).", 
+                        link: "https://heinrichjo.github.io/lernspiele/hi-lo_v2.html" 
+                    },
+                    { 
+                        id: 7, 
+                        title: "Code fixer", 
+                        category: "IT-Systemmanagement", 
+                        description: "Analysieren und beheben Sie Fehler in kurzen Code-Abschnitten (Code analysieren und anwenden).", 
+                        link: "https://heinrichjo.github.io/lernspiele/codefixer.html" 
+                    },
+                    { 
+                        id: 8, 
+                        title: "Der OOP-Lehrpfad", 
+                        category: "IT-Systemmanagement", 
+                        description: "Ein interaktiver Pfad zum Erlernen und Vertiefen der Objektorientierten Programmierung (OOP).", 
+                        link: "https://heinrichjo.github.io/lernspiele/oop.html" 
+                    },
+                    
+                    // Wirtschaftsthemen allgemein (Aus der vorherigen Version beibehalten)
+                    { 
+                        id: 9, 
+                        title: "Zinsrechen-Quiz", 
+                        category: "Wirtschaftsthemen allgemein", 
+                        description: "Testen Sie Ihr Wissen über Zinsberechnungen und die Grundlagen der Finanzwirtschaft.", 
+                        link: "https://heinrichjo.github.io/lernspiele/zinsquiz.html" 
+                    },
+                    { 
+                        id: 10, 
+                        title: "Bilanzen-Meister", 
+                        category: "Wirtschaftsthemen allgemein", 
+                        description: "Lernen Sie, Bilanzen und GuV-Rechnungen richtig zu lesen und zu interpretieren. (Platzhalter)", 
+                        link: "#link-wirtschaft-2" 
+                    },
+                ];
+
+                let activeCategory = "Alle";
+
+                // Funktion zum Rendern der Tabs
+                function renderCategories() {
+                    const navContainer = document.getElementById('category-nav');
+                    navContainer.innerHTML = '';
+
+                    categories.forEach(cat => {
+                        const isActive = cat === activeCategory;
+                        const button = document.createElement('button');
+                        button.textContent = cat;
+                        button.className = `px-4 py-2 text-sm font-medium rounded-full transition duration-150 ease-in-out whitespace-nowrap ${
+                            isActive 
+                                ? 'blue-800 text-white shadow-lg' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-primary hover:text-white'
+                        }`;
+                        button.onclick = () => {
+                            activeCategory = cat;
+                            renderCategories();
+                            renderGames();
+                        };
+                        navContainer.appendChild(button);
+                    });
+                }
+
+                // Funktion zum Rendern der Spielkarten
+                function renderGames() {
+                    const gamesContainer = document.getElementById('games-list');
+                    gamesContainer.innerHTML = '';
+                    
+                    const filteredGames = activeCategory === "Alle" 
+                        ? games 
+                        : games.filter(game => game.category === activeCategory);
+
+                    if (filteredGames.length === 0) {
+                        gamesContainer.innerHTML = `
+                            <p class="text-center text-gray-500 col-span-full py-10">
+                                Leider gibt es in dieser Kategorie noch keine Spiele.
+                            </p>
+                        `;
+                        return;
+                    }
+
+                    filteredGames.forEach(game => {
+                        const card = document.createElement('div');
+                        card.className = "bg-secondary p-5 rounded-lg border border-primary/20 shadow-md flex flex-col justify-between transition transform hover:shadow-xl hover:scale-[1.02] cursor-pointer";
+                        card.innerHTML = `
+                            <div>
+                                <h3 class="text-xl font-semibold text-primary mb-2">${game.title}</h3>
+                                <p class="text-gray-700 mb-4 text-sm">${game.description}</p>
+                            </div>
+                            <a href="${game.link}" class="mt-auto px-4 py-2 blue-800 text-white rounded-lg font-medium hover:bg-blue-700 transition duration-150 text-center shadow-md">
+                                Spiel starten
+                            </a>
+                        `;
+                        gamesContainer.appendChild(card);
+                    });
+                }
+
+                // Initialisierung nach dem Laden des DOM
+                window.onload = () => {
+                    renderCategories();
+                    renderGames();
+                };
+            </script>
+            
+            <!-- Navigationsleiste für Kategorien (Tabs) -->
+            <div id="category-nav" class="flex flex-wrap justify-center gap-3 p-4 bg-gray-50 rounded-lg shadow-inner overflow-x-auto mb-10">
+                <!-- Kategorien-Buttons werden hier durch JavaScript eingefügt -->
             </div>
-            <div class="card">
-                <h3>Code fixer</h3>
-                <p>Zielgruppe: Kaufleute für IT-Systemmanagement (Code analysieren und awenden)</p>
-                <a href="codefixer.html">Spiel starten</a>
+
+            <!-- Liste der Lernspiele (Karten) -->
+            <div id="games-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Spielkarten werden hier durch JavaScript eingefügt -->
             </div>
-            <div class="card">
-                <h3>Der OOP-Lehrpfad</h3>
-                <p>Zielgruppe: Kaufleute für IT-Systemmanagement (simpel)</p>
-                <a href="oop.html">Spiel starten</a>
-            </div>
+
         </div>
     </main>
 
-    <footer>
-        © 2025 Johannes Heinrich BS4 Augsburg – Welserschule
+    <!-- Footer -->
+    <footer class="mt-10 py-6 text-center text-gray-500 text-sm border-t border-gray-200">
+        &copy; Lernspiele Johannes Heinrich - Berufsschule 4 Welserschule Augsburg - 2025
     </footer>
+
 </body>
-
 </html>
-
-
-
-
-
-
-
