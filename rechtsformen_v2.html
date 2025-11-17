@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechtsformen-Gründer-Challenge</title>
+    <!-- Tailwind CSS (für modernes, responsives Design) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Slate 100 */
+        }
+        .card-shadow {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .form-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .form-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.15);
+        }
+        .active-form {
+            border: 4px solid #10b981; /* Emerald 500 */
+            background-color: #ecfdf5; /* Emerald 50 */
+        }
+        .stat-bar {
+            height: 10px;
+            border-radius: 9999px;
+            background-color: #e2e8f0; /* Slate 200 */
+        }
+        .stat-fill {
+            transition: width 1s ease-in-out;
+            background-color: #3b82f6; /* Blue 500 */
+        }
+        .decision-btn {
+            @apply px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition duration-150 ease-in-out w-full md:w-auto;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col items-center justify-center">
+
+    <div id="game-container" class="w-full max-w-4xl bg-white rounded-xl card-shadow p-6 md:p-10 mb-4">
+
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Rechtsformen-Gründer-Challenge</h1>
+            <p class="text-gray-600 text-lg">Wähle die passende Rechtsform für dein Start-up und meistere die Herausforderungen.</p>
+        </header>
+
+        <!-- Game Screens -->
+        <div id="start-screen">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">1. Wähle deine Rechtsform</h2>
+            <p class="mb-6 text-gray-700">Du gründest ein innovatives Logistik-Software-Unternehmen. Wähle die Rechtsform, die du für diese Geschäftsidee am geeignetsten hältst:</p>
+
+            <div id="form-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Cards for legal forms will be inserted here by JS -->
+            </div>
+
+            <div class="mt-8 text-center">
+                <button id="start-game-btn" class="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 ease-in-out disabled:opacity-50" disabled>
+                    Challenge starten
+                </button>
+            </div>
+        </div>
+
+        <div id="challenge-screen" class="hidden">
+            <div class="flex flex-col md:flex-row gap-6 mb-6">
+                <!-- Status Panel -->
+                <div class="md:w-1/3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Dein Unternehmen</h3>
+                    <p class="mb-3"><span class="font-semibold">Rechtsform:</span> <span id="current-form-display" class="text-blue-600"></span></p>
+                    <p class="mb-3"><span class="font-semibold">Kapital:</span> <span id="capital-display" class="font-mono text-green-600">€ 50.000</span></p>
+                    <p class="mb-3"><span class="font-semibold">Bürokratie:</span> <span id="admin-display"></span></p>
+                    <p class="mb-3"><span class="font-semibold">Risiko-Score:</span> <span id="score-display" class="text-xl font-bold">100</span></p>
+                </div>
+
+                <!-- Scenario Panel -->
+                <div class="md:w-2/3 p-4 bg-white rounded-lg border border-gray-200 shadow-inner">
+                    <h3 id="challenge-title" class="text-2xl font-bold text-blue-800 mb-3"></h3>
+                    <p id="challenge-description" class="text-gray-700 mb-4"></p>
+                    
+                    <!-- Decision Phase -->
+                    <div id="challenge-decision-panel">
+                        <p class="font-semibold text-gray-800 mb-3">Welchen Weg wählst du?</p>
+                        <div id="decision-buttons" class="space-y-3 md:space-y-0 md:space-x-3 flex flex-col md:flex-row">
+                            <!-- Decision buttons added by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Result Phase (Hidden initially) -->
+                    <div id="challenge-result-panel" class="hidden">
+                        <div id="challenge-stats" class="space-y-3 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                            <!-- Challenge-specific stats/results -->
+                        </div>
+                        <div class="mt-6 text-right">
+                            <button id="next-challenge-btn" class="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition duration-150 ease-in-out">
+                                Weiter zur nächsten Phase
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="result-screen" class="hidden text-center p-8 bg-blue-50 rounded-xl border-4 border-blue-200">
+            <h2 class="text-3xl font-bold text-blue-800 mb-4">Challenge abgeschlossen!</h2>
+            <p id="final-verdict" class="text-xl text-gray-700 mb-6"></p>
+            <div id="result-summary" class="text-left mx-auto max-w-lg mb-8 space-y-3">
+                <!-- Final results and breakdown -->
+            </div>
+            <button onclick="location.reload()" class="px-8 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-150 ease-in-out">
+                Neustart
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer id="app-footer" class="w-full max-w-4xl mx-auto mt-4 text-center text-gray-600 text-xs p-4 border-t border-gray-300 bg-white rounded-xl card-shadow">
+        <div class="flex items-center justify-center space-x-4">
+            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                 alt="Schullogo" 
+                 class="h-8 w-auto rounded-md"
+                 onerror="this.onerror=null; this.src='https://placehold.co/100x32/1f2937/ffffff?text=BS4+Logo';"
+            >
+            <span>|</span>
+            <p>Johannes Heinrich - Berufsschule 4 Welserschule Augsburg - 2025</p>
+        </div>
+    </footer>
+
+
+    <script>
+        // Globale Variablen für Firebase (wird hier nicht verwendet, aber für die Canvas-Umgebung beibehalten)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const LegalForms = {
+            EU: { name: "Einzelunternehmen (EU)", liabilityFactor: 1.0, capitalEaseFactor: 0.9, adminComplexityFactor: 0.2, desc: "Die einfachste Form. Volle Kontrolle, aber volle private Haftung." },
+            GbR: { name: "Gesellschaft bürgerlichen Rechts (GbR)", liabilityFactor: 0.8, capitalEaseFactor: 0.7, adminComplexityFactor: 0.4, desc: "Für gemeinsame Projekte. Gemeinsame Leitung, gesamtschuldnerische Haftung." },
+            OHG: { name: "Offene Handelsgesellschaft (OHG)", liabilityFactor: 0.7, capitalEaseFactor: 0.6, adminComplexityFactor: 0.6, desc: "Handelsgewerbe. Alle Gesellschafter haften persönlich und unbeschränkt." },
+            KG: { name: "Kommanditgesellschaft (KG)", liabilityFactor: 0.5, capitalEaseFactor: 0.7, adminComplexityFactor: 0.6, desc: "Zwei Partner: Komplementär (unbeschränkt) und Kommanditist (beschränkt auf die Einlage)." },
+            GmbH: { name: "Gesellschaft mit beschränkter Haftung (GmbH)", liabilityFactor: 0.1, capitalEaseFactor: 0.4, adminComplexityFactor: 0.8, desc: "Die klassische Kapitalgesellschaft. Begrenzte Haftung, hohes Stammkapital (€ 25k)." },
+            AG: { name: "Aktiengesellschaft (AG)", liabilityFactor: 0.05, capitalEaseFactor: 0.2, adminComplexityFactor: 0.9, desc: "Ideal für Großunternehmen. Beste Kapitalbeschaffung, maximale Bürokratie." }
+        };
+
+        const Challenges = [
+            {
+                id: 1, // NEUE ID (vorher 5)
+                title: "Die Gründungshürde (Vertrag und Formalitäten)",
+                desc: "Du hast dich mit deinen Mitgründern geeinigt. Nun steht die Formalisierung an, inklusive Gesellschaftervertrag und Anmeldung.",
+                decisions: [
+                    { 
+                        text: "Mündliche Einigung oder einfacher Mustervertrag (Kosten: Gering)",
+                        consequences: {
+                            EU: { scoreChange: 15, result: "Perfekt. Du sparst Kosten, da keine notarielle Beurkundung nötig ist. Schnelle Anmeldung.", learning: "Gründung ist formfrei und extrem einfach. Du brauchst nur eine Gewerbeanmeldung." },
+                            GbR: { scoreChange: 15, result: "Gute Wahl. Die GbR ist formfrei, aber ein schriftlicher Vertrag wäre für die Partnerstruktur ratsam gewesen.", learning: "Die GbR ist formfrei, aber bei komplexen Projekten sollte der Vertrag schriftlich fixiert werden, um Streit zu vermeiden." },
+                            OHG: { scoreChange: -20, result: "Fehler! Die OHG muss ins Handelsregister eingetragen werden (notarielle Beglaubigung nötig). Die Gründung verzögert sich.", learning: "Als Handelsgesellschaft ist die OHG formpflichtig (Handelsregistereintrag) und kann nicht mündlich gegründet werden." },
+                            KG: { scoreChange: -20, result: "Fehler! Die KG muss ins Handelsregister eingetragen werden und erfordert eine notarielle Anmeldung. Die Gründung verzögert sich.", learning: "Die KG ist eine Handelsgesellschaft und erfordert eine notariell beglaubigte Handelsregisteranmeldung. Eine mündliche Einigung ist unzureichend." },
+                            GmbH: { scoreChange: -30, result: "Fatal! Die GmbH muss zwingend notariell beurkundet werden und das Stammkapital muss hinterlegt werden. Deine Gründung ist ungültig.", learning: "Kapitalgesellschaften sind formpflichtig. Notarielle Beurkundung ist Pflicht zur Gültigkeit." },
+                            AG: { scoreChange: -30, result: "Fatal! Die AG-Gründung ist hochkomplex und notarielle Beurkundung ist zwingend. Deine Gründung ist ungültig.", learning: "Die AG ist die formell aufwendigste Rechtsform in der Gründung (Satzung, Notar, Aufsichtsrat)." }
+                        }
+                    },
+                    { 
+                        text: "Notarielle Beurkundung des Vertrages (Kosten: Hoch)",
+                        consequences: {
+                            EU: { scoreChange: -5, result: "Unnötige Kosten. Du hättest nur eine Gewerbeanmeldung gebraucht. Geldverschwendung.", learning: "Obwohl rechtlich nicht nötig, verursacht der Notar unnötige Kosten und Aufwand bei der formfreien EU." },
+                            GbR: { scoreChange: 5, result: "Vorsichtig, aber teuer. Schriftform ist ratsam, aber die Notarisierung ist meistens überflüssig.", learning: "Die GbR ist formfrei. Notarkosten sind vermeidbar, aber ein schriftlicher Vertrag ist gut." },
+                            OHG: { scoreChange: 15, result: "Gute Wahl. Die Eintragung ins Handelsregister (mit Notar) ist zwingend nötig. Jetzt ist die Gründung formal korrekt.", learning: "Die Eintragung ins Handelsregister ist zwingend und erfolgt über den Notar." },
+                            KG: { scoreChange: 15, result: "Gute Wahl. Die Eintragung ins Handelsregister (mit Notar) ist zwingend nötig, um die Haftung des Kommanditisten zu begrenzen.", learning: "Die KG muss ins Handelsregister eingetragen werden. Das geschieht über den Notar und ist für die Haftungsbegrenzung des Kommanditisten entscheidend." },
+                            GmbH: { scoreChange: 20, result: "Optimal. Die notarielle Beurkundung und die Kapitalhinterlegung sind die wichtigsten Schritte zur gültigen Gründung.", learning: "Die Gründung einer Kapitalgesellschaft ist zwingend formgebunden und notariell zu beurkunden (Formzwang)." },
+                            AG: { scoreChange: 20, result: "Optimal. Bei der komplexesten Form ist der Notar zwingend erforderlich.", learning: "Höchster Formzwang. Notar und aufwendige Satzung sind Pflicht." }
+                        }
+                    }
+                ]
+            },
+            {
+                id: 2, // NEUE ID (vorher 1)
+                title: "Der Haftungsfall (Die Krise)",
+                desc: "Ein wichtiger Kunde verklagt dein Unternehmen wegen fehlerhafter Software mit einem Schadenersatz von € 100.000. Du musst entscheiden, wie du auf die Klage reagierst.",
+                decisions: [
+                    { 
+                        text: "Vergleichszahlung anbieten (€ 50.000), um den Fall schnell zu beenden.",
+                        consequences: {
+                            EU: { scoreChange: -25, result: "Durch die unbeschränkte Haftung trifft dich der Verlust hart. Das schnelle Ende begrenzt aber die Anwaltskosten.", learning: "Personengesellschaften haften unbeschränkt. Ein schneller Vergleich ist finanziell schmerzhaft, minimiert aber das Risiko eines noch höheren Verlusts." },
+                            GbR: { scoreChange: -20, result: "Die Gesellschafter teilen den Schaden. Schnelle Zahlung vermeidet weitere Eskalation.", learning: "Personengesellschaften haften unbeschränkt mit dem gesamten Vermögen der Gesellschafter (Gesamtschuldnerische Haftung)." },
+                            OHG: { scoreChange: -20, result: "Schneller Vergleich schont die Ressourcen, aber die volle Haftung der Gesellschafter bleibt.", learning: "Wie alle Personengesellschaften haften die Gesellschafter der OHG unbeschränkt, unmittelbar und gesamtschuldnerisch." },
+                            KG: { scoreChange: -20, result: "Der Komplementär haftet unbeschränkt, muss den Schaden tragen. Das Kommanditisten-Kapital bleibt verschont.", learning: "Der Komplementär einer KG haftet persönlich und unbeschränkt. Nur der Kommanditist haftet beschränkt auf seine Einlage." },
+                            GmbH: { scoreChange: -10, result: "Gute Wahl. Der Schaden wird vom Gesellschaftskapital gedeckt. Du vermeidest teure Rechtsstreitigkeiten.", learning: "Die Haftung ist auf das Gesellschaftsvermögen beschränkt. Dein Privatvermögen ist geschützt, was den Vergleich kalkulierbar macht." },
+                            AG: { scoreChange: -5, result: "Optimal. Der Schaden ist für Aktionäre kaum spürbar, der Fall ist schnell abgeschlossen.", learning: "Kapitalgesellschaften haften nur mit dem Gesellschaftsvermögen. Der Schutzeffekt ist am größten." }
+                        }
+                    },
+                    { 
+                        text: "Die Klage mit allen Mitteln abwehren (Hohe Anwaltskosten: € 20.000), um nichts zahlen zu müssen.",
+                        consequences: {
+                            EU: { scoreChange: -40, result: "Katastrophal. Du verlierst den Prozess. Nun sind die vollen € 100.000 plus € 20.000 Anwaltskosten aus deinem Privatvermögen fällig!", learning: "Wegen der unbeschränkten Haftung war dies ein zu hohes Risiko für dein gesamtes Vermögen." },
+                            GbR: { scoreChange: -35, result: "Hohes Risiko gescheitert. Alle Gesellschafter haften für die gesamte Summe + Anwaltskosten.", learning: "Das private Haftungsrisiko der Gesellschafter ist bei Personengesellschaften zu hoch für risikoreiche Prozesse." },
+                            OHG: { scoreChange: -35, result: "Der Prozess war zu riskant. Das Unternehmen und die Gesellschafter zahlen die Gesamtsumme.", learning: "Unbeschränkte Haftung bedeutet, dass der Misserfolg eines Prozesses das Privatvermögen aller Gesellschafter betrifft." },
+                            KG: { scoreChange: -35, result: "Das hohe Risiko schlägt fehl. Der unbeschränkt haftende Komplementär zahlt die volle Summe plus Anwaltskosten aus seinem Privatvermögen.", learning: "Das private Haftungsrisiko des Komplementärs ist bei Personengesellschaften zu hoch für risikoreiche Prozesse." },
+                            GmbH: { scoreChange: 5, result: "Die Strategie geht auf. Das Risiko lag nur beim Stammkapital, und du gewinnst den Prozess (netto: € 5000 Gewinn durch Anwaltskostenersparnis, da du nur wenig zahlst).", learning: "Die beschränkte Haftung ermöglicht risikoreichere, potenziell gewinnbringende Strategien, da das Worst-Case-Szenario kalkulierbar ist." },
+                            AG: { scoreChange: 10, result: "Perfekt. Durch die Haftungsbeschränkung hast du nur die Chance auf Gewinn. Der Sieg bedeutet einen sauberen Abschluss.", learning: "Maximale Haftungsbeschränkung ist ideal für risikoreiche Prozesse, da die Gesellschaft das Risiko trägt." }
+                        }
+                    }
+                ]
+            },
+            {
+                id: 3, // NEUE ID (vorher 2)
+                title: "Die Kapitalbeschaffung (Das Wachstum)",
+                desc: "Um mit der Konkurrenz mitzuhalten, benötigst du dringend € 500.000 für eine große Investition. Woher soll das Kapital kommen?",
+                decisions: [
+                    { 
+                        text: "Bankkredit beantragen, gesichert durch private Bürgschaften.",
+                        consequences: {
+                            EU: { scoreChange: 15, result: "Als Einzelunternehmer hast du gute Chancen, da deine Bonität zählt, aber das private Risiko steigt stark.", learning: "Bei EU/Personengesellschaften ist die Kreditaufnahme oft einfacher, da die Bank Zugriff auf das Privatvermögen hat. Die Haftung verwässert aber den Vorteil." },
+                            GbR: { scoreChange: 10, result: "Die Bank ist zufrieden, da alle Gesellschafter bürgen. Das Risiko ist auf alle verteilt.", learning: "Der Vorteil der unbeschränkten Haftung: Banken gewähren leichter Kredite, da mehr Sicherheiten existieren." },
+                            OHG: { scoreChange: 10, result: "Als OHG mit guter Bilanz klappt der Kredit. Die Haftung ist bereits unbeschränkt.", learning: "Guter Zugang zu Krediten, aber der Preis ist die unbeschränkte und persönliche Haftung der Gesellschafter." },
+                            KG: { scoreChange: 15, result: "Die Bank ist wegen des unbeschränkt haftenden Komplementärs (du) zufrieden. Das Risiko steigt.", learning: "Die KG genießt guten Kredit-Zugang wegen des Komplementärs, welcher persönlich haftet. Der Kommanditist profitiert." },
+                            GmbH: { scoreChange: -10, result: "Schwierig! Die Bank fordert zwingend private Bürgschaften. Der Vorteil der Haftungsbeschränkung geht damit verloren.", learning: "Banken fordern bei Kapitalgesellschaften oft private Bürgschaften der Geschäftsführer, um das Haftungsrisiko zu umgehen." },
+                            AG: { scoreChange: -20, result: "Wenig geeignet. Eine AG sollte primär über den Kapitalmarkt finanzieren. Ein Bankkredit mit Bürgschaften ist ein Umweg.", learning: "Die Hauptfunktion der AG ist die Kapitalbeschaffung über Aktien. Ein Bankkredit ist ineffizient." }
+                        }
+                    },
+                    { 
+                        text: "Anteile/Geschäftsanteile an Investoren verkaufen.",
+                        consequences: {
+                            EU: { scoreChange: -20, result: "Nicht möglich. Du müsstest erst die Rechtsform ändern (z.B. in eine GmbH), was mit hohem Aufwand verbunden ist.", learning: "Bei Personengesellschaften muss zur Aufnahme neuer Gesellschafter der gesamte Gesellschaftsvertrag neu notariell geregelt werden. Das ist aufwendig." },
+                            GbR: { scoreChange: 5, result: "Möglich, aber kompliziert. Es muss ein neuer Gesellschaftsvertrag ausgehandelt und notariell beglaubigt werden.", learning: "Der Verkauf von Anteile ist aufwendig, da er eine Änderung des Gesellschaftsvertrages erfordert." },
+                            OHG: { scoreChange: 5, result: "Ähnlich wie bei der GbR: Hoher Aufwand bei der Aufnahme neuer Gesellschafter.", learning: "Die OHG ist auf die Gesellschafter zugeschnitten (personengebunden). Anteilsverkauf ist schwierig." },
+                            KG: { scoreChange: 15, result: "Sehr gute Wahl. Der Kommanditist ist der ideale Investor, da er nur beschränkt haftet. Einfache Kapitalaufnahme.", learning: "Die KG ist der OHG überlegen, da sie Kapitalgeber (Kommanditisten) mit beschränkter Haftung anzieht." },
+                            GmbH: { scoreChange: 15, result: "Sehr gut. Der Verkauf von Geschäftsanteilen ist der effizienteste Weg, Kapital zu beschaffen, ohne die Haftung zu erhöhen.", learning: "Die GmbH ist gut für Kapitalgeber zugänglich. Anteile können verhältnismäßig leicht verkauft werden, ohne die private Haftung der Gesellschafter zu aktivieren." },
+                            AG: { scoreChange: 20, result: "Optimal. Du kannst einfach neue Aktien ausgeben. Maximaler Kapitalzufluss bei minimalem Aufwand.", learning: "Die AG ist auf den Kapitalmarkt ausgerichtet. Die Emission neuer Aktien ist der einfachste Weg zur Beschaffung großer Summen." }
+                        }
+                    }
+                ]
+            },
+            {
+                id: 4, // NEUE ID (vorher 3)
+                title: "Die Verwaltungslast (Der Alltag)",
+                desc: "Nach dem Wachstum wird die tägliche Administration zur Belastung. Du musst die notwendigen Buchhaltungs- und Publizitätspflichten erfüllen.",
+                decisions: [
+                    { 
+                        text: "Einen teuren, externen Steuerberater und Wirtschaftsprüfer beauftragen.",
+                        consequences: {
+                            EU: { scoreChange: 5, result: "Zu teuer für die einfache Einnahmen-Überschuss-Rechnung, die du führen musst. Ressourcenverschwendung.", learning: "Als Kleingewerbetreibender/EU ist die Einnahmen-Überschuss-Rechnung (EÜR) ausreichend. Hohe Beraterkosten sind unnötig." },
+                            GbR: { scoreChange: 5, result: "Nicht zwingend notwendig, aber sinnvoll für die Gesellschafterbilanz. Kosten sind aber hoch.", learning: "Als GbR gibt es keine zwingende Buchführungspflicht, aber es ist ratsam. Die Kosten sind jedoch ein Nachteil." },
+                            OHG: { scoreChange: -5, result: "Angemessen. Die Buchführungspflicht erfordert Fachwissen. Die Kosten sind notwendig, mindern aber den Gewinn.", learning: "Als Handelsgesellschaft ist die OHG zur doppelten Buchführung (Bilanzierung) verpflichtet. Externe Hilfe ist notwendig, aber teuer." },
+                            KG: { scoreChange: -5, result: "Angemessen. Auch die KG ist zur doppelten Buchführung verpflichtet, externe Hilfe ist sinnvoll, aber teuer.", learning: "Die KG ist eine Handelsgesellschaft (HGB) und zur Bilanzierung verpflichtet. Der Aufwand ist mittel bis hoch." },
+                            GmbH: { scoreChange: 15, result: "Sehr gute Wahl. Die Publizitäts- und Bilanzierungspflichten sind komplex und extern besser zu handhaben.", learning: "Kapitalgesellschaften unterliegen der Bilanzierungs- und Offenlegungspflicht. Externe Experten sind hier fast zwingend erforderlich." },
+                            AG: { scoreChange: 20, result: "Zwingend notwendig. Die hohe Bürokratie erfordert professionelle, externe Unterstützung.", learning: "Maximale Publizitätspflicht und Aufwand. Ohne externe Berater drohen hohe Fehlerquoten und Strafen." }
+                        }
+                    },
+                    { 
+                        text: "Die Buchhaltung intern von einem Mitarbeiter erledigen lassen, um Kosten zu sparen.",
+                        consequences: {
+                            EU: { scoreChange: 10, result: "Perfekt. Die einfache Buchhaltung kann kostengünstig intern erledigt werden.", learning: "Die EÜR ist einfach und kostengünstig intern zu erledigen." },
+                            GbR: { scoreChange: 10, result: "Gut. Die doppelte Buchführung ist noch überschaubar und intern machbar.", learning: "Doppelte Buchführung ist meistens ratsam, kann aber bei kleineren GbRs intern geleistet werden." },
+                            OHG: { scoreChange: 0, result: "Riskant. Die Anforderungen sind hoch, die Gefahr von Fehlern ist groß. Das spart kaum Kosten.", learning: "Die Bilanzierungspflicht erfordert hohes Fachwissen, was die interne Lösung riskant macht." },
+                            KG: { scoreChange: 0, result: "Riskant. Die Anforderungen der Bilanzierung sind hoch und die Fehlergefahr ist groß.", learning: "Die Bilanzierungspflicht erfordert hohes Fachwissen, was die interne Lösung riskant macht." },
+                            GmbH: { scoreChange: -20, result: "Sehr riskant. Die komplexen Bilanzierungsregeln führen zu Fehlern, die mit hohen Strafen verbunden sind.", learning: "Fehler in der Bilanz oder in der Offenlegung sind teuer. Die Komplexität erfordert externes Fachpersonal." },
+                            AG: { scoreChange: -30, result: "Extrem schlechte Wahl. Die Anforderungen (Vorstand, Aufsichtsrat, Hauptversammlung) erfordern professionelle Abteilungen, nicht nur einen Mitarbeiter.", learning: "Die Struktur und die Pflichten der AG sind für eine interne Lösung durch einen Einzelnen zu komplex und riskant." }
+                        }
+                    }
+                ]
+            },
+            {
+                id: 5, // NEUE ID (vorher 4)
+                title: "Die Steuerlast (Die Verteilung)",
+                desc: "Am Jahresende hast du € 150.000 Gewinn erwirtschaftet. Du musst entscheiden, ob du diesen Gewinn vollständig ausschüttest oder zur Reinvestition im Unternehmen belässt.",
+                decisions: [
+                    { 
+                        text: "Gewinn vollständig ausschütten/entnehmen.",
+                        consequences: {
+                            EU: { scoreChange: -20, result: "Der Gewinn erhöht sofort dein privates Einkommen. Dies führt zur vollen progressiven Einkommensteuerlast (bis zu 45%), was die tatsächliche Entnahme stark reduziert.", learning: "Personengesellschaften sind transparent: Der Gewinn wird dem Inhaber/Gesellschafter zugerechnet und sofort progressiv besteuert, egal ob entnommen oder nicht." },
+                            GbR: { scoreChange: -20, result: "Der Gewinn erhöht sofort das private Einkommen aller Gesellschafter. Volle progressive Einkommensteuerlast für jeden Gesellschafter.", learning: "Wie alle Personengesellschaften: Steuertransparenz bedeutet, der Gewinn wird auf Ebene der Gesellschafter versteuert (Einkommensteuer)." },
+                            OHG: { scoreChange: -20, result: "Der Gewinn wird auf die Gesellschafter verteilt und sofort mit dem persönlichen progressiven Steuersatz belastet.", learning: "Personengesellschaften zahlen keine Körperschaftsteuer, aber die Gesellschafter zahlen Einkommensteuer auf den gesamten Gewinn." },
+                            KG: { scoreChange: -20, result: "Der Gewinn wird auf die Gesellschafter (Komplementär/Kommanditist) verteilt und mit dem persönlichen progressiven Steuersatz belastet.", learning: "Die KG ist wie alle Personengesellschaften steuertransparent. Der Gewinn wird den Gesellschaftern zugerechnet (Einkommensteuer)." },
+                            GmbH: { scoreChange: -10, result: "Die Ausschüttung löst zusätzlich zur Körperschaftsteuer die Kapitalertragsteuer (ca. 25%) aus. Das Kapital wird ineffizient entnommen (doppelte Steuerbelastung).", learning: "Bei Kapitalgesellschaften entsteht bei Ausschüttung die sogenannte 'Doppelbelastung': Körperschaftsteuer auf Unternehmensebene + Kapitalertragsteuer auf Gesellschafterebene." },
+                            AG: { scoreChange: -5, result: "Die Aktionäre freuen sich über die Dividende. Die Ausschüttung führt zur Kapitalertragsteuer. Steuerlich ist die Belastung hoch, aber Aktionärszufriedenheit ist wichtig.", learning: "Ausschüttungen sind teuer wegen der Doppelbesteuerung, aber zur Belohnung der Aktionäre manchmal notwendig." }
+                        }
+                    },
+                    { 
+                        text: "Gewinn im Unternehmen belassen (reinvestieren).",
+                        consequences: {
+                            EU: { scoreChange: 0, result: "Achtung: Der Gewinn wird dir trotzdem zugerechnet. Du zahlst Einkommensteuer, obwohl du das Geld nicht entnimmst. Die Reinvestition ist also teuer.", learning: "Einkommensteuer ist fällig, unabhängig davon, ob der Gewinn entnommen oder reinvestiert wird. Keine Steuervorteile bei Thesaurierung." },
+                            GbR: { scoreChange: 0, result: "Der Gewinn wird den Gesellschaftern zugerechnet. Volle Einkommensteuer, obwohl das Geld für die Firma gebunden ist.", learning: "Steuerlicher Nachteil von Personengesellschaften bei hohem Gewinn und Reinvestition: Man zahlt Steuern auf das, was man nicht entnimmt." },
+                            OHG: { scoreChange: 0, result: "Der Gewinn ist bei den Gesellschaftern steuerpflichtig. Die Steuerbelastung ist hoch, bevor das Geld reinvestiert wird.", learning: "Der Fiskus sieht den Gewinn sofort als Einkommen der Gesellschafter." },
+                            KG: { scoreChange: 0, result: "Der Gewinn ist bei den Gesellschaftern steuerpflichtig. Die volle progressive Einkommensteuer fällt an.", learning: "Steuerlicher Nachteil: Der gesamte Gewinn wird progressiv besteuert, auch wenn er zur Reinvestition im Unternehmen verbleibt." },
+                            GmbH: { scoreChange: 20, result: "Optimal. Nur die Körperschaftsteuer (ca. 15%) wird fällig. Der größte Teil kann steuerbegünstigt für die Reinvestition im Unternehmen verbleiben.", learning: "Kapitalgesellschaften sind ideal zur Thesaurierung: Es wird nur die relativ niedrige Körperschaftsteuer fällig. Kein privater progressiver Steuersatz." },
+                            AG: { scoreChange: 20, result: "Sehr gut. Das Kapital bleibt günstig im Unternehmen. Dies signalisiert dem Markt Wachstum und Stärke.", learning: "Die niedrigere Körperschaftsteuer begünstigt die Reinvestition des Gewinns (Thesaurierung)." }
+                        }
+                    }
+                ]
+            }
+        ];
+
+        let game = {
+            state: 'start',
+            currentFormKey: null,
+            currentForm: null,
+            currentChallengeIndex: 0,
+            score: 100, // Startpunkt
+            adminComplexity: 0.0,
+            initialCapital: 50000,
+            
+            // Hilfsvariablen zur Speicherung der Ergebnisse
+            results: []
+        };
+
+        // --- UI Elemente ---
+        const startScreen = document.getElementById('start-screen');
+        const formSelection = document.getElementById('form-selection');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const challengeScreen = document.getElementById('challenge-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const currentFormDisplay = document.getElementById('current-form-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const capitalDisplay = document.getElementById('capital-display');
+        const adminDisplay = document.getElementById('admin-display');
+        const challengeTitle = document.getElementById('challenge-title');
+        const challengeDescription = document.getElementById('challenge-description');
+        const challengeDecisionPanel = document.getElementById('challenge-decision-panel');
+        const decisionButtons = document.getElementById('decision-buttons');
+        const challengeResultPanel = document.getElementById('challenge-result-panel');
+        const challengeStats = document.getElementById('challenge-stats');
+        const nextChallengeBtn = document.getElementById('next-challenge-btn');
+        const finalVerdict = document.getElementById('final-verdict');
+        const resultSummary = document.getElementById('result-summary');
+
+        // --- Funktionen ---
+
+        function initForms() {
+            Object.keys(LegalForms).forEach(key => {
+                const form = LegalForms[key];
+                const card = document.createElement('div');
+                card.className = 'form-card p-4 rounded-lg bg-gray-50 border-2 border-transparent hover:border-blue-300';
+                card.setAttribute('data-form-key', key);
+                card.innerHTML = `
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">${form.name}</h3>
+                    <p class="text-sm text-gray-600 mb-4">${form.desc}</p>
+
+                    <div class="space-y-2 text-sm">
+                        <div>
+                            <span class="font-semibold">Haftung (Risiko):</span>
+                            <div class="stat-bar"><div class="stat-fill" style="width: ${form.liabilityFactor * 100}%; background-color: ${form.liabilityFactor > 0.5 ? '#ef4444' : '#10b981'};"></div></div>
+                        </div>
+                        <div>
+                            <span class="font-semibold">Kapitalbeschaffung (Einfachheit):</span>
+                            <div class="stat-bar"><div class="stat-fill" style="width: ${form.capitalEaseFactor * 100}%; background-color: ${form.capitalEaseFactor < 0.5 ? '#ef4444' : '#10b981'};"></div></div>
+                        </div>
+                        <div>
+                            <span class="font-semibold">Bürokratie (Aufwand):</span>
+                            <div class="stat-bar"><div class="stat-fill" style="width: ${form.adminComplexityFactor * 100}%; background-color: ${form.adminComplexityFactor > 0.5 ? '#ef4444' : '#10b981'};"></div></div>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', () => selectForm(key, card));
+                formSelection.appendChild(card);
+            });
+        }
+
+        function selectForm(key, cardElement) {
+            // Remove active class from all
+            document.querySelectorAll('.form-card').forEach(c => c.classList.remove('active-form', 'bg-blue-100'));
+
+            // Set active class on selected card
+            cardElement.classList.add('active-form', 'bg-blue-100');
+
+            game.currentFormKey = key;
+            game.currentForm = LegalForms[key];
+            startGameBtn.disabled = false;
+            
+            // Set initial admin complexity for display
+            game.adminComplexity = game.currentForm.adminComplexityFactor;
+        }
+
+        function startGame() {
+            if (!game.currentFormKey) return;
+
+            startScreen.classList.add('hidden');
+            challengeScreen.classList.remove('hidden');
+            game.state = 'challenge';
+            game.currentChallengeIndex = 0;
+            game.score = 100; // Reset Score
+            game.results = []; // Reset results
+            updateStatusDisplay();
+            loadChallenge();
+        }
+
+        function updateStatusDisplay() {
+            currentFormDisplay.textContent = game.currentForm.name;
+            capitalDisplay.textContent = `€ ${game.initialCapital.toLocaleString('de-DE')}`;
+            scoreDisplay.textContent = Math.max(0, game.score); // Score nie unter 0
+            
+            let adminText = '';
+            if (game.adminComplexity < 0.4) adminText = 'Gering';
+            else if (game.adminComplexity < 0.7) adminText = 'Mittel';
+            else adminText = 'Sehr Hoch';
+            adminDisplay.textContent = adminText;
+
+            // Farbliche Hervorhebung des Scores
+            // Max Score: 100 (Start) + 5 Challenges * 20 (max Bonus) = 200
+            const maxScore = 200;
+            if (game.score >= maxScore * 0.8) scoreDisplay.className = 'text-xl font-bold text-green-600'; 
+            else if (game.score >= maxScore * 0.5) scoreDisplay.className = 'text-xl font-bold text-yellow-600';
+            else scoreDisplay.className = 'text-xl font-bold text-red-600';
+        }
+
+        function loadChallenge() {
+            const challenge = Challenges[game.currentChallengeIndex];
+            if (!challenge) {
+                endGame();
+                return;
+            }
+
+            // Set UI state to Decision Phase
+            challengeResultPanel.classList.add('hidden');
+            challengeDecisionPanel.classList.remove('hidden');
+
+            challengeTitle.textContent = `Phase ${challenge.id}: ${challenge.title}`;
+            challengeDescription.textContent = challenge.desc;
+            
+            // Clear old buttons
+            decisionButtons.innerHTML = '';
+
+            // Create new decision buttons
+            challenge.decisions.forEach((decision, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'decision-btn';
+                btn.textContent = decision.text;
+                btn.addEventListener('click', () => handleDecision(index));
+                decisionButtons.appendChild(btn);
+            });
+        }
+
+        function handleDecision(decisionIndex) {
+            const challenge = Challenges[game.currentChallengeIndex];
+            const decision = challenge.decisions[decisionIndex];
+            const consequences = decision.consequences[game.currentFormKey];
+
+            // 1. Update Score
+            game.score += consequences.scoreChange;
+            updateStatusDisplay();
+
+            // 2. Prepare Result Message
+            const scoreColor = consequences.scoreChange > 0 ? 'text-green-600' : (consequences.scoreChange < 0 ? 'text-red-600' : 'text-gray-600');
+            const resultMessage = `
+                <p class="text-lg font-bold text-blue-800 mb-2">Deine Entscheidung: "${decision.text}"</p>
+                <p class="text-gray-700 mb-3">${consequences.result}</p>
+                <div class="mt-4 p-3 bg-white border border-gray-200 rounded-lg">
+                    <h4 class="font-bold text-base text-purple-700">Lern-Notiz (Das Warum):</h4>
+                    <p class="text-sm text-gray-800">${consequences.learning}</p>
+                </div>
+                <p class="${scoreColor} font-bold text-xl mt-4">Score-Änderung: ${consequences.scoreChange > 0 ? '+' : ''}${consequences.scoreChange}</p>
+            `;
+            
+            // 3. Store result for final summary
+            game.results.push({
+                title: challenge.title,
+                decision: decision.text,
+                result: consequences.result,
+                learning: consequences.learning,
+                scoreChange: consequences.scoreChange
+            });
+
+            // 4. Update UI to Result Phase
+            challengeStats.innerHTML = resultMessage;
+            challengeDecisionPanel.classList.add('hidden');
+            challengeResultPanel.classList.remove('hidden');
+        }
+
+        function nextChallenge() {
+            game.currentChallengeIndex++;
+            loadChallenge();
+        }
+
+        function endGame() {
+            challengeScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            const maxScore = 200; // 100 Start + 5 Challenges * 20 (max. Bonus)
+            let verdict, color;
+            if (game.score >= maxScore * 0.8) {
+                verdict = `Brillant! Mit der ${game.currentForm.name} hast du die Herausforderungen optimal gemeistert. Dein Geschäftsmodell passt perfekt zu dieser Rechtsform und du hast klug entschieden.`;
+                color = 'border-green-400';
+            } else if (game.score >= maxScore * 0.5) {
+                verdict = `Gut gemacht! Die ${game.currentForm.name} hat sich bewährt, obwohl es in einigen Bereichen Reibungsverluste gab. Guter Kompromiss und meistens die richtige Reaktion auf die Probleme.`;
+                color = 'border-yellow-400';
+            } else {
+                verdict = `Kritisch! Die ${game.currentForm.name} war in diesem Szenario eine riskante Wahl oder deine Entscheidungen haben die Nachteile der Rechtsform verstärkt. Überdenke besonders die Haftungs- und Kapitaleffekte.`;
+                color = 'border-red-400';
+            }
+
+            finalVerdict.textContent = verdict;
+            // Entferne alte Border-Klassen und füge neue hinzu
+            resultScreen.classList.remove('border-green-400', 'border-yellow-400', 'border-red-400');
+            resultScreen.classList.add(color);
+
+            // Detaillierte Zusammenfassung
+            let summaryHTML = `
+                <h3 class="text-xl font-bold mb-3 text-gray-800">Ergebnis-Analyse</h3>
+                <p><span class="font-semibold">Gewählte Rechtsform:</span> ${game.currentForm.name}</p>
+                <p class="mb-4"><span class="font-semibold">End-Score:</span> <span class="text-2xl">${Math.max(0, game.score)}</span> / ${maxScore}</p>
+                
+                <h4 class="font-bold text-lg text-blue-600 border-b pb-1">Phasen-Details:</h4>
+            `;
+
+            game.results.forEach((res, index) => {
+                const icon = res.scoreChange >= 0 ? '✅' : '❌';
+                const scoreText = res.scoreChange > 0 ? `(+${res.scoreChange})` : (res.scoreChange < 0 ? `(${res.scoreChange})` : '(±0)');
+                summaryHTML += `
+                    <div class="mt-3 p-3 border rounded-lg bg-gray-50">
+                        <p class="font-semibold flex items-center mb-1">
+                            ${icon} Phase ${index + 1}: ${res.title} <span class="ml-2 text-sm font-mono ${res.scoreChange >= 0 ? 'text-green-700' : 'text-red-700'}">${scoreText}</span>
+                        </p>
+                        <p class="text-sm italic text-gray-700">Deine Entscheidung: ${res.decision}</p>
+                        <p class="text-sm mt-1 font-bold text-purple-700">Lerneffekt: ${res.learning}</p>
+                    </div>
+                `;
+            });
+
+            summaryHTML += `
+                <p class="mt-6 text-sm text-gray-500 italic">Fazit: Es gibt keine 'beste' Rechtsform, sondern nur die passendste für das Geschäftsrisiko und die Wachstumsstrategie. Die besten Gründer treffen auch in Krisen die richtigen Entscheidungen.</p>
+            `;
+            resultSummary.innerHTML = summaryHTML;
+        }
+
+        // --- Event Listener ---
+        startGameBtn.addEventListener('click', startGame);
+        nextChallengeBtn.addEventListener('click', nextChallenge);
+
+        // Initialisierung
+        window.onload = () => {
+             // Deaktiviere das Logging im Browser, da Firestore nicht benötigt wird
+            if (typeof setLogLevel !== 'undefined') {
+                 setLogLevel('silent');
+            }
+            initForms();
+        };
+
+    </script>
+</body>
+</html>
