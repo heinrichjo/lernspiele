@@ -40,9 +40,9 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-center">
             <!-- Verwenden des bereitgestellten Logos -->
             <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
-                 alt="BS4 Augsburg Logo" 
-                 class="h-16 object-contain rounded-md"
-                 onerror="this.onerror=null; this.src='https://placehold.co/150x64/004080/ffffff?text=BS4+Logo';">
+                alt="BS4 Augsburg Logo" 
+                class="h-16 object-contain rounded-md"
+                onerror="this.onerror=null; this.src='https://placehold.co/150x64/004080/ffffff?text=BS4+Logo';">
         </div>
     </header>
 
@@ -70,120 +70,9 @@
                 </p>
             </div>
             
-            <!-- JavaScript-Daten, Firebase und Logik -->
-            <script type="module">
-                // Firebase Importe
-                import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-                import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-                import { getFirestore, doc, onSnapshot, setDoc, increment, collection, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-                // WICHTIG: Die Umgebungsvariablen werden automatisch in diesem Kontext bereitgestellt.
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-                let db, auth;
-                let isAuthReady = false;
+            <!-- JavaScript-Daten und Logik -->
+            <script type="text/javascript">
                 
-                // Firestore Logging für Debugging
-                setLogLevel('error');
-
-                // Initialisierung und Authentifizierung (Wird asynchron ausgeführt, um das Rendering nicht zu blockieren)
-                async function initializeFirebase() {
-                    if (!firebaseConfig) {
-                        console.warn("Firebase-Tracking ist deaktiviert: Firebase Konfiguration nicht gefunden.");
-                        return;
-                    }
-                    
-                    const app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-
-                    try {
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                        isAuthReady = true;
-                        console.log("Firebase Authentifizierung erfolgreich. Starte Zähler...");
-
-                        // Starte die Zähler
-                        setupVisitorCounter();
-                        
-                    } catch (error) {
-                        console.error("Firebase Authentifizierung fehlgeschlagen:", error);
-                        isAuthReady = true; 
-                        setupVisitorCounter();
-                    }
-                }
-
-                // --- Besucherzähler (Tracking im Hintergrund) ---
-                function setupVisitorCounter() {
-                    if (!isAuthReady || !db) return;
-
-                    // Pfad zur öffentlichen Zähldatenbank
-                    const countDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'analytics', 'page_views');
-
-                    // Zählung auf eine Zählung pro Sitzung beschränken
-                    if (sessionStorage.getItem('visited')) {
-                        console.log("Besucher bereits in dieser Sitzung gezählt.");
-                        return;
-                    }
-
-                    // Transaktion zum inkrementieren der Besucherzahl
-                    setDoc(countDocRef, { total_visitors: increment(1) }, { merge: true })
-                        .then(() => {
-                            sessionStorage.setItem('visited', 'true');
-                            console.log("Besucherzahl erfolgreich inkrementiert.");
-                        })
-                        .catch(e => {
-                            console.error("Fehler beim Inkrementieren des Besucherzählers:", e);
-                        });
-
-                    // Live-Update für Entwickler in der Konsole
-                    onSnapshot(countDocRef, (docSnap) => {
-                        if (docSnap.exists()) {
-                            const count = docSnap.data().total_visitors || 0;
-                            // Dies zeigt den Wert nur in der Entwicklerkonsole an (F12)
-                            console.log(`[FIREBASE] Aktuelle Gesamtbesucherzahl: ${count}`);
-                        } else {
-                            console.log("[FIREBASE] Dokument für Besucherzähler existiert noch nicht.");
-                        }
-                    }, (error) => {
-                        console.error("[FIREBASE] Fehler beim Abrufen des Besucherzählers:", error);
-                    });
-                }
-
-                // --- Klick-Zähler für Spiele ---
-                function trackGameClick(gameId, gameTitle, link) {
-                    if (!isAuthReady || !db) {
-                        // Wenn Firebase nicht bereit ist, trotzdem zum Spiel weiterleiten
-                        window.location.href = link;
-                        return;
-                    }
-                    
-                    // Pfad zur öffentlichen Klick-Datenbank
-                    const clickDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'game_clicks', gameId.toString());
-
-                    setDoc(clickDocRef, { 
-                        title: gameTitle,
-                        total_clicks: increment(1),
-                        last_clicked: new Date().toISOString()
-                    }, { merge: true })
-                    .then(() => {
-                        console.log(`[FIREBASE] Klick für Spiel ${gameId} gezählt.`);
-                    })
-                    .catch(e => {
-                        console.error(`Fehler beim Zählen des Klicks für Spiel ${gameId}:`, e);
-                    })
-                    .finally(() => {
-                        // Immer zum Spiel weiterleiten, auch wenn das Zählen fehlschlägt
-                        window.location.href = link;
-                    });
-                }
-
-
                 // --- Hauptlogik für Navigation und Rendering ---
                 const categories = [
                     "Alle",
@@ -214,7 +103,7 @@
                         title: "Speditionsrecht: Vergütung & Verzug", 
                         category: "Spedition- und Logistikdienstleistungen", 
                         description: "Lernspiel zu rechtlichen Aspekten der Vergütung und des Verzugs im Speditionsgewerbe. (Nutzt Zinsrechner-Link)", 
-                        link: "https://heinrichjo.github.io/lernspiele/zinsquiz.html" // WUNSCH DES NUTZERS: Link auf zinsquiz.html
+                        link: "https://heinrichjo.github.io/lernspiele/zinsquiz.html" 
                     },
                     { 
                         id: 4, 
@@ -315,9 +204,9 @@
                         const card = document.createElement('div');
                         card.className = "bg-secondary p-5 rounded-lg border border-primary/20 shadow-md flex flex-col justify-between transition transform hover:shadow-xl hover:scale-[1.02] cursor-pointer";
                         
-                        // Erstelle den Button, der den Klick triggert
+                        // Erstelle den Button, der direkt zum Link navigiert
                         const buttonHtml = `
-                            <button data-id="${game.id}" data-title="${game.title}" data-link="${game.link}" 
+                            <button data-link="${game.link}" 
                                 class="game-link mt-auto px-4 py-2 blue-800 text-white rounded-lg font-medium hover:bg-blue-700 transition duration-150 text-center shadow-md w-full">
                                 Spiel starten
                             </button>
@@ -333,24 +222,20 @@
                         gamesContainer.appendChild(card);
                     });
 
-                    // Füge Event Listener für die Klickverfolgung hinzu
+                    // Füge Event Listener für die direkte Navigation hinzu
                     gamesContainer.querySelectorAll('.game-link').forEach(button => {
                         button.addEventListener('click', (e) => {
                             const link = e.currentTarget.dataset.link;
-                            const id = parseInt(e.currentTarget.dataset.id);
-                            const title = e.currentTarget.dataset.title;
-                            trackGameClick(id, title, link);
+                            window.location.href = link;
                         });
                     });
                 }
 
                 // Initialisierung nach dem Laden des DOM
                 window.onload = () => {
-                    // UI-Elemente sofort rendern, um die Sichtbarkeit zu gewährleisten
+                    // UI-Elemente sofort rendern
                     renderCategories(); 
                     renderGames(); 
-                    // Firebase asynchron im Hintergrund starten
-                    initializeFirebase(); 
                 };
             </script>
             
