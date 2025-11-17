@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADSp Quiz (ADSp 2017 Lernspiel)</title>
+    <!-- Tailwind CSS CDN für schnelles und responsives Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Konfigurieren von Tailwind und einer Standard-Schriftart */
+        :root {
+            --primary-color: #10b981; /* Emerald 500 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Grau-Hintergrund */
+        }
+        /* Hauptcontainer mit zentrierter Ausrichtung auf der Seite */
+        #main-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container-card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* Custom Button Styling */
+        .answer-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .answer-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .answer-button.correct {
+            background-color: #10b981; /* Emerald */
+            border-color: #059669;
+            color: white;
+            pointer-events: none;
+        }
+        .answer-button.incorrect {
+            background-color: #ef4444; /* Red */
+            border-color: #dc2626;
+            color: white;
+            pointer-events: none;
+        }
+        .answer-button.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        /* Footer Styling */
+        #quiz-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb; /* Gray 200 */
+        }
+        #school-logo {
+            max-width: 100px; /* Logo-Größe festlegen */
+            height: auto;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div id="main-wrapper">
+        <div id="game-container" class="container-card bg-white p-6 sm:p-8 rounded-xl w-full max-w-lg">
+            <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">
+                ADSp Quiz <span class="text-emerald-500">(ADSp 2017)</span>
+            </h1>
+            
+            <!-- Spielanzeige (Start, Frage, Ergebnis) -->
+            <div id="screen-start" class="text-center">
+                <p class="mb-4 text-gray-600">Testen Sie Ihr Wissen über die Allgemeinen Deutschen Spediteurbedingungen 2017. Jede richtige Antwort bringt Ihnen einen Punkt.</p>
+                <button onclick="startGame()" class="w-full bg-emerald-500 text-white py-3 rounded-lg font-semibold hover:bg-emerald-600 transition duration-150 answer-button">
+                    Challenge Starten!
+                </button>
+            </div>
+
+            <!-- Quiz-Bereich -->
+            <div id="screen-quiz" class="hidden">
+                <div class="mb-6">
+                    <!-- Die Zahl der Fragen wurde auf 15 erhöht -->
+                    <p class="text-sm font-medium text-emerald-600 mb-1">Frage <span id="question-number">1</span> von 15</p>
+                    <h2 id="question-text" class="text-lg font-semibold text-gray-800"></h2>
+                </div>
+
+                <div id="answer-options" class="space-y-3">
+                    <!-- Antwort-Buttons werden hier von JS eingefügt -->
+                </div>
+
+                <div id="feedback" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
+
+                <button id="next-button" onclick="nextQuestion()" class="w-full mt-6 bg-gray-200 text-gray-600 py-3 rounded-lg font-semibold disabled transition duration-150 answer-button" disabled>
+                    Nächste Frage
+                </button>
+            </div>
+
+            <!-- Ergebnis-Bereich -->
+            <div id="screen-result" class="hidden text-center">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Ergebnis des Quizes</h2>
+                <p class="text-6xl font-extrabold text-emerald-500" id="final-score"></p>
+                <p class="text-lg mt-2 mb-6 text-gray-700" id="result-message"></p>
+
+                <button onclick="window.location.reload()" class="w-full bg-emerald-500 text-white py-3 rounded-lg font-semibold hover:bg-emerald-600 transition duration-150 answer-button">
+                    Erneut spielen
+                </button>
+            </div>
+
+            <!-- NEUE FUSSZEILE -->
+            <div id="quiz-footer" class="text-center text-xs text-gray-500">
+                <img id="school-logo" src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="Logo der Welserschule Augsburg" class="mx-auto">
+                <p class="mt-2">Erstellt von Johannes Heinrich – Mithilfe von Gemini</p>
+                <p>Berufsschule 4 – Welserschule Augsburg – 2025</p>
+            </div>
+            <!-- ENDE FUSSZEILE -->
+        </div>
+
+        
+
+    </div>
+
+    <script>
+        // Die Fragen basierend auf den wesentlichen Inhalten der ADSp 2017
+        const questions = [
+            {
+                text: "Was ist laut ADSp 2017 ein 'Diebstahlgefährdetes Gut' (Ziff. 1.3)?",
+                options: [
+                    "Güter, deren Wert 5.000 Euro übersteigt.",
+                    "Unterhaltungselektronik, Tabakwaren oder Edelmetalle.",
+                    "Alle Güter, die nicht durch GPS gesichert sind.",
+                    "Güter, die im Lager unsachgemäß gestapelt wurden."
+                ],
+                correctAnswer: "Unterhaltungselektronik, Tabakwaren oder Edelmetalle.",
+                info: "ADSp 2017, Ziffer 1.3 nennt explizit z.B. Geld, Edelmetalle, Schmuck, Uhren, Spirituosen und Unterhaltungselektronik."
+            },
+            {
+                text: "Ab welchem Wert pro Kilogramm gilt ein Gut laut ADSp 2017 als 'Wertvolles Gut' (Ziff. 1.17)?",
+                options: [
+                    "Mindestens 10 Euro/kg.",
+                    "Mindestens 50 Euro/kg.",
+                    "Mindestens 100 Euro/kg.",
+                    "Mindestens 8,33 SZR/kg."
+                ],
+                correctAnswer: "Mindestens 100 Euro/kg.",
+                info: "ADSp 2017, Ziffer 1.17 definiert 'Wertvolles Gut' mit einem tatsächlichen Wert von mindestens 100 Euro/kg."
+            },
+            {
+                text: "Welche Pflicht hat der Auftraggeber bei 'Gefährlichen Gütern' (Ziff. 3.2)?",
+                options: [
+                    "Er muss die Klassifizierung dem Spediteur überlassen.",
+                    "Er muss nur die Menge mündlich mitteilen.",
+                    "Er muss die genaue Art der Gefahr und Vorsichtsmaßnahmen in Textform mitteilen.",
+                    "Es reicht, wenn das Gut entsprechend gekennzeichnet ist."
+                ],
+                correctAnswer: "Er muss die genaue Art der Gefahr und Vorsichtsmaßnahmen in Textform mitteilen.",
+                info: "ADSp 2017, Ziffer 3.2 verlangt die Mitteilung von Menge, genauer Art der Gefahr und Vorsichtsmaßnahmen in Textform sowie die Übergabe aller erforderlichen Unterlagen."
+            },
+            {
+                text: "Was ist die Regelhaftung des Spediteurs für Güterschäden in seiner Obhut (z.B. als Frachtführer) gemäß Ziffer 23.1.1?",
+                options: [
+                    "2,0 Sonderziehungsrechte (SZR) pro Kilogramm.",
+                    "8,33 SZR pro Kilogramm.",
+                    "1,25 Millionen Euro pro Schadenfall.",
+                    "Die Haftung ist auf 50.000 Euro begrenzt."
+                ],
+                correctAnswer: "8,33 SZR pro Kilogramm.",
+                info: "ADSp 2017, Ziffer 23.1.1 begrenzt die Haftung auf 8,33 SZR für jedes Kilogramm des Rohgewichts des Gutes. Dies ist die wichtigste Haftungsgrenze."
+            },
+            {
+                text: "Für welche Art von Geschäften gelten die ADSp 2017 (gemäß Ziff. 2.3) NICHT?",
+                options: [
+                    "Komplettladungen im Inland.",
+                    "Seefrachtverträge.",
+                    "Umzugsgut, Großraumtransporte oder Lagerung von Akten.",
+                    "Zollabwicklungen."
+                ],
+                correctAnswer: "Umzugsgut, Großraumtransporte oder Lagerung von Akten.",
+                info: "ADSp 2017, Ziffer 2.3 schließt unter anderem Umzugsgut (§ 451 HGB), Schwer- oder Großraumtransporte sowie die Lagerung und Digitalisierung von Akten aus."
+            },
+            {
+                text: "Was versteht man unter einer 'Schnittstelle' und welche Kontrollpflicht hat der Spediteur dort (Ziff. 1.12 und 7.2)?",
+                options: [
+                    "Die technische Verbindung zwischen Auftraggeber- und Spediteur-IT-Systemen (EDI).",
+                    "Die Übernahme und Ablieferung des Gutes.",
+                    "Jede Übergabe oder Umladung des Gutes. Der Spediteur muss dort auf Vollzähligkeit und Schäden prüfen.",
+                    "Die postalische Adresse der Lade- oder Entladestelle."
+                ],
+                correctAnswer: "Jede Übergabe oder Umladung des Gutes. Der Spediteur muss dort auf Vollzähligkeit und Schäden prüfen.",
+                info: "ADSp 2017, Ziffer 1.12 definiert die Schnittstelle als jede Übergabe/Umladung. Ziff. 7.2 verpflichtet den Spediteur zur Kontrolle auf Vollzähligkeit, Identität, Schäden und Unversehrtheit von Verschlüssen."
+            },
+            // NEUE FRAGEN (7 bis 15)
+            {
+                text: "Was umfasst der Begriff 'Verkehrsverträge' im Sinne der ADSp 2017 (Ziff. 1.14)?",
+                options: [
+                    "Ausschließlich Fracht- und Lagerverträge.",
+                    "Nur Speditionsverträge im engeren Sinne des HGB.",
+                    "Speditions-, Fracht-, Seefracht- und Lagergeschäfte sowie speditionsübliche logistische Leistungen.",
+                    "Lediglich Verträge, die die Beförderung gefährlicher Güter betreffen."
+                ],
+                correctAnswer: "Speditions-, Fracht-, Seefracht- und Lagergeschäfte sowie speditionsübliche logistische Leistungen.",
+                info: "Ziff. 1.14 definiert 'Verkehrsverträge' sehr weit und schließt alle üblichen Geschäfte des Speditionsgewerbes ein, solange sie mit Beförderung oder Lagerung zusammenhängen."
+            },
+            {
+                text: "Welche primäre Pflicht hat der Spediteur bei der Annahme eines Auftrags (Ziff. 4.1)?",
+                options: [
+                    "Er muss unverzüglich die Zollabfertigung einleiten.",
+                    "Er hat den Auftrag auf offensichtliche Mängel und Gefahrumstände für die Ausführung zu prüfen.",
+                    "Er muss das Gut sofort versichern lassen.",
+                    "Er muss dem Auftraggeber eine Liste seiner Subunternehmer vorlegen."
+                ],
+                correctAnswer: "Er hat den Auftrag auf offensichtliche Mängel und Gefahrumstände für die Ausführung zu prüfen.",
+                info: "Ziff. 4.1 verlangt vom Spediteur die Wahrnehmung der Interessen des Auftraggebers, wozu die Prüfung auf offensichtliche Mängel und die Anzeige von Gefahrumständen gehört."
+            },
+            {
+                text: "Ist die Gestellung von Paletten oder sonstigen Lademitteln automatisch Teil des Speditionsauftrags (Ziff. 4.8.1)?",
+                options: [
+                    "Ja, das ist immer Standardleistung des Spediteurs.",
+                    "Nein, nur wenn die Ladungssicherungsmittel fehlen.",
+                    "Ja, aber nur bei grenzüberschreitenden Verkehren.",
+                    "Nein, mangels ausdrücklicher Vereinbarung gehört die Gestellung oder der Tausch von Lademitteln nicht zum Auftrag."
+                ],
+                correctAnswer: "Nein, mangels ausdrücklicher Vereinbarung gehört die Gestellung oder der Tausch von Lademitteln nicht zum Auftrag.",
+                info: "Ziff. 4.8.1 zählt die Gestellung und den Tausch von Paletten oder Lademitteln zu den Leistungen, die mangels ausdrücklicher Vereinbarung nicht vom Auftrag umfasst sind."
+            },
+            {
+                text: "Wie lange beträgt die pauschale Lade- oder Entladezeit bei Komplettladungen mit einem 40-Tonnen-Fahrzeug im Straßengüterverkehr (Ziff. 11.2)?",
+                options: [
+                    "Maximal 4 Stunden pro Vorgang.",
+                    "Maximal 1 Stunde für die Verladung bzw. Entladung.",
+                    "Maximal 2 Stunden für die Verladung bzw. 2 Stunden für die Entladung.",
+                    "Die Zeit ist nicht pauschalisiert, sondern muss individuell vereinbart werden."
+                ],
+                correctAnswer: "Maximal 2 Stunden für die Verladung bzw. 2 Stunden für die Entladung.",
+                info: "Ziff. 11.2 legt fest, dass die pauschale Lade- oder Entladezeit bei 40-Tonnen-Fahrzeugen jeweils maximal 2 Stunden beträgt."
+            },
+            {
+                text: "An wen kann das Gut in einer Wohnung abgeliefert werden, wenn der Empfänger nicht angetroffen wird (Ziff. 13.3.1)?",
+                options: [
+                    "Nur an den Mieter der Wohnung.",
+                    "An einen erwachsenen Familienangehörigen oder eine im Haushalt beschäftigte Person, sofern keine offenkundigen Zweifel an deren Empfangsberechtigung bestehen.",
+                    "Nur an Personen mit einer schriftlichen Vollmacht.",
+                    "Das Gut muss immer zur nächsten Niederlassung des Spediteurs zurückgebracht werden."
+                ],
+                correctAnswer: "An einen erwachsenen Familienangehörigen oder eine im Haushalt beschäftigte Person, sofern keine offenkundigen Zweifel an deren Empfangsberechtigung bestehen.",
+                info: "Ziff. 13.3.1 erlaubt die Ablieferung an erwachsene Familienangehörige oder in der Familie beschäftigte Personen, wenn der Empfänger nicht angetroffen wird."
+            },
+            {
+                text: "Wer schuldet die Vergütung gegenüber dem Spediteur, wenn der Auftraggeber eine 'unfreie Abfertigung' (Frachtüberweisung) an den Empfänger wünscht (Ziff. 10)?",
+                options: [
+                    "Ausschließlich der Empfänger.",
+                    "Der Auftraggeber bleibt dem Spediteur gegenüber verpflichtet, die Vergütung und Aufwendungen zu tragen.",
+                    "Die Zahlungspflicht geht vollständig auf den Empfänger über.",
+                    "Der Spediteur muss die Kosten selbst tragen, wenn der Empfänger nicht zahlt."
+                ],
+                correctAnswer: "Der Auftraggeber bleibt dem Spediteur gegenüber verpflichtet, die Vergütung und Aufwendungen zu tragen.",
+                info: "Ziff. 10 stellt klar, dass eine Frachtüberweisung an den Empfänger nicht die Verpflichtung des Auftraggebers gegenüber dem Spediteur berührt, die Vergütung zu zahlen."
+            },
+            {
+                text: "Welche Folge hat das sogenannte 'qualifizierte Verschulden' (Vorsatz oder grobe Fahrlässigkeit des Spediteurs) auf die Haftungsbegrenzungen (Ziff. 27.1)?",
+                options: [
+                    "Die Haftungsbegrenzungen reduzieren sich auf die Hälfte.",
+                    "Die Haftungsbegrenzungen entfallen.",
+                    "Die Haftungsbegrenzungen bleiben unverändert, da die ADSp abschließend regeln.",
+                    "Der Spediteur haftet nur für den tatsächlichen Wert der Ware, ohne Kostenersatz."
+                ],
+                correctAnswer: "Die Haftungsbegrenzungen entfallen.",
+                info: "Ziff. 27.1 besagt, dass die Haftungsausschlüsse und -begrenzungen nicht gelten, wenn der Schaden durch Vorsatz oder grobe Fahrlässigkeit des Spediteurs verursacht wurde."
+            },
+            {
+                text: "Gelten die ADSp 2017 für Verkehrsverträge, die der Spediteur mit einem Verbraucher im Sinne von § 13 BGB abschließt (Ziff. 2.4)?",
+                options: [
+                    "Ja, sofern der Verbraucher zugestimmt hat.",
+                    "Nein, die ADSp finden keine Anwendung auf Verkehrsverträge mit Verbrauchern.",
+                    "Ja, aber nur für internationale Transporte.",
+                    "Nur für Verbraucher, die im Handelsregister eingetragen sind."
+                ],
+                correctAnswer: "Nein, die ADSp finden keine Anwendung auf Verkehrsverträge mit Verbrauchern.",
+                info: "Ziff. 2.4 schließt die Anwendung der ADSp auf Verkehrsverträge mit Verbrauchern (§ 13 BGB) ausdrücklich aus."
+            },
+            {
+                text: "Was gilt für elektronisch oder digital erstellte Ablieferungsnachweise und Dokumente (Ziff. 5.6)?",
+                options: [
+                    "Sie sind nur als Kopie zulässig und müssen zusätzlich in Papierform aufbewahrt werden.",
+                    "Sie stehen schriftlichen Dokumenten gleich und dürfen archiviert werden.",
+                    "Sie sind nur für innerdeutsche Transporte gültig.",
+                    "Sie müssen innerhalb von 24 Stunden durch ein Original ersetzt werden."
+                ],
+                correctAnswer: "Sie stehen schriftlichen Dokumenten gleich und dürfen archiviert werden.",
+                info: "Ziff. 5.6 stellt elektronisch oder digital erstellte Dokumente (insb. Ablieferungsnachweise) schriftlichen Dokumenten gleich."
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        const screenStart = document.getElementById('screen-start');
+        const screenQuiz = document.getElementById('screen-quiz');
+        const screenResult = document.getElementById('screen-result');
+        const questionNumber = document.getElementById('question-number');
+        const questionText = document.getElementById('question-text');
+        const answerOptionsDiv = document.getElementById('answer-options');
+        const feedbackDiv = document.getElementById('feedback');
+        const nextButton = document.getElementById('next-button');
+        const finalScore = document.getElementById('final-score');
+        const resultMessage = document.getElementById('result-message');
+
+        /**
+         * Startet das Spiel und zeigt die erste Frage an.
+         */
+        function startGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            screenStart.classList.add('hidden');
+            screenQuiz.classList.remove('hidden');
+            showQuestion();
+        }
+
+        /**
+         * Zeigt die aktuelle Frage und die Antwortmöglichkeiten an.
+         */
+        function showQuestion() {
+            const q = questions[currentQuestionIndex];
+            questionNumber.textContent = currentQuestionIndex + 1;
+            questionText.textContent = q.text;
+            answerOptionsDiv.innerHTML = '';
+            feedbackDiv.classList.add('hidden');
+            nextButton.disabled = true;
+            nextButton.classList.add('disabled', 'bg-gray-200', 'text-gray-600');
+            nextButton.classList.remove('bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
+            answered = false;
+
+            q.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.className = 'answer-button w-full text-left p-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-emerald-50';
+                button.onclick = () => checkAnswer(button, option, q.correctAnswer, q.info);
+                answerOptionsDiv.appendChild(button);
+            });
+        }
+
+        /**
+         * Überprüft die ausgewählte Antwort und gibt Feedback.
+         * @param {HTMLElement} selectedButton - Der geklickte Button.
+         * @param {string} selectedAnswer - Die ausgewählte Antwort.
+         * @param {string} correctAnswer - Die korrekte Antwort.
+         * @param {string} info - Zusätzliche Erklärung.
+         */
+        function checkAnswer(selectedButton, selectedAnswer, correctAnswer, info) {
+            if (answered) return; // Verhindert Mehrfachklicks
+
+            answered = true;
+            const buttons = answerOptionsDiv.querySelectorAll('.answer-button');
+            buttons.forEach(button => button.classList.add('disabled'));
+
+            if (selectedAnswer === correctAnswer) {
+                score++;
+                selectedButton.classList.add('correct');
+                feedbackDiv.textContent = 'Richtig! ' + info;
+                feedbackDiv.className = 'mt-4 p-3 rounded-lg text-sm bg-green-100 text-green-700';
+            } else {
+                selectedButton.classList.add('incorrect');
+                // Markiere die richtige Antwort
+                buttons.forEach(button => {
+                    if (button.textContent === correctAnswer) {
+                        button.classList.add('correct');
+                    }
+                });
+                feedbackDiv.textContent = 'Falsch. Die korrekte Antwort war: ' + correctAnswer + '. ' + info;
+                feedbackDiv.className = 'mt-4 p-3 rounded-lg text-sm bg-red-100 text-red-700';
+            }
+
+            feedbackDiv.classList.remove('hidden');
+            
+            // Aktiviere den 'Nächste Frage' Button
+            nextButton.disabled = false;
+            nextButton.classList.remove('disabled', 'bg-gray-200', 'text-gray-600');
+            nextButton.classList.add('bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
+        }
+
+        /**
+         * Wechselt zur nächsten Frage oder beendet das Spiel.
+         */
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        /**
+         * Zeigt den finalen Punktestand und die Abschlussnachricht an.
+         */
+        function showResult() {
+            screenQuiz.classList.add('hidden');
+            screenResult.classList.remove('hidden');
+            
+            finalScore.textContent = `${score}/${questions.length}`;
+
+            let message;
+            const percentage = (score / questions.length) * 100;
+
+            if (percentage === 100) {
+                message = "Hervorragend! Sie sind ein wahrer ADSp-Experte und bereit für jede Speditions-Challenge!";
+            } else if (percentage >= 80) {
+                message = "Fantastisch! Sie haben die meisten Punkte erzielt und kennen die ADSp-Regeln sehr gut.";
+            } else if (percentage >= 60) {
+                message = "Gut gemacht! Sie haben die wesentlichen Inhalte erfasst. Wiederholen Sie die Bereiche, in denen Sie Fehler gemacht haben.";
+            } else {
+                message = "Da ist noch Luft nach oben. Die Grundlagen der ADSp 2017 benötigen noch etwas Aufmerksamkeit.";
+            }
+
+            resultMessage.textContent = message;
+        }
+
+        // Starte das Spiel auf der Startseite
+        document.addEventListener('DOMContentLoaded', () => {
+             // Sicherstellen, dass der Startbildschirm sichtbar ist
+             screenStart.classList.remove('hidden');
+        });
+
+    </script>
+</body>
+</html>
