@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digitaler Wächter - DSGVO Lernspiel</title>
+    <!-- Tailwind CSS CDN for modern and responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0056b3',
+                        'secondary': '#28a745',
+                        'accent': '#ffc107',
+                        'background-light': '#f0f4f8',
+                        'card-bg': '#ffffff',
+                        'danger': '#dc3545',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Styles for aesthetics and responsiveness */
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background-color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+        .game-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            flex-grow: 1; /* Stellt sicher, dass der Container wächst */
+        }
+        .item-card {
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+        .item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .item-card.selected {
+            border: 3px solid #ffc107;
+            background-color: #ffedd5; /* accent light */
+            color: #d97706; /* accent dark */
+            animation: pulse 1s infinite alternate;
+        }
+        .target-box {
+            min-height: 100px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .target-box:hover {
+            background-color: #f7fafc;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        @keyframes pulse {
+            from { opacity: 1; }
+            to { opacity: 0.8; }
+        }
+        /* Footer-Styling */
+        .site-footer {
+            width: 100%;
+            padding: 20px 0;
+            margin-top: auto; /* Drückt den Footer nach unten */
+            background-color: #e2e8f0; /* Gleicher Hintergrund wie Body */
+        }
+        .nav-btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 60px; /* Sicherstellen, dass die Buttons auf Mobilgeräten lesbar sind */
+        }
+    </style>
+</head>
+<body class="bg-background-light text-gray-800">
+
+    <!-- Header and Infothek Button -->
+    <div class="w-full bg-primary shadow-lg p-4 text-white">
+        <div class="game-container flex justify-between items-center px-4" style="margin-top: 0; margin-bottom: 0;">
+            <h1 class="text-3xl font-bold tracking-tight">Digitaler Wächter 🛡️</h1>
+            <button id="infothek-btn" onclick="showModal('infothek-modal')"
+                    class="bg-accent text-gray-900 font-semibold py-2 px-4 rounded-full shadow-lg hover:bg-yellow-500 transition-colors">
+                ℹ️ Hilfe vom DSB
+            </button>
+        </div>
+    </div>
+
+    <div class="game-container bg-card-bg rounded-xl shadow-2xl p-6 md:p-10">
+
+        <!-- Game Interface -->
+        <div id="game-interface">
+            <!-- Level Indicator and Progress -->
+            <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b-2 pb-4 border-gray-200">
+                <h2 id="level-title" class="text-2xl md:text-3xl font-extrabold text-primary mb-2 md:mb-0"></h2>
+                <div class="w-full md:w-1/3">
+                    <p class="text-sm font-medium mb-1">Fortschritt:</p>
+                    <div class="h-2 bg-gray-200 rounded-full">
+                        <div id="progress-bar" class="h-full bg-secondary rounded-full transition-all duration-300" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RPG Situation -->
+            <div class="bg-blue-50 border-l-4 border-primary p-4 mb-6 rounded-lg shadow-inner">
+                <p id="rpg-situation" class="italic text-gray-700"></p>
+            </div>
+
+            <!-- Main Content: Source Items and Target Categories -->
+            <div id="classic-level-content" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Source Items (Left Column) -->
+                <div class="lg:col-span-1 bg-gray-50 p-4 rounded-lg border">
+                    <h3 class="text-xl font-bold mb-4 text-gray-700 border-b pb-2">Datensätze / Anfragen</h3>
+                    <div id="source-items" class="space-y-3">
+                        <!-- Items will be inserted here by JS -->
+                    </div>
+                </div>
+
+                <!-- Target Categories (Right Columns) -->
+                <div class="lg:col-span-2 p-4">
+                    <h3 id="target-header" class="text-xl font-bold mb-4 text-gray-700 border-b pb-2">Ziel-Kategorien zur Ablage</h3>
+                    <div id="target-categories" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Target Boxes will be inserted here by JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Level 6 Content (DPIA Simulation) -->
+            <div id="level6-content" class="hidden">
+                <h3 class="text-2xl font-bold mb-4 text-gray-700">Compliance Check: KI-Bewerbungssoftware</h3>
+                <div id="level6-question-container" class="bg-gray-50 p-6 rounded-lg border">
+                    <!-- Dynamic Question UI will be inserted here -->
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button id="level6-next-btn" onclick="processLevel6Step()" class="bg-primary text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-blue-600 transition-colors disabled:opacity-50" disabled>
+                        Entscheidung prüfen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Screen (Initially Hidden) -->
+        <div id="completion-screen" class="hidden text-center p-10">
+            <h2 class="text-4xl font-extrabold text-secondary mb-4">Level Abgeschlossen! Gut gemacht!</h2>
+            <p id="level-completion-text" class="text-xl mb-8"></p>
+            <button id="next-level-btn" onclick="nextLevel()"
+                    class="bg-primary text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-blue-600 transition-colors">
+                Nächstes Level starten
+            </button>
+            <button id="dsb-quiz-btn" onclick="showModal('dsb-quiz-modal')"
+                    class="hidden bg-red-600 text-white font-bold py-3 px-8 rounded-full text-lg mt-4 hover:bg-red-700 transition-colors shadow-2xl animate-pulse">
+                DSB Experten-Quiz! 🎓
+            </button>
+        </div>
+
+        <!-- Final Screen (Initially Hidden) -->
+        <div id="final-screen" class="hidden text-center p-10">
+            <h2 class="text-5xl font-extrabold text-primary mb-6">🏆 Chief Data Protector 🏆</h2>
+            <p class="text-2xl mb-8">Glückwunsch, Sie haben alle 6 Levels erfolgreich gemeistert und Ihr Wissen über die DSGVO und den Datenschutz bewiesen!</p>
+            <p id="final-score" class="text-3xl font-semibold mb-10 text-secondary"></p>
+            <p class="text-lg text-gray-600">Sie sind nun bereit, als Digitaler Wächter in die Praxis einzusteigen!</p>
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Feedback Modal (Used only for Incorrect answers now) -->
+    <div id="feedback-modal" class="modal-overlay fixed inset-0 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-card-bg rounded-xl p-6 w-full max-w-sm text-center shadow-2xl transform transition-all">
+            <h4 id="feedback-title" class="text-3xl font-extrabold mb-4 text-danger">❌ Falsche Zuordnung</h4>
+            <p id="feedback-message" class="text-lg mb-4">Das war leider nicht korrekt. Die richtige Kategorie war:</p>
+            <!-- Only shown on incorrect answer -->
+            <p id="correct-feedback" class="text-xl font-bold text-secondary bg-gray-100 p-3 rounded-lg"></p>
+            <!-- loadCurrentTask() wird beim Schließen aufgerufen, um das fehlerhafte Item neu zu rendern -->
+            <button onclick="closeModal('feedback-modal'); loadCurrentTask()" class="mt-4 bg-primary text-white py-2 px-6 rounded-full hover:bg-blue-600">
+                Verstanden & Weiter
+            </button>
+        </div>
+    </div>
+
+    <!-- Infothek Modal (DSB Hilfe) -->
+    <div id="infothek-modal" class="modal-overlay fixed inset-0 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-card-bg rounded-xl p-8 w-full max-w-xl shadow-2xl">
+            <h3 class="text-3xl font-extrabold text-primary mb-4 border-b pb-2">Datenschutz-Infothek</h3>
+            <div id="infothek-content" class="space-y-4">
+                <!-- Content injected by JS -->
+            </div>
+            <button onclick="closeModal('infothek-modal')" class="mt-6 bg-secondary text-white py-2 px-6 rounded-full hover:bg-green-600">
+                Zurück zum Spiel
+            </button>
+        </div>
+    </div>
+
+    <!-- DSB Experten-Quiz Modal (Level 3 Special) -->
+    <div id="dsb-quiz-modal" class="modal-overlay fixed inset-0 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-card-bg rounded-xl p-8 w-full max-w-lg shadow-2xl">
+            <h3 class="text-3xl font-extrabold text-red-600 mb-4 border-b pb-2">DSB Experten-Quiz</h3>
+            <p class="mb-4 text-lg">Testen Sie Ihr Wissen über den Datenschutzbeauftragten (DSB)!</p>
+
+            <div id="quiz-question-1" class="mb-5">
+                <p class="font-bold mb-2">Frage 1: Ab wie vielen Personen, die ständig mit automatisierter Verarbeitung beschäftigt sind, ist ein DSB in Deutschland Pflicht?</p>
+                <div class="space-y-2">
+                    <button class="quiz-option bg-gray-100 p-3 rounded-lg w-full text-left hover:bg-gray-200 transition-colors" data-answer="Falsch">Ab 10 Personen</button>
+                    <button class="quiz-option bg-gray-100 p-3 rounded-lg w-full text-left hover:bg-gray-200 transition-colors" data-answer="Richtig">Ab mind. 20 Personen</button>
+                    <button class="quiz-option bg-gray-100 p-3 rounded-lg w-full text-left hover:bg-gray-200 transition-colors" data-answer="Falsch">Ab 50 Personen</button>
+                </div>
+            </div>
+
+            <div id="quiz-question-2" class="mb-5 hidden">
+                <p class="font-bold mb-2">Frage 2: Was ist die Hauptaufgabe des DSB?</p>
+                <div class="space-y-2">
+                    <button class="quiz-option bg-gray-100 p-3 rounded-lg w-full text-left hover:bg-gray-200 transition-colors" data-answer="Falsch">Daten löschen und Server warten</button>
+                    <button class="quiz-option bg-gray-100 p-3 rounded-lg w-full text-left hover:bg-gray-200 transition-colors" data-answer="Richtig">Überwachung der Einhaltung und Beratung</button>
+                    <button class="quiz-option bg-gray-100 p-3 rounded-lg w-full text-left hover:bg-gray-200 transition-colors" data-answer="Falsch">Die Geschäftsführung vertreten</button>
+                </div>
+            </div>
+
+            <div id="quiz-result" class="hidden mt-4 text-center">
+                <p id="quiz-result-text" class="text-xl font-bold mb-4"></p>
+            </div>
+
+            <button id="quiz-next-btn" onclick="processQuizAnswer(1)" class="mt-6 bg-primary text-white py-2 px-6 rounded-full hover:bg-blue-600">
+                Antwort prüfen
+            </button>
+            <button id="quiz-close-btn" onclick="closeModal('dsb-quiz-modal')" class="mt-6 bg-secondary text-white py-2 px-6 rounded-full hover:bg-green-600 hidden">
+                Quiz schließen
+            </button>
+        </div>
+    </div>
+
+    <!-- NEU HINZUGEFÜGTER FOOTER -->
+    <footer class="site-footer">
+        <!-- NEUE NAVIGATION -->
+        <div id="level-navigation" class="max-w-4xl mx-auto flex justify-center flex-wrap gap-2 md:gap-4 mb-4 p-2 bg-white rounded-xl shadow-lg border border-gray-100">
+            <!-- Navigation buttons will be rendered here by JS -->
+        </div>
+        <!-- ENDE NEUE NAVIGATION -->
+        <div class="flex items-center justify-center space-x-4 border-t pt-4 border-gray-300">
+            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="Logo Berufsschule 4 Welserschule Augsburg" class="h-16">
+            <p class="text-sm text-gray-700">
+                Johannes Heinrich - Berufsschule 4 Welserschule Augsburg
+                <br>
+                2025
+            </p>
+        </div>
+    </footer>
+    <!-- ENDE FOOTER -->
+
+
+    <script>
+        // Game State and Data
+        const gameState = {
+            currentLevel: 1,
+            currentTaskIndex: 0,
+            selectedItemId: null,
+            score: 0,
+            quizScore: 0,
+            totalItems: 0,
+            levelItems: [],
+        };
+
+        const levels = [
+            // Level 1: Datenklassifizierung
+            {
+                type: 'assignment',
+                title: "Die Akten-Detektive",
+                rpg: "Digitales Archiv: Sie sind in der 'Abteilung Aktenanalyse' und müssen neu eingegangene digitale und physische Dokumente nach Schutzbedarf klassifizieren.",
+                infothek: {
+                    title: "Grundlagen der Datenklassifizierung (Art. 4, Art. 9 DSGVO)",
+                    content: [
+                        "**Personenbezogene Daten (Art. 4 Nr. 1):** Alle Informationen, die sich auf eine identifizierbare natürliche Person beziehen (Name, E-Mail, IP-Adresse, Standortdaten).",
+                        "**Besondere Kategorie (Art. 9):** Hochsensible Daten (Gesundheit, Rasse, Religion, sexuelle Orientierung, biometrische Daten). Diese sind besonders geschützt.",
+                        "**Allgemeine Daten:** Daten ohne direkten Personenbezug (Unternehmenskennzahlen, anonymisierte Statistiken, Lagerbestände)."
+                    ]
+                },
+                targets: ["Allgemeine Daten", "Personenbezogen", "Besondere Kategorie (Art. 9)"],
+                items: [
+                    { id: 1, text: "Gesamtumsatz des Quartals (anonymisiert)", correct: "Allgemeine Daten" },
+                    { id: 2, text: "Name, Adresse und Gehalt eines Mitarbeiters", correct: "Personenbezogen" },
+                    { id: 3, text: "Gesundheitszeugnis eines Bewerbers", correct: "Besondere Kategorie (Art. 9)" },
+                    { id: 4, text: "IP-Adresse eines Website-Besuchers", correct: "Personenbezogen" },
+                    { id: 5, text: "Notiz zur sexuellen Orientierung eines Kunden", correct: "Besondere Kategorie (Art. 9)" },
+                    { id: 6, text: "Lagerbestandsliste von Büromaterial", correct: "Allgemeine Daten" },
+                ]
+            },
+            // Level 2: Datenschutz vs. Datensicherheit
+            {
+                type: 'assignment',
+                title: "Der Doppelte Schutz",
+                rpg: "Incident-Response-Team: Im Meldekopf laufen Anrufe zu verschiedenen Vorfällen ein. Sie müssen schnell die primäre Art des Verstoßes identifizieren.",
+                infothek: {
+                    title: "Datenschutz vs. Datensicherheit",
+                    content: [
+                        "**Datenschutz (DS):** Schutz der Rechte der betroffenen Person (Einhaltung von Gesetzen, Zweckbindung, Transparenz, Rechte des Einzelnen).",
+                        "**Datensicherheit (DSS):** Technische und organisatorische Maßnahmen (TOMs) zum Schutz der Daten *selbst* vor Verlust, Manipulation oder unbefugtem Zugriff (Vertraulichkeit, Integrität, Verfügbarkeit)."
+                    ]
+                },
+                targets: ["Datenschutz (DS)", "Datensicherheit (DSS)"],
+                items: [
+                    { id: 7, text: "Kunde fordert Sperrung für Marketing", correct: "Datenschutz (DS)" },
+                    { id: 8, text: "Trojaner verschlüsselt Festplatten (Verfügbarkeit)", correct: "Datensicherheit (DSS)" },
+                    { id: 9, text: "Mitarbeiter nutzt Kundendaten für neuen, nicht informierten Zweck (Zweckbindung)", correct: "Datenschutz (DS)" },
+                    { id: 10, text: "Serverraumtür stand offen (physische Kontrolle)", correct: "Datensicherheit (DSS)" },
+                    { id: 11, text: "Falsche E-Mail-Adresse in Datenbank (Richtigkeit)", correct: "Datenschutz (DS)" },
+                    { id: 12, text: "Hacker stiehlt Backups (Vertraulichkeit/Verfügbarkeit)", correct: "Datensicherheit (DSS)" },
+                ]
+            },
+            // Level 3: Betroffenenrechte
+            {
+                type: 'assignment',
+                title: "Die Rechte der Betroffenen",
+                rpg: "Rechte-Koordinator: Das Kundencenter leitet alle Anträge direkt an Sie weiter. Sie müssen das Anliegen dem korrekten Betroffenenrecht zuordnen.",
+                infothek: {
+                    title: "Wichtige Betroffenenrechte (Art. 15 ff. DSGVO)",
+                    content: [
+                        "**Auskunftsrecht (Art. 15):** Die Person möchte wissen, welche Daten verarbeitet werden.",
+                        "**Berichtigungsrecht (Art. 16):** Die Person fordert die Korrektur unrichtiger Daten.",
+                        "**Löschungsrecht (Art. 17):** Recht auf 'Vergessenwerden'. Daten müssen gelöscht werden, wenn sie nicht mehr nötig sind.",
+                        "**Widerspruchsrecht (Art. 21):** Die Person kann der Verarbeitung (z.B. Marketing) widersprechen.",
+                        "**Datenübertragbarkeit (Art. 20):** Daten in einem strukturierten, gängigen, maschinenlesbaren Format erhalten.",
+                        "**Einschränkung der Verarbeitung (Art. 18):** Daten dürfen nur gespeichert, aber nicht weiter verarbeitet werden (z.B. bei unklarer Richtigkeit)."
+                    ]
+                },
+                targets: ["Auskunft", "Berichtigung", "Löschung", "Widerspruch", "Datenübertragbarkeit", "Einschränkung"],
+                items: [
+                    { id: 13, text: "Ich möchte wissen, welche Daten Sie speichern.", correct: "Auskunft" },
+                    { id: 14, text: "Bitte korrigieren Sie meine neue Adresse.", correct: "Berichtigung" },
+                    { id: 15, text: "Ich möchte nicht mehr per E-Mail kontaktiert werden.", correct: "Widerspruch" },
+                    { id: 16, text: "Löschen Sie bitte alle meine Daten nach Vertragsende.", correct: "Löschung" },
+                    { id: 17, text: "Ich will meine Daten in einer Datei erhalten.", correct: "Datenübertragbarkeit" },
+                    { id: 18, text: "Ich möchte, dass Sie meine Daten einfrieren.", correct: "Einschränkung" },
+                ]
+            },
+            // Level 4: 6 Grundsätze der Verarbeitung
+            {
+                type: 'assignment',
+                title: "Die 6 Gebote",
+                rpg: "Compliance-Schulung: Sie schulen neue Mitarbeiter in den Grundsätzen der Datenverarbeitung. Ordnen Sie die Praxis-Regeln den lateinischen Prinzipien zu.",
+                infothek: {
+                    title: "Die 6 Grundsätze der Datenverarbeitung (Art. 5 Abs. 1)",
+                    content: [
+                        "**Rechtmäßigkeit, Verarbeitung nach Treu und Glauben, Transparenz (lit. a):** Die Verarbeitung muss eine Rechtsgrundlage haben und für die betroffene Person nachvollziehbar sein.",
+                        "**Zweckbindung (lit. b):** Daten nur für den bei der Erhebung festgelegten Zweck verwenden.",
+                        "**Datenminimierung (lit. c):** Es dürfen nur die Daten verarbeitet werden, die für den Zweck unbedingt erforderlich sind ('Need-to-know').",
+                        "**Richtigkeit (lit. d):** Daten müssen sachlich richtig und erforderlichenfalls auf dem neuesten Stand sein.",
+                        "**Speicherbegrenzung (lit. e):** Daten dürfen nicht länger gespeichert werden, als es für den Zweck notwendig ist.",
+                        "**Integrität und Vertraulichkeit (lit. f):** Schutz vor unbefugtem Zugriff, Verlust oder Zerstörung (durch Datensicherheit)."
+                    ]
+                },
+                targets: ["Rechtmäßigkeit/Transparenz", "Zweckbindung", "Datenminimierung", "Richtigkeit", "Speicherbegrenzung", "Integrität/Vertraulichkeit"],
+                items: [
+                    { id: 19, text: "Die E-Mail-Adresse des Kunden ist korrekt und aktuell.", correct: "Richtigkeit" },
+                    { id: 20, text: "Nur Name und Adresse, keine unnötigen Hobby-Angaben.", correct: "Datenminimierung" },
+                    { id: 21, text: "Die Daten werden nach 5 Jahren gelöscht.", correct: "Speicherbegrenzung" },
+                    { id: 22, text: "Verarbeitung ist im Vertrag klar erklärt.", correct: "Rechtmäßigkeit/Transparenz" },
+                    { id: 23, text: "Die erfassten Daten werden nicht für Werbung Dritter verkauft.", correct: "Zweckbindung" },
+                    { id: 24, text: "Passwörter sind stark verschlüsselt.", correct: "Integrität/Vertraulichkeit" },
+                ]
+            },
+            // Level 5: Gefahrenmanagement & TOMs
+            {
+                type: 'assignment',
+                title: "Gefahrenmanagement",
+                rpg: "Sicherheits-Audit: Nach einem Audit müssen Sie festgestellte Schwachstellen analysieren und mit den richtigen Schutzmaßnahmen beheben.",
+                infothek: {
+                    title: "Ursachen und Schutzmaßnahmen (TOMs, Art. 32)",
+                    content: [
+                        "**Gefahren-Ursachen:** Vorsatz (bewusst schädliche Absicht), Fahrlässigkeit (Unachtsamkeit), Technisches Versagen (Hardware/Software-Defekt), Organisatorische Mängel (Prozessfehler, fehlende Schulungen).",
+                        "**TOMs (Technisch-Organisatorische Maßnahmen):**",
+                        "**Zutrittskontrolle:** Maßnahmen, die Unbefugten den physischen Zugang zu Verarbeitungsanlagen verwehren (z.B. abschließbare Türen).",
+                        "**Zugriffskontrolle:** Maßnahmen, die sicherstellen, dass nur Berechtigte auf Daten zugreifen können (z.B. Passwörter, 2FA).",
+                        "**Transportkontrolle:** Maßnahmen, die verhindern, dass Daten unbefugt gelesen, kopiert, verändert oder entfernt werden können (z.B. Verschlüsselung bei Übermittlung)."
+                    ]
+                },
+                targets: ["Vorsatz", "Fahrlässigkeit", "Technisches Versagen", "Organisatorische Mängel", "Zutrittskontrolle", "Zugriffskontrolle", "Transportkontrolle"],
+                items: [
+                    { id: 25, text: "Mitarbeiter öffnet Phishing-E-Mail.", correct: "Fahrlässigkeit" },
+                    { id: 26, text: "Ex-Mitarbeiter verkauft Kundenlisten.", correct: "Vorsatz" },
+                    { id: 27, text: "Überspannung zerstört Server-Hardware.", correct: "Technisches Versagen" },
+                    { id: 28, text: "Notfallpläne sind nicht dokumentiert.", correct: "Organisatorische Mängel" },
+                    { id: 29, text: "Zwei-Faktor-Authentifizierung (2FA).", correct: "Zugriffskontrolle" },
+                    { id: 30, text: "Verschlüsselte Datenübertragung (HTTPS).", correct: "Transportkontrolle" },
+                    { id: 31, text: "Abschließbare Aktenschränke.", correct: "Zutrittskontrolle" },
+                ]
+            },
+            // Level 6: DPIA und PbD Simulation (NEU)
+            {
+                type: 'multi-step-quiz',
+                title: "Das Dilemma des Auftragsverarbeiters",
+                rpg: "Sie sind Compliance-Manager und bewerten die Einführung einer neuen KI-gesteuerten Bewerbungssoftware (High-Risk). Treffen Sie die richtigen Entscheidungen!",
+                infothek: {
+                    title: "Grundlagen: DPIA & Privacy by Design (Art. 35, Art. 25)",
+                    content: [
+                        "**Datenschutz-Folgenabschätzung (DPIA / Art. 35):** Bei hohem Risiko (z.B. Bewertung von Personen, Einsatz von KI, umfangreiche Verarbeitung besonderer Daten) **zwingend** erforderlich.",
+                        "**Privacy by Design (PbD / Art. 25):** Voreingestellter Datenschutz und minimierte Datenverarbeitung müssen bereits in der Konzeption des Systems (Design) berücksichtigt werden.",
+                        "**Zweckbindung:** Daten dürfen nur für den ursprünglichen, klaren Zweck (hier: Bewerbungsverfahren) verwendet werden."
+                    ]
+                },
+                steps: [
+                    { 
+                        question: "Schritt 1: Ist eine Datenschutz-Folgenabschätzung (DPIA) für ein KI-gesteuertes HR-Tool zur Bewertung von Bewerbern notwendig?",
+                        answers: ["Nein, da es intern verwendet wird.", "Ja, da es sich um eine umfangreiche automatisierte Bewertung von Personen handelt.", "Nur, wenn sensible Daten (Art. 9) verarbeitet werden."],
+                        correctIndex: 1,
+                        itemCount: 1 
+                    },
+                    { 
+                        question: "Schritt 2 (PbD - Datenminimierung): Wie sollten Fotos von nicht eingestellten Bewerbern behandelt werden?",
+                        answers: ["Zusammen mit den restlichen Daten unbegrenzt archivieren.", "Speichern für zukünftige Stellen, aber nur mit expliziter, separater Einwilligung.", "Sofort löschen, da sie für den Zweck (Bewerbungsentscheidung) nicht mehr benötigt werden."],
+                        correctIndex: 2,
+                        itemCount: 1 
+                    },
+                    { 
+                        question: "Schritt 3 (Zweckbindung): Dürfen die Bewerberdaten ohne zusätzliche Rechtsgrundlage für allgemeine, firmeninterne Marktanalysen verwendet werden?",
+                        answers: ["Ja, solange sie pseudonymisiert werden.", "Nein, das verstößt gegen den Grundsatz der Zweckbindung.", "Nur, wenn der Bewerber nicht erfolgreich war."],
+                        correctIndex: 1,
+                        itemCount: 1 
+                    },
+                    { 
+                        question: "Schritt 4 (PbD - Voreinstellung): Darf die Option 'Ich möchte den Newsletter erhalten' im Formular standardmäßig vorangekreuzt sein (Opt-out)?",
+                        answers: ["Ja, das ist gängige Praxis.", "Nein, die Voreinstellung muss datenschutzfreundlich sein (keine Zustimmung ohne aktive Handlung).", "Nur, wenn der Text farblich hervorgehoben ist."],
+                        correctIndex: 1,
+                        itemCount: 1 
+                    }
+                ]
+            }
+        ];
+
+        // --- Core Game Logic ---
+        
+        // Fügt das neue Level 6 hinzu und berechnet die neue Gesamtanzahl
+        const totalLevel6Items = levels[5] ? levels[5].steps.length : 0;
+        const totalClassicItems = levels.slice(0, 5).reduce((sum, level) => sum + level.items.length, 0);
+
+        function initGame() {
+            gameState.totalItems = totalClassicItems + totalLevel6Items;
+            renderLevelNavigation(); // Navigation beim Start rendern
+            loadLevel(gameState.currentLevel);
+        }
+
+        function renderLevelNavigation() {
+            const navContainer = document.getElementById('level-navigation');
+            navContainer.innerHTML = '';
+            
+            levels.forEach((level, index) => {
+                const levelNumber = index + 1;
+                const button = document.createElement('button');
+                button.textContent = `Level ${levelNumber}`;
+                button.className = 'nav-btn py-2 px-3 md:px-5 text-sm font-semibold rounded-full transition-colors whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300';
+                button.onclick = () => goToLevel(levelNumber);
+                navContainer.appendChild(button);
+            });
+            
+            updateNavigationState();
+        }
+
+        function goToLevel(levelNumber) {
+            // Nur springen, wenn das Level nicht das aktuelle ist
+            if (gameState.currentLevel === levelNumber) return;
+
+            // State für den neuen Level setzen
+            gameState.currentLevel = levelNumber;
+            gameState.selectedItemId = null; 
+            
+            // Für Level 6 muss der Schrittzähler zurückgesetzt werden, wenn man zurückspringt
+            if (levelNumber === 6) {
+                gameState.currentTaskIndex = 0; 
+            }
+            
+            // Level laden
+            loadLevel(levelNumber);
+        }
+
+        function updateNavigationState() {
+            document.querySelectorAll('#level-navigation .nav-btn').forEach((btn, index) => {
+                const levelNumber = index + 1;
+                btn.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-600');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+
+                if (levelNumber === gameState.currentLevel) {
+                    btn.classList.remove('bg-gray-200', 'text-gray-700');
+                    btn.classList.add('bg-primary', 'text-white');
+                }
+            });
+        }
+
+
+        function loadLevel(levelNumber) {
+            const levelIndex = levelNumber - 1;
+            const currentLevelData = levels[levelIndex];
+
+            if (!currentLevelData) {
+                return showFinalScreen();
+            }
+
+            // Reset state for new level
+            // Nur Level-Items neu laden, wenn es ein Zuweisungs-Level ist
+            if (currentLevelData.type === 'assignment') {
+                gameState.levelItems = currentLevelData.items ? [...currentLevelData.items] : []; 
+            }
+            gameState.currentTaskIndex = 0;
+            gameState.selectedItemId = null;
+
+
+            // Hide/Show Level Type Containers
+            document.getElementById('game-interface').classList.remove('hidden');
+            document.getElementById('completion-screen').classList.add('hidden');
+            document.getElementById('dsb-quiz-btn').classList.add('hidden');
+            document.getElementById('final-screen').classList.add('hidden');
+
+            const classicContent = document.getElementById('classic-level-content');
+            const level6Content = document.getElementById('level6-content');
+
+            if (currentLevelData.type === 'assignment') {
+                classicContent.classList.remove('hidden');
+                level6Content.classList.add('hidden');
+                document.getElementById('target-header').textContent = `Ziel-Kategorien (Level ${levelNumber})`;
+                renderTargets(currentLevelData.targets);
+                loadCurrentTask();
+            } else if (currentLevelData.type === 'multi-step-quiz') {
+                classicContent.classList.add('hidden');
+                level6Content.classList.remove('hidden');
+                loadLevel6Step(0); // Starte bei Schritt 0
+            }
+
+
+            // Update UI elements common to all levels
+            document.getElementById('level-title').textContent = `Level ${levelNumber}: ${currentLevelData.title}`;
+            document.getElementById('rpg-situation').textContent = currentLevelData.rpg;
+            updateProgressBar();
+            updateNavigationState(); // Navigation aktualisieren
+        }
+
+        function loadCurrentTask() {
+            // Check for level completion
+            if (gameState.levelItems.length === 0) {
+                return levelCompleted();
+            }
+            
+            // Zurücksetzen der Auswahl, falls der Flow nicht durch das Modal kam (z.B. nach richtigem Klick)
+            gameState.selectedItemId = null;
+
+            renderSourceItems();
+        }
+
+        function renderSourceItems() {
+            const sourceContainer = document.getElementById('source-items');
+            sourceContainer.innerHTML = '';
+            gameState.levelItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.id = `item-${item.id}`;
+                itemDiv.textContent = item.text;
+                itemDiv.className = 'item-card bg-primary text-white p-4 rounded-lg font-medium';
+                itemDiv.onclick = () => selectItem(item.id);
+                sourceContainer.appendChild(itemDiv);
+            });
+            
+            // Re-select if an item was already selected (only happens after an incorrect guess)
+            if (gameState.selectedItemId) {
+                 const selectedElement = document.getElementById(`item-${gameState.selectedItemId}`);
+                 if (selectedElement) {
+                    selectedElement.classList.add('selected');
+                 }
+            }
+        }
+
+        function renderTargets(targets) {
+            const targetContainer = document.getElementById('target-categories');
+            targetContainer.innerHTML = '';
+            targets.forEach(target => {
+                const targetDiv = document.createElement('div');
+                targetDiv.textContent = target;
+                targetDiv.className = 'target-box bg-gray-100 p-4 rounded-lg border-2 border-gray-300 font-semibold text-center flex items-center justify-center';
+                targetDiv.onclick = () => assignItem(target);
+                targetContainer.appendChild(targetDiv);
+            });
+        }
+
+        function selectItem(itemId) {
+            // Deselect previous item if any
+            if (gameState.selectedItemId) {
+                const prevSelected = document.getElementById(`item-${gameState.selectedItemId}`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected');
+                }
+            }
+
+            // Select new item
+            gameState.selectedItemId = itemId;
+            document.getElementById(`item-${itemId}`).classList.add('selected');
+        }
+
+        function assignItem(targetCategory) {
+            if (!gameState.selectedItemId) {
+                showTemporaryMessage("Bitte wählen Sie zuerst einen Datensatz oder eine Anfrage aus der linken Spalte.", 'accent');
+                return;
+            }
+
+            const selectedItem = gameState.levelItems.find(item => item.id === gameState.selectedItemId);
+
+            if (selectedItem.correct === targetCategory) {
+                // Richtig: KEIN MODAL
+                gameState.score++;
+                showTemporaryMessage("✅ Korrekt! Nächste Aufgabe.", 'secondary'); 
+                removeSelectedItem(selectedItem.id); 
+                
+                // Lade die nächste Aufgabe sofort
+                loadCurrentTask(); 
+                
+            } else {
+                // Falsch: MODAL BLEIBT ERHALTEN (um die korrekte Antwort anzuzeigen)
+                showIncorrectFeedback(selectedItem.correct);
+                // Die Auswahl bleibt gesetzt, loadCurrentTask() wird vom Modal-Button aufgerufen, 
+                // um das Item neu zu rendern und die Auswahl zu behalten.
+            }
+        }
+
+        // Bei korrekter Zuordnung nur das Item entfernen und ProgressBar updaten
+        function removeSelectedItem(itemId) {
+            gameState.levelItems = gameState.levelItems.filter(item => item.id !== itemId);
+            updateProgressBar();
+        }
+
+        function updateProgressBar() {
+            // Die Progressbar verwendet den Gesamt-Score, da Level-Items bei Levelwechsel nicht zurückgesetzt werden.
+            const progress = (gameState.score / gameState.totalItems) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+
+        function levelCompleted() {
+            document.getElementById('game-interface').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('hidden');
+            document.getElementById('level-completion-text').textContent = `Level ${gameState.currentLevel} erfolgreich abgeschlossen. Sie haben sich in der Rolle des ${levels[gameState.currentLevel - 1].title} bewiesen!`;
+
+            // Special case for Level 3 (DSB Quiz)
+            if (gameState.currentLevel === 3) {
+                document.getElementById('next-level-btn').classList.add('hidden');
+                document.getElementById('dsb-quiz-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('next-level-btn').classList.remove('hidden');
+                document.getElementById('dsb-quiz-btn').classList.add('hidden');
+            }
+        }
+
+        function nextLevel() {
+            gameState.currentLevel++;
+            loadLevel(gameState.currentLevel);
+        }
+
+        function showFinalScreen() {
+            document.getElementById('game-interface').classList.add('hidden');
+            document.getElementById('completion-screen').classList.add('hidden');
+            document.getElementById('final-screen').classList.remove('hidden');
+
+            const finalScoreText = `Ihre finale Punktzahl: ${gameState.score} von ${gameState.totalItems} Zuordnungen/Entscheidungen korrekt.`;
+            document.getElementById('final-score').textContent = finalScoreText;
+        }
+
+        // --- Feedback and Modal Functions ---
+        
+        function showIncorrectFeedback(correctAnswer) {
+            // Passt den Feedback-Modal-Inhalt für den Fehlerfall an
+            document.getElementById('feedback-title').textContent = '❌ Falsche Zuordnung';
+            document.getElementById('feedback-title').className = 'text-3xl font-extrabold mb-4 text-danger';
+            document.getElementById('feedback-message').textContent = 'Das war leider nicht korrekt. Die richtige Kategorie war:';
+            document.getElementById('correct-feedback').textContent = correctAnswer;
+            document.getElementById('correct-feedback').classList.remove('hidden');
+            showModal('feedback-modal');
+        }
+
+        function showModal(id) {
+            if (id === 'infothek-modal') {
+                updateInfothekContent();
+            }
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Temporäre Nachricht für kleine Hinweise (z.B. "Wähle zuerst Item" oder "Korrekt!")
+        function showTemporaryMessage(message, color) {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messageElement.className = `fixed bottom-5 right-5 p-4 rounded-lg shadow-xl text-white font-bold z-40 bg-${color}`;
+            document.body.appendChild(messageElement);
+
+            setTimeout(() => {
+                const fadeOut = messageElement.animate(
+                    [{ opacity: 1 }, { opacity: 0 }],
+                    { duration: 500, fill: 'forwards' }
+                );
+                fadeOut.onfinish = () => document.body.removeChild(messageElement);
+            }, 1000); // 1 Sekunde anzeigen
+        }
+
+        // --- Level 6 Multi-Step Logic ---
+        
+        function loadLevel6Step(stepIndex) {
+            const levelData = levels[5]; // Level 6
+            
+            if (stepIndex >= levelData.steps.length) {
+                // Alle Schritte abgeschlossen
+                return levelCompleted();
+            }
+
+            gameState.currentTaskIndex = stepIndex;
+            const step = levelData.steps[stepIndex];
+            const container = document.getElementById('level6-question-container');
+            container.innerHTML = `
+                <p class="text-lg font-semibold mb-4 text-primary">${step.question}</p>
+                <div id="level6-answers" class="space-y-3">
+                    <!-- Answers will be dynamically created -->
+                </div>
+            `;
+            
+            const answersContainer = document.getElementById('level6-answers');
+            step.answers.forEach((answer, index) => {
+                const radioId = `step6-option-${stepIndex}-${index}`;
+                const div = document.createElement('div');
+                div.className = 'flex items-start p-3 bg-card-bg rounded-lg shadow-sm hover:bg-gray-100 transition-colors cursor-pointer';
+                div.innerHTML = `
+                    <input type="radio" id="${radioId}" name="level6-q${stepIndex}" value="${index}" class="mt-1 h-5 w-5 text-primary focus:ring-primary" onchange="enableLevel6Button()">
+                    <label for="${radioId}" class="ml-3 text-base flex-grow">${answer}</label>
+                `;
+                div.onclick = () => {
+                    document.getElementById(radioId).checked = true;
+                    enableLevel6Button();
+                };
+                answersContainer.appendChild(div);
+            });
+
+            document.getElementById('level6-next-btn').textContent = stepIndex < levelData.steps.length - 1 ? "Entscheidung prüfen & weiter" : "Abschließen & prüfen";
+            document.getElementById('level6-next-btn').disabled = true;
+        }
+
+        function enableLevel6Button() {
+            document.getElementById('level6-next-btn').disabled = false;
+        }
+
+        function processLevel6Step() {
+            const levelData = levels[5];
+            const stepIndex = gameState.currentTaskIndex;
+            const step = levelData.steps[stepIndex];
+            const selectedRadio = document.querySelector(`input[name="level6-q${stepIndex}"]:checked`);
+            
+            if (!selectedRadio) {
+                showTemporaryMessage("Bitte wählen Sie eine Antwort aus.", 'danger');
+                return;
+            }
+
+            const selectedIndex = parseInt(selectedRadio.value);
+            const isCorrect = selectedIndex === step.correctIndex;
+
+            // Deaktiviere alle Buttons für Feedback-Anzeige
+            document.querySelectorAll(`input[name="level6-q${stepIndex}"]`).forEach(radio => {
+                radio.disabled = true;
+                const label = radio.nextElementSibling;
+                const parentDiv = radio.closest('div.flex');
+                
+                if (parseInt(radio.value) === step.correctIndex) {
+                    parentDiv.classList.remove('bg-card-bg');
+                    parentDiv.classList.add('bg-secondary', 'text-white', 'font-bold');
+                } else if (radio.checked) {
+                    parentDiv.classList.remove('bg-card-bg');
+                    parentDiv.classList.add('bg-danger', 'text-white');
+                }
+            });
+
+            document.getElementById('level6-next-btn').disabled = true;
+
+            if (isCorrect) {
+                gameState.score++;
+                showTemporaryMessage("✅ Richtige Compliance-Entscheidung!", 'secondary');
+            } else {
+                showTemporaryMessage("❌ Falsch. Überprüfen Sie die DPIA- und PbD-Prinzipien (Infothek).", 'danger');
+            }
+
+            // Kurze Pause, dann zum nächsten Schritt
+            setTimeout(() => {
+                const nextStepIndex = stepIndex + 1;
+                if (nextStepIndex < levelData.steps.length) {
+                    loadLevel6Step(nextStepIndex);
+                } else {
+                    levelCompleted();
+                }
+            }, 1500);
+        }
+
+        // --- Infothek Logic ---
+
+        function updateInfothekContent() {
+            const levelData = levels[gameState.currentLevel - 1];
+            const contentDiv = document.getElementById('infothek-content');
+            contentDiv.innerHTML = ''; // Clear previous content
+
+            // Title
+            const titleH4 = document.createElement('h4');
+            titleH4.className = 'text-xl font-bold text-gray-700';
+            titleH4.textContent = levelData.infothek.title;
+            contentDiv.appendChild(titleH4);
+
+            // Content list
+            const ul = document.createElement('ul');
+            ul.className = 'list-disc ml-5 space-y-2';
+            levelData.infothek.content.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = item;
+                ul.appendChild(li);
+            });
+            contentDiv.appendChild(ul);
+        }
+
+        // --- DSB Quiz Logic (Level 3 Special) ---
+        let currentQuizQuestion = 1;
+
+        function processQuizAnswer(questionNumber) {
+            const questionDiv = document.getElementById(`quiz-question-${questionNumber}`);
+            const buttons = questionDiv.querySelectorAll('.quiz-option');
+            let isCorrect = false;
+
+            buttons.forEach(button => {
+                button.disabled = true;
+                // Check for the actual selected class 'bg-accent'
+                if (button.classList.contains('bg-accent')) {
+                    if (button.dataset.answer === "Richtig") {
+                        isCorrect = true;
+                    }
+                }
+                // Show correct/incorrect globally
+                if (button.dataset.answer === "Richtig") {
+                    button.classList.remove('bg-gray-100');
+                    button.classList.add('bg-secondary', 'text-white');
+                } else if (button.classList.contains('bg-accent')) {
+                    // Was selected but wrong
+                    button.classList.remove('bg-accent');
+                    button.classList.add('bg-danger', 'text-white');
+                }
+            });
+
+            document.getElementById('quiz-next-btn').disabled = true;
+
+            if (questionNumber === 1) {
+                if (isCorrect) gameState.quizScore++;
+                setTimeout(() => {
+                    document.getElementById('quiz-question-1').classList.add('hidden');
+                    document.getElementById('quiz-question-2').classList.remove('hidden');
+                    document.getElementById('quiz-next-btn').textContent = "Frage 2 prüfen";
+                    document.getElementById('quiz-next-btn').onclick = () => processQuizAnswer(2);
+                    document.getElementById('quiz-next-btn').disabled = false;
+                    // Reset buttons for Q2
+                    document.querySelectorAll('#quiz-question-2 .quiz-option').forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('bg-red-500', 'bg-secondary', 'text-white', 'bg-accent');
+                        btn.classList.add('bg-gray-100');
+                        btn.onclick = (e) => selectQuizOption(e.target);
+                    });
+                }, 1000);
+            } else if (questionNumber === 2) {
+                if (isCorrect) gameState.quizScore++;
+                document.getElementById('quiz-next-btn').classList.add('hidden');
+                document.getElementById('quiz-close-btn').classList.remove('hidden');
+                document.getElementById('quiz-result').classList.remove('hidden');
+
+                const resultText = gameState.quizScore === 2 ?
+                    "🎉 Exzellent! Sie sind ein wahrer DSB-Experte!" :
+                    `Gut, aber noch nicht perfekt. ${gameState.quizScore} von 2 Fragen richtig. Wiederholen Sie die Infothek!`;
+
+                document.getElementById('quiz-result-text').textContent = resultText;
+            }
+        }
+
+        function selectQuizOption(button) {
+            const currentQuestionDiv = button.closest('div[id^="quiz-question-"]');
+            const buttons = currentQuestionDiv.querySelectorAll('.quiz-option');
+
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-accent');
+                btn.classList.add('bg-gray-100');
+            });
+
+            button.classList.remove('bg-gray-100');
+            button.classList.add('bg-accent');
+            document.getElementById('quiz-next-btn').disabled = false;
+        }
+
+        function resetQuizState() {
+            gameState.quizScore = 0;
+            currentQuizQuestion = 1;
+            document.getElementById('quiz-question-1').classList.remove('hidden');
+            document.getElementById('quiz-question-2').classList.add('hidden');
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('quiz-next-btn').classList.remove('hidden');
+            document.getElementById('quiz-close-btn').classList.add('hidden');
+            document.getElementById('quiz-next-btn').textContent = "Antwort prüfen";
+            document.getElementById('quiz-next-btn').onclick = () => processQuizAnswer(1);
+
+            document.querySelectorAll('.quiz-option').forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('bg-red-500', 'bg-secondary', 'bg-accent', 'text-white');
+                btn.classList.add('bg-gray-100');
+                btn.onclick = (e) => selectQuizOption(e.target);
+            });
+        }
+
+        // Global Event Listeners for Quiz buttons and Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('#dsb-quiz-modal .quiz-option').forEach(btn => {
+                btn.onclick = (e) => selectQuizOption(e.target);
+            });
+            document.getElementById('dsb-quiz-btn').onclick = () => {
+                resetQuizState();
+                showModal('dsb-quiz-modal');
+            };
+            document.getElementById('quiz-close-btn').onclick = () => {
+                closeModal('dsb-quiz-modal');
+                if (gameState.currentLevel === 3) {
+                    // Allow moving to the next level after quiz attempt
+                    document.getElementById('next-level-btn').classList.remove('hidden');
+                    document.getElementById('dsb-quiz-btn').classList.add('hidden');
+                }
+            };
+
+            initGame();
+        });
+    </script>
+
+</body>
+</html>
