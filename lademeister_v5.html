@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LadeMeister - Logistik Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --trailer-bg: #e2e8f0;
+            --trailer-border: #475569;
+            --accent: #3b82f6;
+            --text: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 10px;
+            height: 100vh;
+            overflow: hidden;
+        }
+        h1 { margin: 0 0 5px 0; font-size: 1.2rem; }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            height: 80vh; 
+            border: 2px solid #cbd5e1;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Start Screen Overlay */
+        #start-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .mode-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            padding: 15px;
+            margin: 8px;
+            border-radius: 8px;
+            width: 200px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .mode-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+        .mode-card h3 { margin-top: 0; color: var(--accent); font-size: 1.0rem; }
+        .mode-card p { font-size: 0.8rem; color: #475569; margin-bottom: 5px;}
+
+        #canvas-wrapper {
+            flex: 1;
+            overflow: auto; 
+            position: relative;
+            background: #f8fafc;
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
+        }
+
+        #canvas-wrapper:active {
+            cursor: grabbing;
+        }
+
+        canvas {
+            display: block;
+        }
+        
+        #ui-controls {
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary { background-color: var(--accent); color: white; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-success { background-color: #22c55e; color: white; }
+        .btn-success:hover { background-color: #16a34a; }
+        .btn-warn { background-color: #f59e0b; color: white; }
+        .btn-warn:hover { background-color: #d97706; }
+        .btn-danger { background-color: #ef4444; color: white; }
+
+        #stats {
+            font-family: monospace;
+            font-size: 0.8rem;
+            margin-left: auto;
+            background: #f1f5f9;
+            padding: 5px 10px;
+            border-radius: 4px;
+            white-space: pre-line;
+            text-align: right;
+            min-width: 120px;
+        }
+
+        /* Modal für Ergebnisse */
+        #result-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 95%;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .score-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin: 10px 0;
+        }
+        .comparison-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 6px;
+            text-align: left;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        /* Preview Canvas in Modal */
+        #preview-container {
+            margin-top: 15px;
+            border: 1px solid #cbd5e1;
+            background: #e2e8f0;
+            overflow-x: auto;
+            border-radius: 4px;
+            text-align: left;
+        }
+
+        #tour-legend {
+            display: none;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            background: #fff;
+            padding: 5px 10px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Footer Styles */
+        footer {
+            margin-top: auto;
+            padding: 10px;
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .footer-logo {
+            height: 30px;
+            width: auto;
+        }
+        
+        @media (max-width: 600px) {
+            #stats { display: none; }
+            .btn { padding: 8px 10px; font-size: 0.8rem; }
+            footer { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🚛 LadeMeister</h1>
+    <div id="instructions" style="margin-bottom: 5px; font-size: 0.9rem; opacity: 0.8;">
+        <!-- Wird dynamisch per JS gesetzt -->
+    </div>
+
+    <div id="tour-legend">
+        <strong>Reihenfolge (Entladen):</strong>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> 1. Rot</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> 2. Blau</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> 3. Grün</div>
+    </div>
+
+    <div id="game-container">
+        
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <h2 style="font-size: 1.8rem; color: var(--text); margin-bottom: 10px;">Auftrag wählen</h2>
+            <p style="margin-bottom: 20px; color: #64748b;">Wähle deinen Spielmodus</p>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;">
+                <div class="mode-card" onclick="startGame('classic')">
+                    <div><h3>📏 Lademeter</h3><p>Platz sparen. Alles an die Stirnwand.</p></div>
+                    <small style="color: green; font-weight: bold; margin-top:10px;">Starten</small>
+                </div>
+                <div class="mode-card" onclick="startGame('delivery')">
+                    <div><h3>🚚 Touren</h3><p>LIFO Reihenfolge. 3 Kunden.</p></div>
+                    <small style="color: var(--accent); font-weight: bold; margin-top:10px;">Starten</small>
+                </div>
+                <div class="mode-card" onclick="startGame('axle')">
+                    <div><h3>⚖️ Achslast</h3><p>Schwerpunkt optimieren.</p></div>
+                    <small style="color: #d97706; font-weight: bold; margin-top:10px;">Starten</small>
+                </div>
+                 <div class="mode-card" onclick="startGame('stack')">
+                    <div><h3>🏗️ Stapelung</h3><p>Nutze die Höhe! Seitenansicht beachten.</p></div>
+                    <small style="color: #7c3aed; font-weight: bold; margin-top:10px;">Starten</small>
+                </div>
+            </div>
+        </div>
+
+        <div id="canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+        
+        <div id="ui-controls">
+            <button class="btn btn-primary" onclick="rotateAction()">🔄 (R)</button>
+            <button class="btn btn-warn" onclick="lockSelectedItem()">🔒 Sichern (S)</button>
+            <button class="btn btn-warn" onclick="secureAllItems()" title="Alle gültigen Positionen sichern">🔒🔒 Alles</button>
+            <button class="btn btn-primary" onclick="unlockSelectedItem()">🔓 Entsichern (D)</button>
+            <button class="btn btn-success" onclick="finishGame()">🏁 Werten</button>
+            <button class="btn btn-danger" onclick="resetGame()">🗑️ Neu</button>
+            <div id="stats">Starten...</div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-left">
+            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="Logo" class="footer-logo">
+            <strong>Johannes Heinrich</strong>
+        </div>
+        <div>Erstellt mithilfe von Gemini • 2025</div>
+    </footer>
+
+    <div id="result-modal">
+        <div class="modal-content">
+            <h2>Ladebericht</h2>
+            <div class="score-display" id="final-score">0.0m</div>
+            <p id="final-subtitle">Benötigte Lademeter</p>
+            <div class="comparison-box">
+                <strong>Analyse:</strong><br>
+                <span id="analysis-content">...</span><br>
+                <hr style="margin: 10px 0; border: 0; border-top: 1px solid #ddd;">
+                <small id="feedback-text">...</small>
+                <div id="computer-preview-section">
+                    <div style="margin-top: 15px; font-weight: bold;">Lösungsvorschlag (Computer):</div>
+                    <div id="preview-container">
+                        <canvas id="previewCanvas" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button class="btn btn-primary" onclick="closeModal()">Zurück zur Ansicht</button>
+                <button class="btn btn-success" onclick="resetGame(); closeModal()">Neuer Auftrag</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * LadeMeister Game Logic
+ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const wrapper = document.getElementById('canvas-wrapper');
+const statsDiv = document.getElementById('stats');
+const startScreen = document.getElementById('start-screen');
+const legendDiv = document.getElementById('tour-legend');
+const instructionsDiv = document.getElementById('instructions');
+
+const TRAILER_LENGTH_CM = 1360; 
+const TRAILER_WIDTH_CM = 240; 
+const TRAILER_HEIGHT_CM = 280;
+const PIXELS_PER_CM = 0.85;
+const MARGIN_TOP = 50; 
+const MARGIN_LEFT = 40;
+
+let TRAILER_END_Y_PX = 0;
+let SIDE_VIEW_START_Y_PX = 0;
+let DOCK_START_Y_PX = 0;
+
+const DOCK_ITEM_SPACING = 10;   
+const KINGPIN_POS_X = 100; 
+const AXLE_GROUP_POS_X = 850; 
+const TARGET_COG_MIN = 450; 
+const TARGET_COG_MAX = 650; 
+
+const COLOR_TRAILER = '#e2e8f0';
+const COLOR_TRAILER_BORDER = '#475569';
+const COLOR_LOCKED = '#64748b';
+const COLOR_SELECTED = '#3b82f6';
+const COLOR_COLLISION = '#ef4444';
+const COLOR_DOCK_BACKGROUND = '#f1f5f9';
+const COLOR_COG_ZONE = 'rgba(34, 197, 94, 0.2)'; 
+const COLOR_COG_BORDER = '#16a34a';
+
+let items = [];
+let draggingItem = null;
+let selectedItem = null;
+let dragOffset = { x: 0, y: 0 };
+let isGameOver = false;
+let gameMode = 'classic'; 
+let mouseDownTime = 0;
+let mouseDownPos = {x:0, y:0};
+
+const PACKAGES_SRC = [
+    { name: 'Euro-Palette', w: 80, h: 120, h_real: 100, color: '#d97706', minW: 200, maxW: 800, sf: 1 }, 
+    { name: 'Industrie-Pal', w: 100, h: 120, h_real: 100, color: '#b45309', minW: 300, maxW: 1000, sf: 1 }, 
+    { name: 'Halbpalette', w: 60, h: 80, h_real: 80, color: '#ca8a04', minW: 100, maxW: 400, sf: 1 }, 
+    { name: 'Gitterbox', w: 84, h: 124, h_real: 100, color: '#475569', minW: 200, maxW: 1200, sf: 1 }, 
+    { name: 'Kiste Klein', w: 60, h: 40, h_real: 40, color: '#10b981', minW: 20, maxW: 80, sf: 0 }, 
+    { name: 'Kiste Mittel', w: 80, h: 60, h_real: 60, color: '#06b6d4', minW: 50, maxW: 150, sf: 1 }, 
+    { name: 'Kiste Groß', w: 100, h: 80, h_real: 80, color: '#0891b2', minW: 100, maxW: 300, sf: 1 }, 
+    { name: 'Langgut 1', w: 200, h: 50, h_real: 50, color: '#8b5cf6', minW: 500, maxW: 1500, sf: 0 },
+    { name: 'Langgut 2', w: 150, h: 40, h_real: 40, color: '#a855f7', minW: 300, maxW: 800, sf: 0 }, 
+    { name: 'Maschine', w: 120, h: 120, h_real: 150, color: '#ef4444', minW: 2000, maxW: 5000, sf: 0 }, 
+    { name: 'Schmalpalette', w: 60, h: 100, h_real: 100, color: '#be123c', minW: 150, maxW: 500, sf: 1 } 
+];
+
+const STOPS = [
+    { id: 1, name: 'Kunde 1', color: '#ef4444' }, 
+    { id: 2, name: 'Kunde 2', color: '#3b82f6' }, 
+    { id: 3, name: 'Kunde 3', color: '#22c55e' }  
+];
+
+class Item {
+    constructor(id, typeTemplate, x, y, stopId = null) {
+        this.id = id;
+        this.name = typeTemplate.name;
+        this.w = typeTemplate.w; 
+        this.h = typeTemplate.h; 
+        this.originalW = typeTemplate.w; 
+        this.originalH = typeTemplate.h; 
+        this.realHeight = typeTemplate.h_real || 100; 
+        this.x = x; 
+        this.y = y;
+        this.z = 0; 
+        this.color = typeTemplate.color;
+        this.rotatable = (typeTemplate.rotatable !== undefined) ? typeTemplate.rotatable : true;
+        this.sf = (typeTemplate.sf !== undefined) ? typeTemplate.sf : 1;
+        this.locked = false;
+        this.rotated = false; 
+        this.inDock = true; 
+        this.collisionHighlight = 0; 
+        this.stopId = stopId; 
+        
+        const min = typeTemplate.minW || 100;
+        const max = typeTemplate.maxW || min;
+        this.weight = Math.floor(Math.random() * (max - min + 1)) + min;
+
+        if (stopId) {
+            const stop = STOPS.find(s => s.id === stopId);
+            if (stop) this.color = stop.color;
+        }
+    }
+
+    draw(context, scale = PIXELS_PER_CM) {
+        const px = this.x * scale;
+        const py = this.y * scale;
+        const pw = this.w * scale;
+        const ph = this.h * scale;
+
+        if (this.collisionHighlight > 0) {
+            context.fillStyle = COLOR_COLLISION;
+            this.collisionHighlight--;
+        } else {
+            context.fillStyle = this.locked ? COLOR_LOCKED : this.color;
+        }
+        
+        if (this.z > 0) {
+             context.shadowColor = 'rgba(0,0,0,0.3)';
+             context.shadowBlur = 5;
+             context.shadowOffsetX = 2;
+             context.shadowOffsetY = 2;
+        }
+
+        if (this === selectedItem && !this.locked && context === ctx) {
+            context.shadowColor = 'rgba(0,0,0,0.4)';
+            context.shadowBlur = 15;
+            context.lineWidth = 2;
+            context.strokeStyle = '#2563eb';
+        } else {
+            if (this.z === 0) context.shadowBlur = 0; 
+            context.lineWidth = 1;
+            context.strokeStyle = 'rgba(0,0,0,0.4)';
+        }
+        
+        if (this === draggingItem && checkCollision(this) && context === ctx) {
+            context.fillStyle = COLOR_COLLISION;
+            context.globalAlpha = 0.8;
+        }
+
+        context.fillRect(px, py, pw, ph);
+        context.strokeRect(px, py, pw, ph);
+        
+        context.globalAlpha = 1.0;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 0;
+        context.shadowBlur = 0;
+
+        if (pw > 30 && ph > 15) {
+            context.fillStyle = 'rgba(255,255,255,0.95)';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            const fontSize = Math.max(9, Math.min(12, pw / 6));
+            context.font = `${fontSize}px Arial`;
+            
+            context.fillText(`${(this.w/100).toFixed(1)}x${(this.h/100).toFixed(1)}`, px + pw/2, py + ph/2 - 6);
+            
+            let infoText = "";
+            if (gameMode === 'axle') infoText = `${this.weight}kg`;
+            else if (this.stopId) infoText = `Stop ${this.stopId}`;
+            else if (gameMode === 'stack') {
+                infoText = `SF: ${this.sf}`;
+                if (this.z > 0) infoText += ` (L${this.z+1})`;
+            }
+            
+            if (infoText) {
+                context.font = `bold ${fontSize}px Arial`;
+                context.fillText(infoText, px + pw/2, py + ph/2 + 6);
+            }
+        }
+        
+        if (this.rotatable && !this.locked) {
+            context.fillStyle = 'rgba(255,255,255,0.4)';
+            if (this.w < this.h) context.fillRect(px + pw/2 - 2, py + 4, 4, ph - 8);
+            else context.fillRect(px + 4, py + ph/2 - 2, pw - 8, 4);
+        }
+    }
+
+    contains(mx, my) {
+        const px = this.x * PIXELS_PER_CM;
+        const py = this.y * PIXELS_PER_CM;
+        const pw = this.w * PIXELS_PER_CM;
+        const ph = this.h * PIXELS_PER_CM;
+        return mx >= px && mx <= px + pw && my >= py && my <= py + ph;
+    }
+}
+
+function startGame(mode) {
+    gameMode = mode;
+    startScreen.style.display = 'none';
+    legendDiv.style.display = 'none';
+    
+    if (gameMode === 'classic') {
+        instructionsDiv.innerHTML = "Lade <b>alle</b> Packstücke so platzsparend wie möglich nach links.<br>R: Drehen | S: Sichern | D: Entsichern";
+    } else if (gameMode === 'delivery') {
+        instructionsDiv.innerHTML = "Lade LIFO: <b>Stop 1</b> (Rot) zuletzt (Heck), <b>Stop 3</b> (Grün) zuerst (Stirnwand).";
+        legendDiv.style.display = 'flex';
+    } else if (gameMode === 'axle') {
+        instructionsDiv.innerHTML = "Verteile das Gewicht! Bring den <b>Schwerpunkt</b> in den grünen Bereich.";
+    } else if (gameMode === 'stack') {
+        instructionsDiv.innerHTML = "Nutze die Höhe! Ziehe Packstücke aufeinander. <br><b>Oben:</b> Draufsicht | <b>Mitte:</b> Seitenansicht | <b>Unten:</b> Lager";
+    }
+
+    initGame();
+}
+
+function calculateLayout() {
+    const scale = PIXELS_PER_CM;
+    TRAILER_END_Y_PX = (MARGIN_TOP + TRAILER_WIDTH_CM) * scale;
+    
+    if (gameMode === 'stack') {
+        SIDE_VIEW_START_Y_PX = TRAILER_END_Y_PX + 40;
+        const sideViewHeight = TRAILER_HEIGHT_CM * scale + 40; 
+        DOCK_START_Y_PX = SIDE_VIEW_START_Y_PX + sideViewHeight + 40;
+    } else {
+        SIDE_VIEW_START_Y_PX = 0; 
+        DOCK_START_Y_PX = TRAILER_END_Y_PX + 60;
+    }
+}
+
+function initGame() {
+    calculateLayout();
+    const w = (TRAILER_LENGTH_CM + MARGIN_LEFT * 2) * PIXELS_PER_CM;
+    canvas.width = w;
+    canvas.height = DOCK_START_Y_PX + 400;
+
+    items = [];
+    const count = Math.floor(Math.random() * (15 - 8 + 1)) + 8; 
+    generateItems(count);
+    
+    isGameOver = false;
+    wrapper.scrollLeft = 0;
+    
+    drawLoop();
+    updateStats();
+}
+
+function generateItems(count) {
+    for (let i = 0; i < count; i++) {
+        let type = null;
+        if (gameMode === 'axle' && Math.random() < 0.3) {
+            type = PACKAGES_SRC.find(p => p.name === 'Maschine');
+        }
+        if (!type) {
+            if (Math.random() < 0.4) type = PACKAGES_SRC.find(p => p.name === 'Euro-Palette');
+            else type = PACKAGES_SRC[Math.floor(Math.random() * PACKAGES_SRC.length)];
+        }
+        if (!type) type = PACKAGES_SRC[0];
+
+        let stopId = null;
+        if (gameMode === 'delivery') stopId = Math.floor(Math.random() * 3) + 1;
+
+        const item = new Item(i, type, 0, 0, stopId); 
+        items.push(item);
+    }
+    arrangeDockItems();
+}
+
+function arrangeDockItems() {
+    let startX = MARGIN_LEFT;
+    let startY_Logic = DOCK_START_Y_PX / PIXELS_PER_CM; 
+    let currentRowHeight = 0;
+    let dockWidthLimit = TRAILER_LENGTH_CM / 2; 
+
+    let dockItems = items.filter(item => item.inDock);
+    
+    if (gameMode === 'delivery') dockItems.sort((a,b) => b.stopId - a.stopId); 
+    else if (gameMode === 'axle') dockItems.sort((a,b) => (b.weight || 0) - (a.weight || 0));
+    else if (gameMode === 'stack') dockItems.sort((a,b) => b.sf - a.sf);
+
+    dockItems.forEach(item => {
+        item.x = startX;
+        item.y = startY_Logic;
+        item.z = 0; 
+        startX += item.w + DOCK_ITEM_SPACING; 
+        currentRowHeight = Math.max(currentRowHeight, item.h);
+        if (startX > MARGIN_LEFT + dockWidthLimit) {
+            startX = MARGIN_LEFT;
+            startY_Logic += currentRowHeight + DOCK_ITEM_SPACING;
+            currentRowHeight = 0;
+        }
+    });
+}
+
+function drawLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawEnvironment(ctx);
+    
+    const renderList = [...items].sort((a,b) => a.z - b.z);
+    
+    renderList.forEach(i => {
+        if (i !== draggingItem) i.draw(ctx);
+    });
+    
+    if (draggingItem) draggingItem.draw(ctx);
+    
+    if (gameMode === 'axle') drawCoG();
+
+    if (gameMode === 'stack') {
+        drawSideViewOnMain();
+    }
+
+    requestAnimationFrame(drawLoop);
+}
+
+function drawEnvironment(context) {
+    const scale = PIXELS_PER_CM;
+    const x = MARGIN_LEFT * scale;
+    const y = MARGIN_TOP * scale; 
+    const w = TRAILER_LENGTH_CM * scale;
+    const h = TRAILER_WIDTH_CM * scale;
+
+    context.fillStyle = COLOR_TRAILER;
+    context.fillRect(x, y, w, h);
+    
+    context.fillStyle = '#64748b';
+    context.font = 'bold 14px Arial';
+    context.textAlign = 'left';
+    context.fillText("DRAUFSICHT", 10, y - 10);
+
+    if (gameMode === 'axle') {
+        const zx = x + TARGET_COG_MIN * scale;
+        const zw = (TARGET_COG_MAX - TARGET_COG_MIN) * scale;
+        context.fillStyle = COLOR_COG_ZONE;
+        context.fillRect(zx, y, zw, h);
+        context.strokeStyle = COLOR_COG_BORDER;
+        context.lineWidth = 2;
+        context.strokeRect(zx, y, zw, h);
+    }
+
+    context.beginPath();
+    context.lineWidth = 1;
+    for(let i=0; i<=TRAILER_LENGTH_CM; i+=50) {
+        const lx = x + i * scale;
+        context.strokeStyle = (i % 100 === 0) ? '#94a3b8' : '#cbd5e1'; 
+        context.beginPath(); context.moveTo(lx, y); context.lineTo(lx, y+h); context.stroke();
+        if(i % 100 === 0) {
+            context.fillStyle = '#64748b'; context.font = '10px Arial'; context.textAlign = 'center';
+            context.fillText(i/100 + "m", lx, y - 5);
+        }
+    }
+
+    context.strokeStyle = COLOR_TRAILER_BORDER;
+    context.lineWidth = 3;
+    context.strokeRect(x, y, w, h);
+    
+    context.fillStyle = '#ef4444';
+    context.fillRect(x-4, y-4, 4, h+8); 
+    
+    context.fillStyle = COLOR_DOCK_BACKGROUND;
+    context.fillRect(0, DOCK_START_Y_PX, canvas.width, canvas.height - DOCK_START_Y_PX);
+    
+    context.fillStyle = '#64748b';
+    context.font = 'bold 14px Arial';
+    context.textAlign = 'left';
+    context.fillText("LAGERZONE / RAMPE", 20, DOCK_START_Y_PX + 20);
+}
+
+function drawSideViewOnMain() {
+    const scale = PIXELS_PER_CM;
+    const startY = SIDE_VIEW_START_Y_PX;
+    const startX = MARGIN_LEFT * scale;
+    const trailerW = TRAILER_LENGTH_CM * scale;
+    const trailerH = TRAILER_HEIGHT_CM * scale;
+    const floorY = startY + trailerH; 
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText("SEITENANSICHT (Höhe)", 10, startY - 10);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(startX, startY, trailerW, trailerH);
+    ctx.strokeStyle = '#475569';
+    ctx.strokeRect(startX, startY, trailerW, trailerH); 
+    
+    ctx.beginPath(); 
+    ctx.moveTo(startX - 10, floorY); 
+    ctx.lineTo(startX + trailerW + 10, floorY); 
+    ctx.strokeStyle = '#333'; 
+    ctx.lineWidth = 4; 
+    ctx.stroke();
+
+    items.forEach(item => {
+        if (item.locked || (item === draggingItem && !item.inDock)) {
+            const ix = startX + item.x * scale;
+            const ih = item.realHeight * scale;
+            const iy = floorY - ih - (item.z * ih); 
+            
+            ctx.fillStyle = item.color;
+            ctx.fillRect(ix, iy, item.w * scale, ih);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#333';
+            ctx.strokeRect(ix, iy, item.w * scale, ih);
+            
+            if (item.z > 0) {
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(`L${item.z+1}`, ix + 3, iy + 12);
+            }
+        }
+    });
+}
+
+function drawCoG() {
+    const stats = calculatePhysics();
+    if (stats.totalWeight === 0) return;
+    const scale = PIXELS_PER_CM;
+    const xStart = MARGIN_LEFT * scale;
+    const yStart = MARGIN_TOP * scale;
+    const cogPx = xStart + stats.cogX * scale;
+    const cogPy = yStart + TRAILER_WIDTH_CM * scale / 2; 
+    const isGood = stats.cogX >= TARGET_COG_MIN && stats.cogX <= TARGET_COG_MAX;
+    
+    ctx.save(); ctx.translate(cogPx, cogPy);
+    ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2);
+    ctx.fillStyle = isGood ? '#22c55e' : '#ef4444'; ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.font = 'bold 11px Arial'; ctx.fillText("CoG", 15, -5);
+    ctx.restore();
+}
+
+function calculatePhysics() {
+    let totalWeight = 0, momentSum = 0;
+    items.forEach(item => { if (item.locked) { momentSum += item.weight * (item.x + item.w / 2); totalWeight += item.weight; }});
+    if (totalWeight === 0) return { totalWeight: 0, cogX: 0, axleLoad: 0, kpLoad: 0 };
+    const cogX = momentSum / totalWeight;
+    const axleLoad = totalWeight * ((cogX - KINGPIN_POS_X) / (AXLE_GROUP_POS_X - KINGPIN_POS_X));
+    return { totalWeight, cogX, axleLoad, kpLoad: totalWeight - axleLoad };
+}
+
+function getMousePos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
+}
+function snapToGrid(val) { return Math.round(val / 5) * 5; }
+
+function isInsideTrailer(item) {
+    const trailerTop = MARGIN_TOP;
+    const trailerBottom = MARGIN_TOP + TRAILER_WIDTH_CM;
+    const trailerLeft = MARGIN_LEFT;
+    const trailerRight = MARGIN_LEFT + TRAILER_LENGTH_CM; 
+    return (item.y + item.h > trailerTop && item.y < trailerBottom) && (item.x >= trailerLeft - 1 && item.x < trailerRight);
+}
+
+function checkCollision(item) {
+    const trailerTop = MARGIN_TOP;
+    const trailerBottom = MARGIN_TOP + TRAILER_WIDTH_CM;
+    const trailerLeft = MARGIN_LEFT;
+    if (isInsideTrailer(item)) { 
+        if (item.x < trailerLeft) return true; 
+        if (item.y < trailerTop) return true; 
+        if (item.y + item.h > trailerBottom) return true; 
+    }
+    
+    for (let other of items) {
+        if (other === item) continue;
+        if (other.z !== item.z) continue; 
+        
+        if (item.x < other.x + other.w && item.x + item.w > other.x && item.y < other.y + other.h && item.y + item.h > other.y) return true;
+    }
+    return false;
+}
+
+function checkForStackingTarget(item) {
+    if (gameMode !== 'stack') return null;
+    for (let other of items) {
+        if (other === item || !other.locked) continue;
+        const cx = item.x + item.w/2;
+        const cy = item.y + item.h/2;
+        if (cx > other.x && cx < other.x + other.w && cy > other.y && cy < other.y + other.h) {
+            if (other.sf < 1) return { valid: false, reason: "Nicht belastbar (SF 0)" };
+            return { valid: true, target: other };
+        }
+    }
+    return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    if (isGameOver) return;
+    const m = getMousePos(e);
+    mouseDownTime = Date.now();
+    mouseDownPos = m;
+    const hitList = [...items].sort((a,b) => b.z - a.z);
+    
+    for (let item of hitList) {
+        if (item.contains(m.x, m.y)) {
+            if (item.locked) { selectedItem = item; return; }
+            selectedItem = item; draggingItem = item;
+            dragOffset.x = m.x - (item.x * PIXELS_PER_CM); dragOffset.y = m.y - (item.y * PIXELS_PER_CM);
+            item.inDock = false; 
+            updateStats(); return;
+        }
+    }
+    selectedItem = null; 
+});
+canvas.addEventListener('mousemove', (e) => {
+    if (!draggingItem) return;
+    const m = getMousePos(e);
+    draggingItem.x = snapToGrid((m.x - dragOffset.x) / PIXELS_PER_CM);
+    draggingItem.y = snapToGrid((m.y - dragOffset.y) / PIXELS_PER_CM);
+});
+canvas.addEventListener('mouseup', (e) => {
+    const m = getMousePos(e);
+    const timeDiff = Date.now() - mouseDownTime;
+    const distDiff = Math.abs(m.x - mouseDownPos.x) + Math.abs(m.y - mouseDownPos.y);
+    
+    if (draggingItem && timeDiff < 250 && distDiff < 15) {
+        const itemPixelY = draggingItem.y * PIXELS_PER_CM;
+        if (itemPixelY > DOCK_START_Y_PX - 50) { 
+             autoPlaceItem(draggingItem);
+        }
+    }
+    
+    if (draggingItem && !draggingItem.locked && !draggingItem.inDock && gameMode === 'stack') {
+        const stackResult = checkForStackingTarget(draggingItem);
+        if (stackResult) {
+            if (stackResult.valid) {
+                draggingItem.z = stackResult.target.z + 1;
+            } else {
+                alert(stackResult.reason);
+                draggingItem.z = 0; 
+            }
+        } else {
+            draggingItem.z = 0; 
+        }
+    }
+    
+    if(draggingItem && !draggingItem.locked && draggingItem.inDock === false) {
+        const itemPixelY = draggingItem.y * PIXELS_PER_CM;
+        if (itemPixelY > TRAILER_END_Y_PX + 50) { 
+             draggingItem.inDock = true; draggingItem.z = 0; arrangeDockItems(); 
+        }
+    }
+    draggingItem = null; updateStats();
+});
+canvas.addEventListener('dblclick', (e) => {
+    const m = getMousePos(e);
+    const hitList = [...items].sort((a,b) => b.z - a.z);
+    for (let item of hitList) {
+        if (item.contains(m.x, m.y)) { selectedItem = item; lockSelectedItem(); break; }
+    }
+});
+window.addEventListener('keydown', (e) => {
+    if (startScreen.style.display !== 'none') return;
+    if (e.key.toLowerCase() === 'r') rotateAction();
+    if (e.key.toLowerCase() === 's') lockSelectedItem();
+    if (e.key.toLowerCase() === 'd') unlockSelectedItem();
+});
+
+function autoPlaceItem(item) {
+    let maxLoadedX = MARGIN_LEFT;
+    items.forEach(i => { if (i.locked) maxLoadedX = Math.max(maxLoadedX, i.x + i.w); });
+    let searchX = (maxLoadedX === MARGIN_LEFT) ? MARGIN_LEFT : maxLoadedX + 1;
+    let foundPos = false;
+    for(let tx = searchX; tx < MARGIN_LEFT + TRAILER_LENGTH_CM - item.w; tx += 10) {
+        for(let ty = MARGIN_TOP; ty <= MARGIN_TOP + TRAILER_WIDTH_CM - item.h; ty += 10) {
+            item.x = tx; item.y = ty; item.z = 0;
+            if (!checkCollision(item)) { foundPos = true; break; }
+        }
+        if(foundPos) break;
+    }
+    if (foundPos) { item.inDock = false; item.x = snapToGrid(item.x); item.y = snapToGrid(item.y); updateStats(); }
+    else { item.inDock = true; arrangeDockItems(); item.collisionHighlight = 10; }
+}
+
+function secureAllItems() {
+    let c = 0; items.forEach(i => { if(!i.locked && !i.inDock && isInsideTrailer(i) && !checkCollision(i)) { i.locked = true; c++; }});
+    if (c > 0) { updateStats(); selectedItem = null; } else alert("Nichts zu sichern.");
+}
+
+function rotateAction() {
+    let t = draggingItem || selectedItem; if (!t || t.locked) return;
+    let ow = t.w, oh = t.h; t.w = oh; t.h = ow; t.rotated = !t.rotated;
+    if (checkCollision(t)) { t.w = ow; t.h = oh; t.rotated = !t.rotated; t.collisionHighlight = 20; }
+}
+function lockSelectedItem() {
+    if (!selectedItem) return;
+    if (checkCollision(selectedItem) || !isInsideTrailer(selectedItem)) { alert("Position ungültig."); return; }
+    selectedItem.locked = true; selectedItem.inDock = false; selectedItem = null; arrangeDockItems(); updateStats();
+}
+function unlockSelectedItem() {
+    if (selectedItem && selectedItem.locked) { selectedItem.locked = false; selectedItem.inDock = true; selectedItem = null; arrangeDockItems(); updateStats(); }
+}
+
+function updateStats() {
+    let maxX = 0; let itemsOnTrailer = 0;
+    items.forEach(item => { if (!item.inDock && item.x >= MARGIN_LEFT) { maxX = Math.max(maxX, item.x + item.w - MARGIN_LEFT); itemsOnTrailer++; }});
+    const itemsLeft = items.filter(item => item.inDock).length;
+    let text = `Lademeter: ${(maxX/100).toFixed(2)}m\nOffen: ${itemsLeft}`;
+    if (gameMode === 'axle') {
+        const phys = calculatePhysics();
+        text = `Gesamt: ${phys.totalWeight}kg\nSattel: ${Math.round(phys.kpLoad)}kg\nAchse: ${Math.round(phys.axleLoad)}kg\nOffen: ${itemsLeft}`;
+    }
+    statsDiv.innerText = text;
+    return { maxLademeter: maxX, itemsLeft: itemsLeft };
+}
+
+function finishGame() {
+    const stats = updateStats();
+    if (stats.itemsLeft > 0) { alert(`Noch ${stats.itemsLeft} Packstücke offen!`); return; }
+    if (items.some(item => !item.locked)) { alert("Bitte alles sichern!"); return; }
+    
+    if (gameMode === 'delivery') {
+        let loadedItems = items.filter(i => i.locked).sort((a,b) => b.x - a.x);
+        for (let i = 0; i < loadedItems.length; i++) {
+            let cur = loadedItems[i];
+            for (let k = i + 1; k < loadedItems.length; k++) {
+                let beh = loadedItems[k];
+                if (cur.stopId > beh.stopId && (cur.y < beh.y + beh.h && cur.y + cur.h > beh.y)) {
+                    alert(`Fehler: ${cur.name} (Stop ${cur.stopId}) blockiert ${beh.name} (Stop ${beh.stopId}).`); return;
+                }
+            }
+        }
+    }
+    
+    const usedLm = stats.maxLademeter;
+    document.getElementById('final-score').innerText = (usedLm/100).toFixed(2) + " m";
+    document.getElementById('final-subtitle').innerText = "Benötigte Lademeter";
+
+    let analysis = `Dein Ergebnis: <strong>${(usedLm/100).toFixed(2)}</strong> m<br>`;
+    let feedback = "";
+
+    if (gameMode === 'axle') {
+        const phys = calculatePhysics();
+        const inZone = phys.cogX >= TARGET_COG_MIN && phys.cogX <= TARGET_COG_MAX;
+        document.getElementById('final-score').innerText = inZone ? "PERFEKT" : "KRITISCH";
+        document.getElementById('final-subtitle').innerText = "Lastverteilung";
+        analysis = `Gesamtgewicht: <strong>${phys.totalWeight}kg</strong><br>`;
+        analysis += `Schwerpunkt bei: <strong>${(phys.cogX/100).toFixed(2)}m</strong> (Ziel: ${(TARGET_COG_MIN/100).toFixed(2)} - ${(TARGET_COG_MAX/100).toFixed(2)}m)<br>`;
+        if (inZone) { analysis += "<span style='color:green'>✓ Im grünen Bereich!</span>"; feedback = "Hervorragend!"; } 
+        else { analysis += "<span style='color:red'>⚠ Außerhalb!</span>"; feedback = "Achte auf die Achslasten."; }
+        document.getElementById('computer-preview-section').style.display = 'none';
+    } else {
+        document.getElementById('computer-preview-section').style.display = 'block';
+        const optLm = calculateAndDrawOptimalPacking(items);
+        analysis += `Optimum: <strong>${(optLm/100).toFixed(2)}</strong> m<br>`;
+        const diff = usedLm - optLm;
+        analysis += `Differenz: <span style="color:${diff <= 20 ? 'green' : 'red'}">+${(diff/100).toFixed(2)} m</span>`;
+        if (gameMode === 'delivery') analysis += `<br><span style='color:green'>✓ Reihenfolge OK!</span>`;
+        if (diff <= 20) feedback = "Meisterleistung!"; else feedback = "Da geht noch was.";
+    }
+
+    document.getElementById('analysis-content').innerHTML = analysis;
+    document.getElementById('feedback-text').innerText = feedback;
+    document.getElementById('result-modal').style.display = 'flex';
+}
+
+function calculateAndDrawOptimalPacking(itemsToPack) {
+    const pCtx = document.getElementById('previewCanvas').getContext('2d');
+    const pScale = 0.6; 
+    let simItems = itemsToPack.map(i => ({w: i.originalW, h: i.originalH, color: i.color, stopId: i.stopId, rotatable: i.rotatable, sf: i.sf}));
+    
+    // --- STACKING LOGIC (Stack Mode Only) ---
+    if (gameMode === 'stack') {
+        // Gruppe items by dimension (footprint)
+        let grouped = [];
+        // Sortieren: SF >= 1 zuerst (als Basis), dann SF 0
+        simItems.sort((a,b) => b.sf - a.sf);
+        
+        let stacks = [];
+        simItems.forEach(item => {
+            // Versuch, item auf bestehenden Stack zu packen
+            let added = false;
+            for (let s of stacks) {
+                // Check Dimension (muss gleich sein, Rotationscheck einfachheitshalber ignorieren wir hier und nehmen an W==W && H==H)
+                let dimMatch = (s.w === item.w && s.h === item.h); // Oder rotated
+                if (dimMatch) {
+                    // Check Load Bearing capacity of stack top
+                    // Vereinfacht: Wenn der Stack schon existiert, hat er unten ein SF>=1 item.
+                    // Wir packen einfach drauf.
+                    s.items.push(item);
+                    added = true;
+                    break;
+                }
+            }
+            if (!added) {
+                // Neuer Stack
+                stacks.push({ w: item.w, h: item.h, items: [item] });
+            }
+        });
+        
+        // Ersetze simItems durch "Stacks" (repräsentiert durch das Basis-Item, aber nur 1x pro Stack für 2D Packer)
+        simItems = stacks.map(s => s.items[0]);
+    }
+
+    if (gameMode === 'delivery') simItems.sort((a, b) => (a.stopId !== b.stopId) ? b.stopId - a.stopId : Math.max(b.w, b.h) - Math.max(a.w, a.h));
+    else simItems.sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
+
+    pCtx.clearRect(0,0, 800, 200);
+    pCtx.fillStyle = '#e2e8f0'; pCtx.fillRect(0, 0, 800, 240*pScale);
+    let freeRects = [{x:0,y:0,w:9999,h:240}]; let maxX = 0; let placed = [];
+
+    simItems.forEach(itm => {
+        let bestScore = Infinity, bestR = -1, bestW, bestH;
+        for(let i=0; i<freeRects.length; i++) {
+            let r = freeRects[i];
+            let opts = [];
+            if (r.w>=itm.w && r.h>=itm.h) opts.push({w:itm.w, h:itm.h});
+            if (itm.rotatable && r.w>=itm.h && r.h>=itm.w) opts.push({w:itm.h, h:itm.w});
+            for(let o of opts) {
+                let valid = true;
+                if (gameMode === 'delivery') {
+                    for(let p of placed) if (p.stopId > itm.stopId && r.y < p.y+p.h && r.y+o.h > p.y && p.x > r.x) valid = false;
+                }
+                if (valid) {
+                    let score = Math.min(r.w-o.w, r.h-o.h) + r.x*0.1;
+                    if (score < bestScore) { bestScore = score; bestR = i; bestW = o.w; bestH = o.h; }
+                }
+            }
+        }
+        if (bestR !== -1) {
+            let r = freeRects[bestR];
+            pCtx.fillStyle = itm.color; pCtx.fillRect(r.x*pScale, r.y*pScale, bestW*pScale, bestH*pScale);
+            pCtx.strokeRect(r.x*pScale, r.y*pScale, bestW*pScale, bestH*pScale);
+            placed.push({x:r.x, y:r.y, w:bestW, h:bestH, stopId:itm.stopId});
+            let rw = r.w - bestW, rh = r.h - bestH;
+            let n = (rw > rh) ? [{x:r.x,y:r.y+bestH,w:bestW,h:rh}, {x:r.x+bestW,y:r.y,w:rw,h:r.h}] : [{x:r.x+bestW,y:r.y,w:rw,h:bestH}, {x:r.x,y:r.y+bestH,w:r.w,h:rh}];
+            freeRects.splice(bestR, 1, ...n);
+            freeRects = freeRects.filter(fr => fr.w>0 && fr.h>0);
+            maxX = Math.max(maxX, r.x+bestW);
+        }
+    });
+    return maxX;
+}
+
+function closeModal() { document.getElementById('result-modal').style.display = 'none'; }
+function resetGame() { document.getElementById('start-screen').style.display = 'flex'; items = []; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+</script>
+</body>
+</html>
