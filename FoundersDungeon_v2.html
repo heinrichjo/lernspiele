@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founder's Dungeon: Legal Legends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #111;
+            color: #e2e8f0;
+            image-rendering: pixelated;
+        }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+        
+        /* Retro UI Box Styles */
+        .retro-box {
+            border: 4px solid #4a5568;
+            box-shadow: 6px 6px 0px #000;
+            background-color: #2d3748;
+        }
+        .retro-panel {
+            background-color: #1a202c;
+            border: 2px solid #4a5568;
+            padding: 10px;
+        }
+
+        .btn-retro {
+            background-color: #4a5568;
+            border: 2px solid #cbd5e0;
+            box-shadow: 3px 3px 0px #000;
+            transition: all 0.1s;
+            cursor: pointer;
+            position: relative;
+            top: 0;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+        }
+        .btn-retro:active { top: 3px; box-shadow: 0px 0px 0px #000; }
+        .btn-retro:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
+
+        /* Specific Button Styles */
+        .btn-safe { background-color: #276749; border-color: #48bb78; }
+        .btn-normal { background-color: #2c5282; border-color: #63b3ed; }
+        .btn-risk { background-color: #9c4221; border-color: #f6ad55; }
+        .btn-salary { background-color: #b7791f; border-color: #f6e05e; color: #000; }
+
+        /* Slot Machine */
+        .slot-window {
+            background-color: #000;
+            border: 4px inset #718096;
+            overflow: hidden;
+            position: relative;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .slot-reel { font-size: 40px; line-height: 100px; text-align: center; filter: blur(0px); transition: filter 0.1s; }
+        .slot-blur { filter: blur(5px); }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            25% { transform: translate(-2px, -2px) rotate(-1deg); }
+            50% { transform: translate(2px, 2px) rotate(1deg); }
+            75% { transform: translate(-1px, -1px) rotate(0deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .shake-anim { animation: shake 0.4s; animation-iteration-count: 2; }
+        
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .pop-anim { animation: pop 0.3s ease-out; }
+
+        /* Minigame Specifics */
+        .cursor-move { animation: moveCursor 1.5s infinite alternate ease-in-out; }
+        @keyframes moveCursor { from { left: 0%; } to { left: 95%; } }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a202c; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen w-full flex flex-col items-center justify-center overflow-hidden p-2 bg-gray-900">
+
+    <!-- MAIN CONTAINER -->
+    <div id="game-container" class="retro-box w-full max-w-3xl h-[95vh] flex flex-col relative p-4 transition-all duration-200">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-end border-b-4 border-gray-600 pb-3 mb-3">
+            <div>
+                <h1 class="text-yellow-400 text-xs md:text-lg leading-tight mb-1">FOUNDER'S DUNGEON</h1>
+                <p class="text-[10px] text-gray-400">Legal Legends Edition</p>
+            </div>
+            <div class="text-right">
+                <span id="header-type" class="block text-blue-300 font-bold text-[10px] md:text-xs">Wähle Rechtsform</span>
+                <span id="header-day" class="block text-[9px] text-gray-500">Monat 0</span>
+            </div>
+        </header>
+
+        <!-- CONTENT AREA -->
+        <main id="screen-area" class="flex-grow flex flex-col relative overflow-hidden">
+            <!-- Content injected via JS -->
+        </main>
+
+    </div>
+
+    <!-- TEMPLATES -->
+    
+    <!-- 1. START SCREEN -->
+    <template id="tpl-start">
+        <div class="flex flex-col items-center justify-center h-full text-center space-y-6 animate-fade-in">
+            <div class="text-6xl mb-4 animate-pulse">🏛️</div>
+            <h2 class="text-sm md:text-base text-white mb-2">Wirtschaft & Recht Simulator</h2>
+            <p class="leading-loose text-[10px] md:text-xs text-gray-400 max-w-md mx-auto">
+                Wähle deine Rechtsform weise.<br>
+                Sie bestimmt deine Haftung, dein Kapital<br>
+                und deine Feinde.<br><br>
+                <span class="text-yellow-500">Überlebe 24 Monate ohne Insolvenz.</span>
+            </p>
+            <button onclick="game.goToSelection()" class="btn-retro px-8 py-4 text-green-400 font-bold text-xs mt-4 hover:bg-gray-700">
+                NEUES SPIEL STARTEN
+            </button>
+        </div>
+    </template>
+
+    <!-- 2. SELECTION SCREEN -->
+    <template id="tpl-selection">
+        <div class="flex flex-col h-full">
+            <h3 class="text-center text-xs text-gray-400 mb-2">WÄHLE DEINE RECHTSFORM</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto pr-2 flex-grow pb-10">
+                
+                <!-- EU -->
+                <div onclick="game.prepareFounding('EU')" class="retro-panel hover:bg-gray-700 cursor-pointer group transition relative">
+                    <div class="flex justify-between items-start">
+                        <div class="text-3xl mr-3">👤</div>
+                        <div class="flex-grow">
+                            <h4 class="text-yellow-400 text-xs font-bold">Einzelunternehmen</h4>
+                            <p class="text-[9px] text-gray-300 mt-1">Der Klassiker.</p>
+                        </div>
+                    </div>
+                    <ul class="text-[8px] text-gray-400 mt-2 list-disc pl-3 space-y-1">
+                        <li>Startkosten: <span class="text-green-400">0 €</span></li>
+                        <li>Haftung: <span class="text-red-500 font-bold">Privat (Voll)</span></li>
+                        <li>Vorteil: Maximale Kontrolle</li>
+                    </ul>
+                </div>
+
+                <!-- OHG -->
+                <div onclick="game.prepareFounding('OHG')" class="retro-panel hover:bg-gray-700 cursor-pointer group transition">
+                    <div class="flex justify-between items-start">
+                        <div class="text-3xl mr-3">🤝</div>
+                        <div class="flex-grow">
+                            <h4 class="text-orange-400 text-xs font-bold">OHG</h4>
+                            <p class="text-[9px] text-gray-300 mt-1">Offene Handelsgesellschaft</p>
+                        </div>
+                    </div>
+                    <ul class="text-[8px] text-gray-400 mt-2 list-disc pl-3 space-y-1">
+                        <li>Startkosten: <span class="text-green-400">0 €</span> (+Partnerkapital)</li>
+                        <li>Haftung: <span class="text-red-500 font-bold">Privat (Solidarisch!)</span></li>
+                        <li>Minigame: <span class="text-yellow-500">Vertragsschluss</span></li>
+                    </ul>
+                </div>
+
+                <!-- KG -->
+                <div onclick="game.prepareFounding('KG')" class="retro-panel hover:bg-gray-700 cursor-pointer group transition">
+                    <div class="flex justify-between items-start">
+                        <div class="text-3xl mr-3">🦁</div>
+                        <div class="flex-grow">
+                            <h4 class="text-orange-300 text-xs font-bold">KG</h4>
+                            <p class="text-[9px] text-gray-300 mt-1">Kommanditgesellschaft</p>
+                        </div>
+                    </div>
+                    <ul class="text-[8px] text-gray-400 mt-2 list-disc pl-3 space-y-1">
+                        <li>Rolle: <span class="text-yellow-500">Komplementär</span> (Chef)</li>
+                        <li>Vorteil: Geld vom Kommanditisten</li>
+                        <li>Haftung: <span class="text-red-500">Privat (Nur du!)</span></li>
+                        <li>Minigame: <span class="text-yellow-500">Vertragsschluss</span></li>
+                    </ul>
+                </div>
+
+                <!-- GmbH -->
+                <div onclick="game.prepareFounding('GmbH')" class="retro-panel hover:bg-gray-700 cursor-pointer group transition">
+                    <div class="flex justify-between items-start">
+                        <div class="text-3xl mr-3">🛡️</div>
+                        <div class="flex-grow">
+                            <h4 class="text-blue-400 text-xs font-bold">GmbH</h4>
+                            <p class="text-[9px] text-gray-300 mt-1">Ges. mit beschr. Haftung</p>
+                        </div>
+                    </div>
+                    <ul class="text-[8px] text-gray-400 mt-2 list-disc pl-3 space-y-1">
+                        <li>Startkosten: <span class="text-red-400">25.000 €</span></li>
+                        <li>Haftung: <span class="text-green-400 font-bold">Beschränkt</span></li>
+                        <li>Minigame: <span class="text-yellow-500">Stammkapital sammeln</span></li>
+                    </ul>
+                </div>
+
+                <!-- AG -->
+                <div onclick="game.prepareFounding('AG')" class="retro-panel hover:bg-gray-700 cursor-pointer group transition md:col-span-2">
+                    <div class="flex justify-between items-start">
+                        <div class="text-3xl mr-3">🏙️</div>
+                        <div class="flex-grow">
+                            <h4 class="text-purple-400 text-xs font-bold">AG (Aktiengesellschaft)</h4>
+                            <p class="text-[9px] text-gray-300 mt-1">Die Königsklasse.</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                         <ul class="text-[8px] text-gray-400 mt-2 list-disc pl-3 space-y-1">
+                            <li>Startkosten: <span class="text-red-400">50.000 €</span></li>
+                            <li>Haftung: <span class="text-green-400 font-bold">Beschränkt</span></li>
+                        </ul>
+                        <ul class="text-[8px] text-gray-400 mt-2 list-disc pl-3 space-y-1">
+                            <li>Vorteil: Riesiges Kapital möglich</li>
+                            <li>Minigame: <span class="text-yellow-500">Grundkapital sammeln</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- 3. MINIGAMES -->
+    <template id="tpl-minigame">
+        <div class="flex flex-col items-center justify-center h-full text-center p-4 w-full">
+            <h2 id="mg-title" class="text-yellow-400 text-sm mb-4">GRÜNDUNGSPHASE</h2>
+            <p id="mg-desc" class="text-xs text-gray-400 mb-6 max-w-sm">Anleitung...</p>
+
+            <!-- CONTRACT GAME UI -->
+            <div id="mg-contract-ui" class="hidden w-full max-w-md">
+                <div class="relative h-12 bg-gray-800 border-2 border-gray-600 mb-4 rounded overflow-hidden">
+                    <!-- Hit Zone -->
+                    <div class="absolute top-0 bottom-0 left-[40%] width-[20%] w-1/5 bg-green-900/50 border-l border-r border-green-500"></div>
+                    <span class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[8px] text-green-400 z-0">UNTERSCHRIFT</span>
+                    <!-- Cursor -->
+                    <div id="mg-cursor" class="absolute top-0 bottom-0 w-2 bg-yellow-400 cursor-move z-10"></div>
+                </div>
+                <button onclick="game.handleContractClick()" class="btn-retro w-full py-4 text-white">JETZT UNTERSCHREIBEN!</button>
+                <div class="mt-4 text-xs text-gray-500">Benötigte Unterschriften: <span id="mg-signatures" class="text-white font-bold">0/3</span></div>
+            </div>
+
+            <!-- CAPITAL GAME UI -->
+            <div id="mg-capital-ui" class="hidden w-full max-w-md">
+                <div class="w-full bg-gray-800 h-8 border-2 border-gray-600 mb-4 relative">
+                    <div id="mg-cap-bar" class="bg-green-600 h-full w-0 transition-all duration-75"></div>
+                    <span class="absolute inset-0 flex items-center justify-center text-[10px] text-white font-bold drop-shadow-md">
+                        <span id="mg-cap-current">0</span> / <span id="mg-cap-target">25000</span> €
+                    </span>
+                </div>
+                <button onclick="game.handleCapitalClick()" class="btn-retro w-full py-6 text-yellow-400 text-sm active:scale-95 transform transition">
+                    💰 INVESTOREN ÜBERZEUGEN! (KLICKEN)
+                </button>
+            </div>
+
+        </div>
+    </template>
+
+
+    <!-- 4. GAME HUD -->
+    <template id="tpl-game">
+        <div class="flex flex-col h-full justify-between">
+            
+            <!-- STATS -->
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <!-- Private -->
+                <div class="retro-panel border-l-4 border-l-red-500 flex flex-col">
+                    <span class="text-[8px] text-gray-400 uppercase">Privatvermögen</span>
+                    <div class="flex justify-between items-end">
+                        <span class="text-xs md:text-sm text-white font-mono" id="hud-private-money">0 €</span>
+                        <span class="text-[8px] text-green-500" id="hud-private-safe">SAFE</span>
+                    </div>
+                </div>
+                <!-- Company -->
+                <div class="retro-panel border-l-4 border-l-blue-500 flex flex-col relative">
+                    <span class="text-[8px] text-gray-400 uppercase">Firmenkonto</span>
+                    <div class="flex justify-between items-end">
+                        <span class="text-xs md:text-sm text-white font-mono" id="hud-corp-money">0 €</span>
+                    </div>
+                     <span class="absolute top-1 right-1 text-[8px] text-blue-300 border border-blue-300 px-1 rounded" id="hud-form-badge">GmbH</span>
+                </div>
+            </div>
+
+            <!-- SLOT MACHINE / FORECAST -->
+            <div class="retro-box bg-black p-4 flex flex-col items-center justify-center flex-grow relative border-gray-700">
+                <!-- Lamps -->
+                <div class="flex gap-2 mb-2 absolute top-2 right-2">
+                    <div class="w-2 h-2 rounded-full bg-red-900 border border-black" id="lamp-1"></div>
+                    <div class="w-2 h-2 rounded-full bg-yellow-900 border border-black" id="lamp-2"></div>
+                    <div class="w-2 h-2 rounded-full bg-green-900 border border-black" id="lamp-3"></div>
+                </div>
+
+                <!-- Reel -->
+                <div class="slot-window w-full bg-gray-800 mb-2 border-2 border-gray-600 rounded">
+                    <div id="slot-reel-content" class="slot-reel w-full text-white">📰</div>
+                </div>
+
+                <!-- Result / Forecast Display -->
+                <div id="result-display" class="h-28 w-full text-center flex flex-col items-center justify-center overflow-hidden p-1 border-t border-gray-800 mt-2">
+                    <!-- Forecast loads here -->
+                    <span class="text-[10px] text-gray-500 animate-pulse">Lade Marktdaten...</span>
+                </div>
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="mt-2">
+                <!-- Strategy Selection -->
+                <div id="controls-area" class="grid grid-cols-3 gap-2">
+                    <button onclick="game.spinWheel('safe')" class="btn-retro btn-safe h-14 flex flex-col items-center justify-center group">
+                        <span class="text-lg group-hover:scale-110 transition">🛡️</span>
+                        <span class="text-[8px] font-bold mt-1">Sicherheit</span>
+                        <span class="text-[7px] opacity-50">(Sparen)</span>
+                    </button>
+                    <button onclick="game.spinWheel('normal')" class="btn-retro btn-normal h-14 flex flex-col items-center justify-center group">
+                        <span class="text-lg group-hover:scale-110 transition">⚖️</span>
+                        <span class="text-[8px] font-bold mt-1">Markt</span>
+                        <span class="text-[7px] opacity-50">(Standard)</span>
+                    </button>
+                    <button onclick="game.spinWheel('risk')" class="btn-retro btn-risk h-14 flex flex-col items-center justify-center group">
+                        <span class="text-lg group-hover:scale-110 transition">🚀</span>
+                        <span class="text-[8px] font-bold mt-1">Risiko</span>
+                        <span class="text-[7px] opacity-50">(Expansion)</span>
+                    </button>
+                </div>
+                
+                <!-- Next Month / Salary -->
+                <button onclick="game.withdraw()" id="btn-salary" class="hidden w-full mt-2 btn-retro btn-salary h-14 flex flex-col items-center justify-center">
+                    <span class="text-sm font-bold">💵 GEHALT BUCHEN</span>
+                    <span class="text-[8px] opacity-75">Monat abschließen</span>
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- 5. GAME OVER -->
+    <template id="tpl-gameover">
+        <div class="flex flex-col items-center justify-center h-full text-center p-4">
+            <h1 id="go-title" class="text-red-500 text-xl md:text-2xl font-bold mb-4 border-b-2 border-red-500 pb-2">INSOLVENZ</h1>
+            
+            <div class="retro-box p-4 bg-gray-800 w-full text-left mb-4">
+                <p id="go-reason" class="text-xs text-gray-300 leading-relaxed mb-4">...</p>
+                
+                <div class="bg-black p-2 rounded border border-gray-600">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-500">Rechtsform:</span>
+                        <span id="go-form" class="text-blue-300"></span>
+                    </div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-500">Überlebt:</span>
+                        <span id="go-months" class="text-white"></span>
+                    </div>
+                    <div class="h-px bg-gray-600 my-2"></div>
+                    <div class="flex justify-between text-sm font-bold">
+                        <span class="text-gray-400">Privat Rest:</span>
+                        <span id="go-private" class="text-yellow-400"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="go-lesson" class="text-[9px] text-gray-400 italic mb-6 max-w-sm">
+                <!-- Specific lesson based on legal form -->
+            </div>
+            
+            <button onclick="location.reload()" class="btn-retro px-6 py-3 text-white text-xs w-full">
+                NEU GRÜNDEN
+            </button>
+        </div>
+    </template>
+
+    <script>
+        // --- CONFIGURATION ---
+        const LEGAL_FORMS = {
+            'EU': { name: 'Einzelunternehmen', cost: 0, liability: 'FULL', bonus: 0, type: 'PERSON' },
+            'OHG': { name: 'OHG', cost: 0, liability: 'FULL', bonus: 10000, type: 'CONTRACT' },
+            'KG': { name: 'KG', cost: 0, liability: 'FULL', bonus: 20000, type: 'CONTRACT' },
+            'GmbH': { name: 'GmbH', cost: 25000, liability: 'LIMITED', bonus: 25000, type: 'CAPITAL' },
+            'AG': { name: 'AG', cost: 50000, liability: 'LIMITED', bonus: 50000, type: 'CAPITAL' }
+        };
+
+        const FORECASTS = [
+            { text: "🎄 Das Weihnachtsgeschäft steht an! Die Kunden kaufen wie verrückt.", best: 'risk', icon: '🎅' },
+            { text: "📉 Experten warnen vor einer Rezession. Märkte sind nervös.", best: 'safe', icon: '📉' },
+            { text: "☀️ Sommerloch. Alles ist ruhig in der Wirtschaft.", best: 'safe', icon: '🏖️' },
+            { text: "🦈 Ein großer Konkurrent ist pleite! Marktanteile sind frei.", best: 'risk', icon: '🥩' },
+            { text: "⚖️ Regierung plant neue Gesetzesverschärfungen.", best: 'safe', icon: '§' },
+            { text: "🦄 Ein neuer Tech-Trend! Investoren suchen Innovation.", best: 'risk', icon: '🚀' },
+            { text: "😐 Der Markt ist stabil. Keine besonderen Vorkommnisse.", best: 'normal', icon: '📊' },
+            { text: "💸 Die Inflation steigt leicht an. Preise ziehen an.", best: 'normal', icon: '🏷️' }
+        ];
+
+        const SCENARIOS = [
+            // -- ALLGEMEIN --
+            { id: 'S1', type: 'PROFIT', val: 4000, icon: '🔨', title: 'Solide Arbeit', text: 'Das Tagesgeschäft brummt.', risk: 1 },
+            { id: 'S2', type: 'LOSS', val: -2000, icon: '📉', title: 'Marktflaute', text: 'Kunden halten das Geld zusammen.', risk: 1 },
+            { id: 'S3', type: 'LOSS', val: -3500, icon: '💸', title: 'Inflation', text: 'Materialpreise steigen an.', risk: 1 },
+            { id: 'S4', type: 'PROFIT', val: 10000, icon: '🚀', title: 'Viraler Hit', text: 'Deine Marke trendet auf Social Media.', risk: 3 },
+            { id: 'S5', type: 'PROFIT', val: 1500, icon: '🛡️', title: 'Effizienz', text: 'Kosten gespart durch Optimierung.', risk: 0 },
+            
+            // -- RECHTSFORM SPEZIFISCH --
+            { id: 'S_PARTNER', type: 'LOSS', val: -5000, icon: '🤬', title: 'Partnerstreit', text: 'Deine Mitgesellschafter blockieren Entscheidungen.', tags: ['OHG', 'KG'], risk: 2 },
+            { id: 'S_AG_MEETING', type: 'LOSS', val: -8000, icon: '📢', title: 'Hauptversammlung', text: 'Aktionäre fordern teure Kurskorrektur & Buffet.', tags: ['AG'], risk: 2 },
+            { id: 'S_AG_IPO', type: 'PROFIT', val: 25000, icon: '📈', title: 'Aktienkurs Explodiert', text: 'Investoren lieben deine Strategie!', tags: ['AG'], risk: 3 },
+            { id: 'S_GMBH_ADMIN', type: 'LOSS', val: -3000, icon: '§', title: 'Jahresabschluss', text: 'Der Steuerberater schreibt eine saftige Rechnung.', tags: ['GmbH', 'AG'], risk: 1 },
+            // Haftungskiller
+            { id: 'S_LAWSUIT', type: 'LOSS', val: -40000, icon: '⚖️', title: 'Schadensersatzklage', text: 'Ein Produktfehler verursacht massive Schäden!', risk: 3 }
+        ];
+
+        class FounderGame {
+            constructor() {
+                this.privateMoney = 60000; 
+                this.corpMoney = 0;
+                this.month = 0;
+                this.currentForm = null;
+                this.spinning = false;
+                this.salary = 3000;
+                this.currentForecast = null;
+                
+                // Minigame State
+                this.mg = {
+                    signatures: 0,
+                    collected: 0,
+                    target: 0
+                };
+                
+                this.ui = {
+                    screen: document.getElementById('screen-area'),
+                    pMoney: document.getElementById('hud-private-money'),
+                    cMoney: document.getElementById('hud-corp-money'),
+                };
+            }
+
+            init() {
+                this.renderTemplate('tpl-start');
+            }
+
+            goToSelection() {
+                this.renderTemplate('tpl-selection');
+            }
+
+            // --- PHASE 1: SELECTION & PREP ---
+            
+            prepareFounding(key) {
+                const form = LEGAL_FORMS[key];
+                this.currentForm = { key, ...form };
+                
+                if (this.privateMoney < form.cost && form.type !== 'CAPITAL') { 
+                    // Für GmbH/AG prüfen wir erst im Minigame bzw. ziehen ab nach Erfolg
+                     alert("Nicht genug Privatvermögen! Du brauchst " + form.cost + "€.");
+                     return;
+                }
+
+                if (form.type === 'PERSON') {
+                    // Einzelunternehmen - direkt loslegen
+                    this.month = 1;
+                    this.startGame();
+                } else if (form.type === 'CONTRACT') {
+                    // OHG / KG - Vertragsspiel
+                    this.startMinigame('CONTRACT');
+                } else if (form.type === 'CAPITAL') {
+                    // GmbH / AG - Kapitalspiel
+                    this.mg.target = form.cost;
+                    this.mg.collected = 0;
+                    this.startMinigame('CAPITAL');
+                }
+            }
+
+            // --- PHASE 2: MINIGAMES ---
+
+            startMinigame(type) {
+                this.renderTemplate('tpl-minigame');
+                
+                const title = document.getElementById('mg-title');
+                const desc = document.getElementById('mg-desc');
+
+                if (type === 'CONTRACT') {
+                    title.innerText = "GESELLSCHAFTSVERTRAG";
+                    desc.innerText = "Drücke 'UNTERSCHREIBEN', wenn der Cursor im grünen Bereich ist. Du brauchst 3 gültige Unterschriften deiner Partner.";
+                    document.getElementById('mg-contract-ui').classList.remove('hidden');
+                    this.mg.signatures = 0;
+                } else if (type === 'CAPITAL') {
+                    title.innerText = "KAPITALBESCHAFFUNG";
+                    desc.innerText = `Du benötigst ${this.mg.target}€ Stammkapital. Klicke wie verrückt, um Investoren zu überzeugen!`;
+                    document.getElementById('mg-capital-ui').classList.remove('hidden');
+                    document.getElementById('mg-cap-target').innerText = this.mg.target;
+                    document.getElementById('mg-cap-current').innerText = "0";
+                }
+            }
+
+            handleContractClick() {
+                const cursor = document.getElementById('mg-cursor');
+                const rect = cursor.getBoundingClientRect();
+                const parentRect = cursor.parentElement.getBoundingClientRect();
+                
+                // Relative position in %
+                const relX = (rect.left - parentRect.left) / parentRect.width;
+                
+                // Green zone is 40% to 60% (0.4 - 0.6)
+                if (relX >= 0.38 && relX <= 0.62) {
+                    this.mg.signatures++;
+                    document.getElementById('mg-signatures').innerText = `${this.mg.signatures}/3`;
+                    
+                    // Visual Success
+                    const btn = cursor.parentElement.nextElementSibling;
+                    btn.classList.add('bg-green-600');
+                    setTimeout(() => btn.classList.remove('bg-green-600'), 200);
+
+                    if (this.mg.signatures >= 3) {
+                        setTimeout(() => {
+                            // Success!
+                            this.month = 1;
+                            this.startGame();
+                        }, 500);
+                    }
+                } else {
+                    // Fail Visual
+                    const btn = cursor.parentElement.nextElementSibling;
+                    btn.classList.add('bg-red-600');
+                    setTimeout(() => btn.classList.remove('bg-red-600'), 200);
+                }
+            }
+
+            handleCapitalClick() {
+                // Increment
+                const step = 1000 + Math.floor(Math.random() * 500);
+                this.mg.collected += step;
+                
+                if (this.mg.collected > this.mg.target) this.mg.collected = this.mg.target;
+
+                // UI Update
+                const pct = (this.mg.collected / this.mg.target) * 100;
+                document.getElementById('mg-cap-bar').style.width = `${pct}%`;
+                document.getElementById('mg-cap-current').innerText = this.mg.collected;
+
+                if (this.mg.collected >= this.mg.target) {
+                    setTimeout(() => {
+                        // Success! Now we deduct private money and add company money
+                        if (this.privateMoney >= this.currentForm.cost) {
+                             this.privateMoney -= this.currentForm.cost;
+                             this.corpMoney = this.currentForm.bonus;
+                             this.month = 1;
+                             this.startGame();
+                        } else {
+                            alert("Du hast Investoren gefunden, aber dein Privatanteil fehlt! (Bug-Fail-Safe)");
+                        }
+                    }, 500);
+                }
+            }
+
+
+            // --- PHASE 3: MAIN GAME ---
+
+            startGame() {
+                this.renderTemplate('tpl-game');
+                this.updateHUD();
+                
+                const badge = document.getElementById('hud-form-badge');
+                badge.innerText = this.currentForm.name;
+                
+                const safetyText = document.getElementById('hud-private-safe');
+                if (this.currentForm.liability === 'FULL') {
+                    safetyText.innerText = "HAFTET";
+                    safetyText.className = "text-[8px] text-red-500 blink font-bold";
+                }
+
+                this.generateForecast();
+            }
+
+            generateForecast() {
+                this.currentForecast = FORECASTS[Math.floor(Math.random() * FORECASTS.length)];
+                
+                const reel = document.getElementById('slot-reel-content');
+                reel.innerText = this.currentForecast.icon;
+                
+                const display = document.getElementById('result-display');
+                display.innerHTML = `
+                    <div class="flex flex-col items-center animate-fade-in h-full justify-center">
+                        <span class="text-[8px] text-blue-400 uppercase mb-1">MARKT-PROGNOSE</span>
+                        <span class="text-[10px] text-white italic text-center leading-tight px-2">"${this.currentForecast.text}"</span>
+                    </div>
+                `;
+            }
+
+            spinWheel(strategy) {
+                if (this.spinning) return;
+                this.spinning = true;
+                
+                document.getElementById('controls-area').classList.add('opacity-50', 'pointer-events-none');
+                const reel = document.getElementById('slot-reel-content');
+                const lamps = [document.getElementById('lamp-1'), document.getElementById('lamp-2'), document.getElementById('lamp-3')];
+                
+                if (strategy === 'risk') {
+                    this.corpMoney -= 2000;
+                    this.updateHUD();
+                }
+
+                reel.classList.add('slot-blur');
+                let lampInt = setInterval(() => {
+                    lamps.forEach(l => l.style.backgroundColor = '#330000');
+                    lamps[Math.floor(Math.random()*3)].style.backgroundColor = '#ff0000';
+                }, 100);
+                
+                let icons = ['⚖️', '📉', '📈', '🔨', '💸'];
+                let spinInt = setInterval(() => {
+                    reel.innerText = icons[Math.floor(Math.random()*icons.length)];
+                }, 50);
+
+                setTimeout(() => {
+                    clearInterval(lampInt);
+                    clearInterval(spinInt);
+                    reel.classList.remove('slot-blur');
+                    lamps.forEach(l => l.style.backgroundColor = '#330000'); 
+
+                    const scenario = this.calculateScenario(strategy);
+                    this.handleScenarioResult(scenario, reel, lamps);
+                }, 1000);
+            }
+
+            calculateScenario(strategy) {
+                let pool = SCENARIOS.filter(s => {
+                    if (!s.tags) return true; 
+                    return s.tags.includes(this.currentForm.key);
+                });
+
+                let strategicFit = 'NEUTRAL';
+                
+                if (this.currentForecast.best === strategy) {
+                    strategicFit = 'PERFECT'; 
+                } else if (
+                    (this.currentForecast.best === 'safe' && strategy === 'risk') ||
+                    (this.currentForecast.best === 'risk' && strategy === 'safe')
+                ) {
+                    strategicFit = 'BAD'; 
+                }
+
+                if (strategy === 'safe') {
+                    pool = pool.filter(s => s.risk <= 1);
+                    if (strategicFit === 'BAD') pool.push(SCENARIOS.find(s => s.id === 'S2')); 
+                } else if (strategy === 'risk') {
+                    let highRisks = pool.filter(s => s.risk === 3);
+                    pool = pool.concat(highRisks); 
+                }
+
+                let choice = pool[Math.floor(Math.random() * pool.length)];
+                let value = choice.val;
+                
+                if (strategicFit === 'PERFECT') {
+                    if (choice.type === 'PROFIT') value *= 1.5;
+                    if (choice.type === 'LOSS') value *= 0.5; 
+                } else if (strategicFit === 'BAD') {
+                    if (choice.type === 'PROFIT') value *= 0.7;
+                    if (choice.type === 'LOSS') value *= 1.5;
+                }
+
+                if (strategy === 'risk' && choice.type === 'PROFIT') value *= 1.3;
+                
+                return { ...choice, actualValue: Math.floor(value), fit: strategicFit };
+            }
+
+            handleScenarioResult(scenario, reel, lamps) {
+                reel.innerText = scenario.icon;
+                const display = document.getElementById('result-display');
+                
+                const isWin = scenario.actualValue >= 0;
+                const colorClass = isWin ? 'text-green-400' : 'text-red-400';
+                const sign = isWin ? '+' : '';
+
+                if(isWin) lamps[2].style.backgroundColor = '#00ff00'; 
+                else lamps[0].style.backgroundColor = '#ff0000'; 
+
+                let strategyFeedback = "";
+                if (scenario.fit === 'PERFECT') strategyFeedback = "<span class='text-green-500 text-[8px]'>Strategie-Bonus!</span>";
+                if (scenario.fit === 'BAD') strategyFeedback = "<span class='text-red-500 text-[8px]'>Schlechte Strategie!</span>";
+
+                // FIXED DISPLAY HTML to ensure money is always visible
+                display.innerHTML = `
+                    <div class="pop-anim flex flex-col items-center h-full justify-between py-1 w-full">
+                        <div class="flex flex-col items-center w-full">
+                            <span class="text-[9px] text-gray-400 uppercase leading-tight truncate w-full">${scenario.title}</span>
+                            ${strategyFeedback}
+                            <span class="text-[8px] text-gray-500 italic leading-tight line-clamp-2 max-w-xs mt-1">"${scenario.text}"</span>
+                        </div>
+                        <div class="text-xl font-mono font-bold ${colorClass} bg-black/50 px-2 rounded border border-gray-800 mt-1">
+                            ${sign}${scenario.actualValue} €
+                        </div>
+                    </div>
+                `;
+
+                this.corpMoney += scenario.actualValue;
+                
+                if (this.corpMoney < 0) {
+                    this.handleDebt(Math.abs(this.corpMoney), scenario.title);
+                } else {
+                    this.updateHUD();
+                    document.getElementById('controls-area').classList.add('hidden');
+                    document.getElementById('btn-salary').classList.remove('hidden');
+                }
+            }
+
+            handleDebt(amount, cause) {
+                const container = document.getElementById('game-container');
+                container.classList.add('shake-anim');
+                
+                let message = "";
+                
+                if (this.currentForm.liability === 'FULL') {
+                    this.privateMoney -= amount;
+                    this.corpMoney = 0;
+                    message = `Das Firmenkonto ist leer! Du haftest PRIVAT für ${amount}€!`;
+                    
+                    if (this.privateMoney < 0) {
+                        this.triggerGameOver("PRIVATINSOLVENZ", `Die Schulden aus "${cause}" haben dein Privatvermögen vernichtet.`);
+                        return;
+                    }
+                } else {
+                    this.corpMoney = 0;
+                    this.triggerGameOver("FIRMENINSOLVENZ", `Die Firma ist pleite durch "${cause}". Als GmbH/AG bist du privat fein raus!`);
+                    return;
+                }
+
+                document.getElementById('result-display').innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full">
+                        <div class="text-[9px] text-red-400 font-bold border border-red-500 p-2 bg-red-900/20 text-center">
+                            ${message}
+                        </div>
+                    </div>`;
+                this.updateHUD();
+                
+                document.getElementById('controls-area').classList.add('hidden');
+                document.getElementById('btn-salary').classList.remove('hidden');
+                document.getElementById('btn-salary').innerHTML = `<span class="text-xs">Überleben & Weiter</span>`;
+            }
+
+            withdraw() {
+                if (this.corpMoney >= this.salary) {
+                    this.corpMoney -= this.salary;
+                    let net = Math.floor(this.salary * 0.7);
+                    this.privateMoney += net;
+                    document.getElementById('result-display').innerHTML = `
+                        <div class="flex items-center justify-center h-full">
+                            <span class="text-green-400 text-xs font-bold">Gehalt gebucht (+${net}€)</span>
+                        </div>`;
+                } else {
+                    document.getElementById('result-display').innerHTML = `
+                        <div class="flex items-center justify-center h-full">
+                            <span class="text-gray-500 text-xs">Kein Geld für Gehalt.</span>
+                        </div>`;
+                }
+
+                this.month++;
+                this.spinning = false;
+                this.updateHUD();
+                
+                setTimeout(() => {
+                    document.getElementById('controls-area').classList.remove('hidden', 'opacity-50', 'pointer-events-none');
+                    document.getElementById('btn-salary').classList.add('hidden');
+                    document.getElementById('btn-salary').innerHTML = `<span class="text-sm font-bold">💵 GEHALT BUCHEN</span>`; 
+                    
+                    this.generateForecast();
+                    
+                }, 1500);
+
+                if (this.month >= 24) {
+                    this.triggerGameOver("GEWONNEN!", "Du hast 2 Jahre am Markt überlebt!");
+                }
+            }
+
+            triggerGameOver(title, reason) {
+                this.renderTemplate('tpl-gameover');
+                const titleEl = document.getElementById('go-title');
+                if(titleEl) titleEl.innerText = title;
+                
+                document.getElementById('go-reason').innerHTML = reason;
+                document.getElementById('go-form').innerText = this.currentForm.name;
+                document.getElementById('go-months').innerText = this.month + " Monate";
+                document.getElementById('go-private').innerText = this.privateMoney + " €";
+
+                const lessonEl = document.getElementById('go-lesson');
+                if (this.currentForm.liability === 'FULL' && title.includes("PRIVAT")) {
+                    lessonEl.innerText = "Lektion: Bei Personengesellschaften haftest du immer voll mit deinem Privatvermögen.";
+                } else if (title.includes("FIRMEN")) {
+                    lessonEl.innerText = "Lektion: Kapitalgesellschaften schützen dein privates Vermögen bei einer Firmenpleite.";
+                }
+            }
+
+            updateHUD() {
+                if(!this.ui.pMoney) return;
+                this.ui.pMoney.innerText = this.privateMoney + " €";
+                this.ui.cMoney.innerText = this.corpMoney + " €";
+                const elDay = document.getElementById('header-day');
+                if(elDay) elDay.innerText = "Monat " + this.month;
+                
+                this.ui.cMoney.className = this.corpMoney < 5000 ? "text-xs md:text-sm text-red-400 font-mono blink" : "text-xs md:text-sm text-white font-mono";
+            }
+
+            renderTemplate(id) {
+                const tpl = document.getElementById(id);
+                this.ui.screen.innerHTML = "";
+                this.ui.screen.appendChild(tpl.content.cloneNode(true));
+                
+                this.ui.pMoney = document.getElementById('hud-private-money');
+                this.ui.cMoney = document.getElementById('hud-corp-money');
+            }
+        }
+
+        const game = new FounderGame();
+        game.init();
+    </script>
+</body>
+</html>
