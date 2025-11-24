@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpediQuiz - Das Lernspiel für Speditionskaufleute</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            touch-action: manipulation; /* Verbessert Touch-Reaktion */
+        }
+
+        .card-enter {
+            animation: slideIn 0.4s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-press:active {
+            transform: scale(0.95);
+        }
+
+        /* LKW Animation für Fortschrittsbalken */
+        .truck-icon {
+            transition: left 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header / Status Bar -->
+    <header class="bg-white shadow-md p-4 z-10">
+        <div class="max-w-3xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i data-lucide="truck" class="text-blue-600 w-6 h-6"></i>
+                <h1 class="font-bold text-lg text-slate-700 hidden sm:block">SpediQuiz</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                    Frage <span id="q-current">1</span>/<span id="q-total">22</span>
+                </div>
+                <div class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                    <i data-lucide="trophy" class="w-4 h-4"></i> <span id="score">0</span> XP
+                </div>
+            </div>
+        </div>
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-200 h-2 mt-4 rounded-full overflow-hidden relative max-w-3xl mx-auto">
+            <div id="progress-bar" class="bg-blue-600 h-full w-0 transition-all duration-500"></div>
+        </div>
+    </header>
+
+    <!-- Game Container -->
+    <main class="flex-1 flex flex-col justify-center items-center p-4 w-full max-w-3xl mx-auto relative">
+        
+        <!-- Start Screen -->
+        <div id="start-screen" class="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md w-full card-enter">
+            <div class="mb-6 flex justify-center">
+                <div class="bg-blue-100 p-6 rounded-full">
+                    <i data-lucide="package-check" class="w-16 h-16 text-blue-600"></i>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold mb-2 text-slate-800">Speditions-Profi werden</h2>
+            <p class="text-slate-500 mb-8">22 Fragen zu ADSp, HGB und Speditionsrecht. Entscheide: Wahr oder Falsch? Korrigiere die Fehler!</p>
+            <button onclick="startGame()" class="btn-press w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2">
+                <i data-lucide="play"></i> Spiel starten
+            </button>
+        </div>
+
+        <!-- Question Card (Phase 1: True/False) -->
+        <div id="question-card" class="bg-white p-6 md:p-10 rounded-2xl shadow-xl w-full hidden relative min-h-[300px] flex flex-col justify-between">
+            <div>
+                <span class="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2 block">Aussage</span>
+                <h3 id="question-text" class="text-xl md:text-2xl font-semibold text-slate-800 leading-relaxed mb-6">
+                    <!-- Text inserted by JS -->
+                </h3>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-auto">
+                <button onclick="handleTrueFalse(true)" class="btn-press group bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-400 p-4 rounded-xl transition-all flex flex-col items-center justify-center gap-2">
+                    <i data-lucide="check-circle" class="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform"></i>
+                    <span class="font-bold text-green-700">Wahr</span>
+                </button>
+                <button onclick="handleTrueFalse(false)" class="btn-press group bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-400 p-4 rounded-xl transition-all flex flex-col items-center justify-center gap-2">
+                    <i data-lucide="x-circle" class="w-8 h-8 text-red-600 group-hover:scale-110 transition-transform"></i>
+                    <span class="font-bold text-red-700">Falsch</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Correction Card (Phase 2: Multiple Choice) -->
+        <div id="correction-card" class="bg-white p-6 md:p-8 rounded-2xl shadow-xl w-full hidden">
+            <div class="mb-4">
+                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">Korrekt! Die Aussage war falsch.</span>
+                <h3 class="text-lg font-bold text-slate-800 mt-2">Wie lautet die Aussage richtig?</h3>
+            </div>
+            
+            <div id="mc-options" class="flex flex-col gap-3">
+                <!-- Options injected by JS -->
+            </div>
+        </div>
+
+        <!-- Feedback Overlay (Success/Fail) -->
+        <div id="feedback-overlay" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 rounded-2xl flex flex-col items-center justify-center p-8 hidden text-center">
+            <div id="feedback-icon" class="mb-4"></div>
+            <h3 id="feedback-title" class="text-2xl font-bold mb-2"></h3>
+            <p id="feedback-text" class="text-slate-600 mb-6"></p>
+            <button onclick="nextQuestion()" class="bg-slate-800 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-slate-700 transition-colors">
+                Weiter
+            </button>
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen" class="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md w-full hidden">
+            <h2 class="text-3xl font-bold mb-2 text-slate-800">Ergebnis</h2>
+            <div class="my-6">
+                <div class="text-6xl font-black text-blue-600 mb-2" id="final-score">0</div>
+                <p class="text-slate-500">von möglichen <span id="max-score">0</span> Punkten</p>
+            </div>
+            <p id="final-rank" class="text-xl font-bold text-orange-500 mb-8">Rang: Lademeister</p>
+            <button onclick="location.reload()" class="btn-press w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2">
+                <i data-lucide="rotate-ccw"></i> Noch einmal spielen
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        // --- DATA ---
+        // isTrue: true = Aussage ist richtig, false = Aussage ist falsch (bedarf Korrektur)
+        // correctionOptions: Nur nötig wenn isTrue = false. Index 0 ist immer die richtige Antwort (wird später gemischt).
+        const quizData = [
+            {
+                id: 1,
+                text: "Ein Spediteur handelt mit der Sorgfalt eines ordentlichen Kaufmanns, wenn er nicht nach eigenem Ermessen handelt.",
+                isTrue: false,
+                correctionOptions: [
+                    "wenn er die im Verkehr erforderliche Sorgfalt beachtet.",
+                    "wenn er strikt nur nach den Weisungen des Kunden handelt.",
+                    "wenn er immer die kostengünstigste Lösung wählt."
+                ],
+                explanation: "Der Spediteur muss stets die im Verkehr erforderliche Sorgfalt beachten, auch wenn er Ermessensspielräume hat."
+            },
+            {
+                id: 2,
+                text: "Bei der Vereinbarung eines Übernahmesatzes hat der Spediteur hinsichtlich der Abfertigung der Sendung die Rechte und Pflichten eines Frachtführers.",
+                isTrue: false,
+                correctionOptions: [
+                    "Bei der Vereinbarung eines FESTEN Übernahmesatzes.",
+                    "Bei der Vereinbarung eines variablen Übernahmesatzes.",
+                    "Bei der Vereinbarung einer reinen Vermittlungsprovision."
+                ],
+                explanation: "Dies gilt spezifisch bei Vereinbarung fester Kosten (Fixkostenspedition)."
+            },
+            {
+                id: 3,
+                text: "Eine bereits verjährte Forderung eines Spediteurs gilt als erloschen und ist daher uneinbringlich.",
+                isTrue: false,
+                correctionOptions: [
+                    "Sie ist nicht erloschen (Naturalobligation). Der Schuldner muss sich aktiv auf die Verjährung berufen.",
+                    "Sie verlängert sich automatisch um 3 Jahre, wenn nicht gemahnt wurde.",
+                    "Sie geht automatisch auf den Staat über."
+                ],
+                explanation: "Eine verjährte Forderung besteht weiter. Zahlt der Schuldner trotzdem, kann er das Geld nicht zurückfordern."
+            },
+            {
+                id: 4,
+                text: "Das Selbsteintrittsrecht steht dem Spediteur lt. ADSp jederzeit zu!",
+                isTrue: false,
+                correctionOptions: [
+                    "Das Selbsteintrittsrecht steht ihm laut HGB (§ 458) zu.",
+                    "Das Selbsteintrittsrecht ist gesetzlich verboten.",
+                    "Es steht ihm nur zu, wenn der Kunde zustimmt."
+                ],
+                explanation: "Das Recht ergibt sich aus dem Handelsgesetzbuch (HGB), nicht primär aus den ADSp."
+            },
+            {
+                id: 5,
+                text: "Die ADSp bilden die gesetzliche Grundlage für die Arbeit des Spediteurs.",
+                isTrue: false,
+                correctionOptions: [
+                    "ADSp sind kein Gesetz, sondern AGB. Sie gelten nur bei Vereinbarung.",
+                    "Die ADSp sind ein Anhang des Grundgesetzes.",
+                    "Die ADSp ersetzen das HGB vollständig."
+                ],
+                explanation: "ADSp sind Allgemeine Geschäftsbedingungen und ergänzen das Gesetz (dispositives Recht)."
+            },
+            {
+                id: 6,
+                text: "Die ADSp gelten ohne ausdrückliche Vereinbarung gegenüber allen Vertragspartnern des Spediteurs und für alle Verrichtungen des Spediteurs.",
+                isTrue: false,
+                correctionOptions: [
+                    "Sie gelten nur durch ausdrückliche Vereinbarung bzw. Einbeziehung.",
+                    "Sie gelten automatisch, sobald ein LKW bewegt wird.",
+                    "Sie gelten nur für internationale Transporte."
+                ],
+                explanation: "AGB müssen in den Vertrag einbezogen werden."
+            },
+            {
+                id: 7,
+                text: "Die ADSp gilt u. a. nicht bei der Beförderung lebender Tiere und Pflanzen.",
+                isTrue: false,
+                correctionOptions: [
+                    "Die ADSp gilt auch bei der Beförderung lebender Tiere und Pflanzen (Ziff 2 ADSp 2017).",
+                    "Sie gilt nur für tote Materie.",
+                    "Sie gilt nicht für Gefahrgut."
+                ],
+                explanation: "Frühere Fassungen schlossen dies aus, die ADSp 2017 schließen es ein."
+            },
+            {
+                id: 8,
+                text: "Eine Wertangabe im Speditionsauftrag berechtigt den Spediteur zum Abschluss einer Transportversicherung.",
+                isTrue: true,
+                explanation: "Korrekt. Dies wird als Auftrag zur Versicherung gedeutet (Interessenwahrung)."
+            },
+            {
+                id: 9,
+                text: "An Schnittstellen muss der Spediteur die Packstücke u. a. auf Identität überprüfen.",
+                isTrue: true,
+                explanation: "Korrekt. Identitätsprüfung gehört zu den Schnittstellenkontrollen (Ziff 13 ADSp)."
+            },
+            {
+                id: 10,
+                text: "Für Anzahl und Inhalt der übernommenen Packstücke übernimmt der Spediteur in der Empfangsbescheinigung keinerlei Gewähr.",
+                isTrue: false,
+                correctionOptions: [
+                    "Er bestätigt im Zweifel Anzahl und Art, aber nicht den Inhalt/Wert.",
+                    "Er übernimmt volle Gewähr für den Inhalt.",
+                    "Er muss jedes Paket öffnen und den Inhalt prüfen."
+                ],
+                explanation: "Die Anzahl (äußere Beschaffenheit) wird bestätigt, der innere Inhalt meist nicht."
+            },
+            {
+                id: 11,
+                text: "Eine am 04.02. zugegangene Speditionsrechnung ist spätestens nach 30 Tagen zu begleichen.",
+                isTrue: false,
+                correctionOptions: [
+                    "Speditionsrechnungen sind sofort zu begleichen.",
+                    "Sie ist nach 14 Tagen fällig.",
+                    "Sie ist erst nach Lieferung der Ware fällig."
+                ],
+                explanation: "Speditionsrechnungen sind sofort fällig (Ziff 18 ADSp)."
+            },
+            {
+                id: 12,
+                text: "Im Verkehr mit Privatleuten kann die ADSp auch stillschweigend vereinbart werden.",
+                isTrue: false,
+                correctionOptions: [
+                    "ADSp finden keine Anwendung auf Verträge mit Verbrauchern (Privatleuten).",
+                    "Nur wenn der Privatmann zustimmt.",
+                    "Nur bei Umzügen."
+                ],
+                explanation: "Verbraucher sind gem. Ziff 2.4 ADSp 2017 ausgenommen."
+            },
+            {
+                id: 13,
+                text: "HGB und ADSp gehören wie das BGB zum Gebiet des Privatrechts.",
+                isTrue: true,
+                explanation: "Korrekt. Es regelt Beziehungen zwischen Bürgern/Unternehmen."
+            },
+            {
+                id: 14,
+                text: "Die ADSp gelten für Verkehrsverträge und für speditionsübliche logistische Leistungen im Zusammenhang mit der Beförderung oder Lagerung von Gütern.",
+                isTrue: true,
+                explanation: "Korrekt. Das ist der sachliche Anwendungsbereich."
+            },
+            {
+                id: 15,
+                text: "ADSp und HGB enthalten im Normalfall keine Formvorschriften für den Speditionsvertrag.",
+                isTrue: true,
+                explanation: "Korrekt. Der Vertrag kann auch mündlich oder durch schlüssiges Handeln zustande kommen."
+            },
+            {
+                id: 16,
+                text: "Die Sorgfalt eines ordentlichen Kaufmanns verlangt vom Spediteur die Nachprüfung der vom Kunden im Speditionsauftrag gemachten Angaben.",
+                isTrue: false,
+                correctionOptions: [
+                    "Nein, er muss nicht prüfen, aber auf offensichtliche Mängel hinweisen.",
+                    "Ja, er muss jede Angabe polizeilich prüfen.",
+                    "Ja, er haftet für jede falsche Angabe des Kunden."
+                ],
+                explanation: "Keine generelle Nachprüfungspflicht, aber Hinweispflicht bei Auffälligkeiten."
+            },
+            {
+                id: 17,
+                text: "Eine Haftungsversicherung ist vom Spediteur immer dann einzudecken, wenn er nicht nach ADSp, sondern nach HGB arbeitet.",
+                isTrue: false,
+                correctionOptions: [
+                    "Sie ist immer einzudecken, egal ob nach ADSp oder HGB gearbeitet wird.",
+                    "Nur bei ADSp Aufträgen.",
+                    "Nur bei Gefahrgut."
+                ],
+                explanation: "Versicherungspflicht besteht grundsätzlich für Verkehrsverträge."
+            },
+            {
+                id: 18,
+                text: "Der Auftraggeber hat alte Markierungen von den Packstücken zu entfernen oder zumindest unkenntlich zu machen.",
+                isTrue: true,
+                explanation: "Korrekt. Vermeidung von Fehlleitungen."
+            },
+            {
+                id: 19,
+                text: "Zahlungsverzug des Kunden tritt ohne Mahnung spätestens 30 Tage nach Erhalt der Rechnung ein.",
+                isTrue: true,
+                explanation: "Korrekt (gem. § 286 BGB)."
+            },
+            {
+                id: 20,
+                text: "Die ADSp enthalten keine Vorschriften über den Inhalt eines Speditionsauftrages.",
+                isTrue: false,
+                correctionOptions: [
+                    "Doch, siehe Ziffer 3 ADSp 2017 (Informationspflichten).",
+                    "Ja, das steht nur im HGB.",
+                    "Ja, der Auftrag ist formfrei ohne Inhalt."
+                ],
+                explanation: "Ziffer 3 regelt genau, was der Auftraggeber mitteilen muss (Art, Menge, Gewicht, etc.)."
+            },
+            {
+                id: 21,
+                text: "Die ADSp gelten u. a. nicht bei Schwer- oder Großraumtransporten.",
+                isTrue: true,
+                explanation: "Korrekt. Hier gelten meist die BSK-Bedingungen."
+            },
+            {
+                id: 22,
+                text: "Gegenüber Privatleuten können lt. BGB höhere Verzugszinsen berechnet werden als gegenüber Kaufleuten.",
+                isTrue: false,
+                correctionOptions: [
+                    "Gegenüber Kaufleuten (B2B) sind die Zinsen höher (9% über Basis) als bei Privatleuten (5%).",
+                    "Die Zinsen sind immer gleich (5%).",
+                    "Privatleute zahlen gar keine Zinsen."
+                ],
+                explanation: "B2B Geschäfte haben einen höheren Verzugszinssatz."
+            }
+        ];
+
+        // --- STATE ---
+        let currentQuestionIdx = 0;
+        let score = 0;
+        let maxScore = 0; // Wird dynamisch berechnet (Manche Fragen geben 1 Punkt, manche 2 durch Korrektur)
+        // Eigentlich: Wir geben 1 Punkt für Richtig erkannt (W/F) und 1 Zusatzpunkt für Korrektur.
+
+        // --- DOM ELEMENTS ---
+        const uiStart = document.getElementById('start-screen');
+        const uiQuestion = document.getElementById('question-card');
+        const uiCorrection = document.getElementById('correction-card');
+        const uiFeedback = document.getElementById('feedback-overlay');
+        const uiEnd = document.getElementById('end-screen');
+        
+        const elQText = document.getElementById('question-text');
+        const elQCurrent = document.getElementById('q-current');
+        const elQTotal = document.getElementById('q-total');
+        const elScore = document.getElementById('score');
+        const elProgressBar = document.getElementById('progress-bar');
+        const elMcOptions = document.getElementById('mc-options');
+
+        const fbIcon = document.getElementById('feedback-icon');
+        const fbTitle = document.getElementById('feedback-title');
+        const fbText = document.getElementById('feedback-text');
+
+        // --- INITIALIZATION ---
+        lucide.createIcons();
+        document.getElementById('q-total').innerText = quizData.length;
+
+        function startGame() {
+            uiStart.style.display = 'none';
+            uiQuestion.style.display = 'flex';
+            uiQuestion.classList.add('card-enter');
+            score = 0;
+            currentQuestionIdx = 0;
+            updateStatus();
+            loadQuestion();
+        }
+
+        function updateStatus() {
+            elQCurrent.innerText = currentQuestionIdx + 1;
+            elScore.innerText = score;
+            const pct = ((currentQuestionIdx) / quizData.length) * 100;
+            elProgressBar.style.width = `${pct}%`;
+        }
+
+        function loadQuestion() {
+            uiCorrection.style.display = 'none';
+            uiQuestion.style.display = 'flex';
+            uiQuestion.classList.remove('hidden');
+            uiQuestion.classList.add('card-enter'); // Animation trigger
+
+            const q = quizData[currentQuestionIdx];
+            elQText.innerText = q.text;
+            
+            // Icon reload for dynamically added elements (not needed here but good practice)
+        }
+
+        function handleTrueFalse(userSaidTrue) {
+            const q = quizData[currentQuestionIdx];
+            
+            if (userSaidTrue === q.isTrue) {
+                // User is CORRECT about the truth value
+                if (q.isTrue) {
+                    // It was True, User said True -> Perfect. Points + Next.
+                    showFeedback(true, "Richtig!", q.explanation || "Die Aussage ist korrekt.");
+                    score += 100;
+                } else {
+                    // It was False, User said False -> Good. Now phase 2: Correction.
+                    startCorrectionPhase(q);
+                    return; // Don't show feedback yet
+                }
+            } else {
+                // User is WRONG
+                if (q.isTrue) {
+                    // It was True, User said False
+                    showFeedback(false, "Leider falsch", "Die Aussage ist tatsächlich WAHR.<br><br>" + q.explanation);
+                } else {
+                    // It was False, User said True
+                    showFeedback(false, "Leider falsch", "Die Aussage ist FALSCH.<br><br>Richtig wäre gewesen: " + q.correctionOptions[0]);
+                }
+            }
+        }
+
+        function startCorrectionPhase(q) {
+            uiQuestion.style.display = 'none';
+            uiCorrection.style.display = 'block';
+            uiCorrection.classList.add('card-enter');
+
+            elMcOptions.innerHTML = '';
+
+            // Create array of options with indices to track the correct one (index 0 original)
+            let opts = q.correctionOptions.map((text, idx) => ({ text, isCorrect: idx === 0 }));
+            
+            // Shuffle options
+            opts.sort(() => Math.random() - 0.5);
+
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-slate-700 font-medium btn-press";
+                btn.innerText = opt.text;
+                btn.onclick = () => handleCorrectionAnswer(opt.isCorrect, q);
+                elMcOptions.appendChild(btn);
+            });
+        }
+
+        function handleCorrectionAnswer(isCorrect, q) {
+            if (isCorrect) {
+                showFeedback(true, "Hervorragend!", "Du hast den Fehler erkannt und korrigiert.<br><br>" + (q.explanation || ""));
+                score += 150; // Bonus points for hard part
+            } else {
+                showFeedback(false, "Knapp daneben", "Das war nicht die korrekte Berichtigung.<br><br>Richtig ist: " + q.correctionOptions[0]);
+                score += 50; // Points for recognizing it was false at least
+            }
+        }
+
+        function showFeedback(isSuccess, title, text) {
+            uiFeedback.classList.remove('hidden');
+            uiFeedback.classList.add('flex'); // ensure flex display
+            
+            fbTitle.innerText = title;
+            fbTitle.className = isSuccess ? "text-2xl font-bold mb-2 text-green-600" : "text-2xl font-bold mb-2 text-red-600";
+            
+            fbText.innerHTML = text;
+
+            if (isSuccess) {
+                fbIcon.innerHTML = `<i data-lucide="thumbs-up" class="w-16 h-16 text-green-500"></i>`;
+            } else {
+                fbIcon.innerHTML = `<i data-lucide="thumbs-down" class="w-16 h-16 text-red-500"></i>`;
+            }
+            lucide.createIcons();
+        }
+
+        function nextQuestion() {
+            uiFeedback.classList.add('hidden');
+            uiFeedback.classList.remove('flex');
+            
+            currentQuestionIdx++;
+            updateStatus();
+
+            if (currentQuestionIdx < quizData.length) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            uiQuestion.style.display = 'none';
+            uiCorrection.style.display = 'none';
+            uiEnd.style.display = 'block';
+            uiEnd.classList.add('card-enter');
+
+            // Max possible score estimate: 
+            // 8 True questions * 100 = 800
+            // 14 False questions * 150 = 2100
+            // Total approx 2900
+            const maxPoints = 2900; 
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('max-score').innerText = maxPoints;
+
+            const percentage = score / maxPoints;
+            let rank = "Azubi im 1. Lehrjahr";
+            let color = "text-slate-500";
+
+            if (percentage > 0.4) { rank = "Junior Disponent"; color = "text-blue-500"; }
+            if (percentage > 0.7) { rank = "Speditionskaufmann/-frau"; color = "text-green-500"; }
+            if (percentage > 0.9) { rank = "Logistik-Meister/in"; color = "text-orange-500"; }
+
+            const rEl = document.getElementById('final-rank');
+            rEl.innerText = "Rang: " + rank;
+            rEl.className = "text-xl font-bold mb-8 " + color;
+        }
+
+    </script>
+</body>
+</html>
