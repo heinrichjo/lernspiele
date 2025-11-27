@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Zoo Architect</title>
+    
+    <!-- React und ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Babel für JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Styles für Animationen -->
+    <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .animate-in { animation: fadeIn 0.5s ease-out; }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ICONS (Ersatz für Lucide-React) ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {children}
+            </svg>
+        );
+
+        const Play = (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconBase>;
+        const Code = (props) => <IconBase {...props}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+        const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></IconBase>;
+        const ChevronRight = (props) => <IconBase {...props}><polyline points="9 18 15 12 9 6"/></IconBase>;
+        const Terminal = (props) => <IconBase {...props}><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></IconBase>;
+        const RefreshCw = (props) => <IconBase {...props}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></IconBase>;
+        const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const MapIcon = (props) => <IconBase {...props}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></IconBase>;
+        const X = (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>;
+
+
+        // --- HAUPTKOMPONENTE ---
+        const ZooGame = () => {
+            const [level, setLevel] = useState(0);
+            const [feedback, setFeedback] = useState("");
+            const [status, setStatus] = useState("idle"); // idle, error, success
+            const [zooAnimals, setZooAnimals] = useState([]);
+            const [logs, setLogs] = useState([]);
+            const [showTheory, setShowTheory] = useState(false);
+            const [inputVal, setInputVal] = useState("");
+
+            // Level Definitionen
+            const levels = [
+                {
+                    id: 1,
+                    title: "1. Die Blaupause (Klasse & Attribute)",
+                    description: "Alle Tiere im Zoo brauchen einen Namen. Wir definieren das in der Oberklasse.",
+                    theory: "Eine **Klasse** ist wie ein Bauplan. Variablen (Attribute) darin speichern Daten. 'String' ist der Datentyp für Text in Java.",
+                    codePre: "abstract class Tier {\n    // Variable für den Namen\n    protected ",
+                    codePost: " name;\n\n    public Tier(String name) {\n        this.name = name;\n    }\n}",
+                    placeholder: "Datentyp...",
+                    solution: "String",
+                    hint: "Text wird in Java mit dem Typ 'String' (großes S) gespeichert.",
+                    buttonText: "Klasse kompilieren"
+                },
+                {
+                    id: 2,
+                    title: "2. Der König (Vererbung)",
+                    description: "Ein Löwe ist eine spezielle Art von Tier. Er muss alles erben, was ein Tier hat.",
+                    theory: "**Vererbung** vermeidet Code-Dopplung. Mit dem Schlüsselwort `extends` übernimmt die Unterklasse alle Eigenschaften der Oberklasse.",
+                    codePre: "class Loewe ",
+                    codePost: " Tier {\n    public Loewe(String name) {\n        super(name);\n    }\n}",
+                    placeholder: "Schlüsselwort...",
+                    solution: "extends",
+                    hint: "In Java erbt eine Klasse von einer anderen mit dem Wort 'extends'.",
+                    buttonText: "Vererbung herstellen"
+                },
+                {
+                    id: 3,
+                    title: "3. Die eigene Stimme (Override)",
+                    description: "Der Affe soll nicht die Standard-Geräusche machen. Wir müssen sein Verhalten ändern.",
+                    theory: "**Polymorphie (Vielgestaltigkeit)**: Eine Unterklasse kann eine Methode der Oberklasse überschreiben (`@Override`), um sich anders zu verhalten, obwohl der Methodenname gleich bleibt.",
+                    codePre: "class Affe extends Tier {\n    // Überschreibe die Methode\n    @Override\n    public void ",
+                    codePost: "() {\n        System.out.println(\"Ugh Ugh!\");\n    }\n}",
+                    placeholder: "Methodenname...",
+                    solution: "ichSage",
+                    hint: "Die Methode in der Oberklasse heißt 'ichSage'. Diese müssen wir exakt so wiederverwenden.",
+                    buttonText: "Methode definieren"
+                },
+                {
+                    id: 4,
+                    title: "4. Der Frackträger (Super-Konstruktor)",
+                    description: "Wir fügen einen Pinguin hinzu. Er muss seinen Namen an die Oberklasse weitergeben.",
+                    theory: "Der **Konstruktor** baut das Objekt. Mit `super(name)` rufen wir den Konstruktor der Oberklasse auf, damit das Tier korrekt initialisiert wird.",
+                    codePre: "class Pinguin extends Tier {\n    public Pinguin(String name) {\n        // Rufe Konstruktor der Oberklasse auf\n        ",
+                    codePost: "(name);\n    }\n    public void ichSage() { ... }\n}",
+                    placeholder: "Aufruf...",
+                    solution: "super",
+                    hint: "Um den Konstruktor der Elternklasse aufzurufen, nutzt man 'super(...)'.",
+                    buttonText: "Konstruktor verbinden"
+                },
+                {
+                    id: 5,
+                    title: "5. Geburt der Tiere (Instanziierung)",
+                    description: "Die Baupläne sind fertig. Jetzt erstellen wir einen echten Elefanten im Speicher.",
+                    theory: "Ein **Objekt** ist eine konkrete Instanz einer Klasse. Mit dem Schlüsselwort `new` wird Speicher reserviert und das Objekt erstellt.",
+                    codePre: "public static void main(String[] args) {\n    // Erstelle ein neues Objekt\n    Tier benjamin = ",
+                    codePost: " Elefant(\"Benjamin\");\n}",
+                    placeholder: "Schlüsselwort...",
+                    solution: "new",
+                    hint: "Neue Objekte werden mit dem Schlüsselwort 'new' erzeugt.",
+                    buttonText: "Objekt instanziieren"
+                },
+                {
+                    id: 6,
+                    title: "6. Einzelaufruf (Methoden)",
+                    description: "Lass Simba brüllen, um zu testen, ob er lebt.",
+                    theory: "Um ein Verhalten auszulösen, rufen wir eine **Methode** auf dem Objekt auf. Man nutzt dafür die Punkt-Notation: `objekt.methode()`.",
+                    codePre: "Tier simba = new Loewe(\"Simba\");\n\n// Methodenaufruf\nsimba.",
+                    codePost: "();",
+                    placeholder: "Methodenname...",
+                    solution: "ichSage",
+                    hint: "Die Methode für das Sprechen heißt 'ichSage'.",
+                    buttonText: "Methode ausführen"
+                },
+                {
+                    id: 7,
+                    title: "7. Der Rundgang (Schleifen)",
+                    description: "Wir haben eine Liste 'meinZoo'. Laufe durch die Liste und lass alle Tiere etwas sagen.",
+                    theory: "Die **For-Each Schleife** iteriert über eine Sammlung. Für jedes `Tier t` in der Liste `meinZoo` wird der Codeblock einmal ausgeführt.",
+                    codePre: "List<Tier> meinZoo = ...;\n\n// Für jedes Tier t im Zoo\nfor (Tier t : ",
+                    codePost: ") {\n    t.ichSage();\n}",
+                    placeholder: "Listenname...",
+                    solution: "meinZoo",
+                    hint: "Wir wollen über die Liste iterieren. Wie haben wir die Liste oben genannt?",
+                    buttonText: "Rundgang starten"
+                }
+            ];
+
+            useEffect(() => {
+                setInputVal("");
+                setStatus("idle");
+                setFeedback("");
+                setShowTheory(false);
+                if (level === 0) {
+                    setLogs([]);
+                    setZooAnimals([]);
+                }
+            }, [level]);
+
+            const checkLevel = () => {
+                const currentLvl = levels[level];
+                const cleanInput = inputVal.trim();
+                
+                if (cleanInput === currentLvl.solution || (currentLvl.solution === "ichSage" && cleanInput === "ichSage")) {
+                    setStatus("success");
+                    setFeedback("Korrekt! Code wird kompiliert...");
+                    
+                    if (level === 4) { 
+                        addToLog("System: Speicher für Elefant 'Benjamin' reserviert.");
+                        setZooAnimals(prev => [...prev, { icon: "🐘", name: "Benjamin" }]);
+                    } else if (level === 5) {
+                        addToLog("Simba: ROAAAAR!");
+                        if(!zooAnimals.find(a => a.name === "Simba")) {
+                            setZooAnimals(prev => [...prev, { icon: "🦁", name: "Simba" }]);
+                        }
+                    } else if (level === 6) {
+                        addToLog("--- RUNDGANG STARTET ---");
+                        addToLog("Simba: ROAAAAR!");
+                        addToLog("Charlie: Ugh Ugh!");
+                        addToLog("Pingu: Quak!");
+                        addToLog("Benjamin: Töröööö!");
+                        setZooAnimals([
+                            { icon: "🦁", name: "Simba" },
+                            { icon: "🐒", name: "Charlie" },
+                            { icon: "🐧", name: "Pingu" },
+                            { icon: "🐘", name: "Benjamin" }
+                        ]);
+                    } else {
+                        addToLog(`System: Level ${level + 1} erfolgreich kompiliert.`);
+                    }
+
+                } else {
+                    setStatus("error");
+                    setFeedback(`Fehler: Das ist nicht ganz richtig. Tipp: ${currentLvl.hint}`);
+                    addToLog(`Error: Syntaxfehler in Zeile ${level + 10}.`);
+                }
+            };
+
+            const nextLevel = () => {
+                if (level < levels.length - 1) {
+                    setLevel(level + 1);
+                } else {
+                    setStatus("finished");
+                }
+            };
+
+            const addToLog = (msg) => {
+                setLogs(prev => [...prev, `> ${msg}`]);
+            };
+
+            const resetGame = () => {
+                setLevel(0);
+                setZooAnimals([]);
+                setLogs([]);
+                setStatus("idle");
+            };
+
+            return (
+                <div className="min-h-screen p-2 md:p-6 flex flex-col items-center relative">
+                
+                {/* Theory Modal */}
+                {showTheory && (
+                    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in">
+                        <div className="bg-gray-800 border border-blue-500 rounded-xl max-w-lg w-full p-6 shadow-2xl relative">
+                            <button 
+                                onClick={() => setShowTheory(false)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                            >
+                                <X size={24} />
+                            </button>
+                            <div className="flex items-center gap-3 mb-4 text-blue-400">
+                                <BookOpen size={32} />
+                                <h3 className="text-2xl font-bold">Theorie: {levels[level].title.split('.')[1]}</h3>
+                            </div>
+                            <div className="prose prose-invert">
+                                <p className="text-gray-300 text-lg leading-relaxed">{levels[level].theory}</p>
+                            </div>
+                            <div className="mt-6 flex justify-end">
+                                <button 
+                                    onClick={() => setShowTheory(false)}
+                                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold"
+                                >
+                                    Verstanden
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Header with Navigation */}
+                <header className="w-full max-w-5xl mb-6 flex flex-wrap justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700 gap-4 shadow-lg">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-900/50">
+                            <Code size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Java Zoo Architect</h1>
+                            <p className="text-gray-400 text-xs md:text-sm">Objektorientierung spielerisch lernen</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => setShowTheory(true)}
+                            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-blue-300 px-3 py-2 rounded-lg border border-gray-600 transition-colors"
+                        >
+                            <BookOpen size={18} />
+                            <span className="hidden sm:inline">Theorie</span>
+                        </button>
+
+                        <div className="relative group">
+                            <div className="flex items-center gap-2 bg-gray-900 px-3 py-2 rounded-lg border border-gray-700 text-gray-300">
+                                <MapIcon size={18} />
+                                <select 
+                                    value={level} 
+                                    onChange={(e) => setLevel(Number(e.target.value))}
+                                    className="bg-gray-900 outline-none cursor-pointer w-32 md:w-auto"
+                                >
+                                    {levels.map((l, i) => (
+                                        <option key={l.id} value={i}>Level {l.id}: {l.title.split('(')[0]}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Main Content Grid */}
+                <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    {/* Left Column: Code Editor */}
+                    <div className="bg-gray-800 rounded-xl shadow-xl border border-gray-700 overflow-hidden flex flex-col min-h-[500px]">
+                        <div className="bg-gray-900 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="flex gap-1.5">
+                                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                </div>
+                                <span className="ml-3 text-xs text-gray-400 font-mono">ZooSimulation.java</span>
+                            </div>
+                            <div className="text-xs font-mono text-gray-500">Zeile {level * 5 + 10}:1</div>
+                        </div>
+
+                        {status !== "finished" ? (
+                            <div className="p-6 flex-grow flex flex-col">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h2 className="text-xl font-bold text-blue-300">{levels[level].title}</h2>
+                                </div>
+                                
+                                <p className="text-gray-300 mb-6 text-sm leading-relaxed">{levels[level].description}</p>
+
+                                <div className="bg-gray-950 p-6 rounded-lg font-mono text-sm md:text-base border border-gray-700 shadow-inner overflow-x-auto relative group">
+                                    <pre className="text-gray-400 whitespace-pre-wrap relative z-10">
+                                        {levels[level].codePre}
+                                        <input 
+                                            type="text" 
+                                            value={inputVal}
+                                            onChange={(e) => setInputVal(e.target.value)}
+                                            className={`bg-gray-800 border-b-2 outline-none px-2 py-0.5 mx-1 min-w-[120px] text-center font-bold transition-all
+                                                ${status === 'error' ? 'border-red-500 text-red-300 bg-red-900/20' : 
+                                                  status === 'success' ? 'border-green-500 text-green-300 bg-green-900/20' : 'border-blue-500 text-white focus:bg-gray-700'}
+                                            `}
+                                            placeholder={levels[level].placeholder}
+                                            disabled={status === "success"}
+                                            autoFocus
+                                        />
+                                        {levels[level].codePost}
+                                    </pre>
+                                </div>
+
+                                <div className="mt-6 min-h-[3rem]">
+                                    {feedback && (
+                                        <div className={`p-3 rounded-lg flex items-center gap-3 text-sm slide-in ${status === 'error' ? 'bg-red-900/30 text-red-200 border border-red-800' : 'bg-green-900/30 text-green-200 border border-green-800'}`}>
+                                            {status === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+                                            {feedback}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-auto pt-4">
+                                    <button 
+                                        onClick={status === 'success' ? nextLevel : checkLevel}
+                                        className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-all transform active:scale-[0.98] shadow-lg
+                                            ${status === 'success' 
+                                                ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white shadow-green-900/20' 
+                                                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-blue-900/20'
+                                            }`}
+                                    >
+                                        {status === 'success' ? (
+                                            <>Weiter zum nächsten Level <ChevronRight size={22} /></>
+                                        ) : (
+                                            <>{levels[level].buttonText} <Play size={20} /></>
+                                        )}
+                                    </button>
+                                </div>
+
+                            </div>
+                        ) : (
+                            <div className="p-8 flex flex-col items-center justify-center h-full text-center animate-in">
+                                <div className="text-7xl mb-6 drop-shadow-2xl">🎉</div>
+                                <h2 className="text-3xl font-bold text-white mb-4">Herzlichen Glückwunsch!</h2>
+                                <p className="text-gray-300 mb-8 max-w-md">Du hast alle Level gemeistert und deinen eigenen Zoo programmiert. Du hast Klassen, Vererbung, Objekte und Schleifen verstanden!</p>
+                                <button 
+                                    onClick={resetGame}
+                                    className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 rounded-xl flex items-center gap-2 font-bold shadow-lg shadow-purple-900/30 transition-all hover:scale-105"
+                                >
+                                    <RefreshCw size={20} /> Nochmal spielen
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                        <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 h-[350px] relative overflow-hidden group shadow-xl">
+                            <div className="absolute top-3 right-3 z-10 bg-black/40 px-2 py-1 rounded text-xs text-gray-300 uppercase tracking-widest font-bold backdrop-blur-sm border border-white/10">Zoo Vorschau</div>
+                            
+                            <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 to-gray-900/80"></div>
+                            <div className="absolute bottom-0 w-full h-1/3 bg-green-900/40 border-t border-green-800/50 backdrop-blur-[2px]"></div>
+                            <div className="absolute top-10 left-10 text-yellow-500/10 text-9xl animate-pulse">☀</div>
+                            <div className="absolute top-20 right-20 text-white/5 text-6xl">☁</div>
+
+                            <div className="relative h-full flex items-end justify-around pb-8 px-4">
+                                {status !== 'finished' && zooAnimals.length === 0 && (
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center opacity-40">
+                                        <Code size={48} className="mx-auto mb-2" />
+                                        <p>Warte auf Code...</p>
+                                    </div>
+                                )}
+
+                                {level >= 2 && <div className="absolute bottom-32 left-10 text-6xl opacity-20 grayscale hover:grayscale-0 transition-all duration-700" title="Klasse Tier verfügbar">🏗️</div>}
+                                {level >= 4 && <div className="absolute bottom-32 right-10 text-6xl opacity-20 grayscale hover:grayscale-0 transition-all duration-700" title="Vererbung aktiv">🧬</div>}
+
+                                {zooAnimals.map((animal, idx) => (
+                                    <div key={idx} className="flex flex-col items-center animate-bounce duration-[2000ms] z-10 hover:scale-110 transition-transform cursor-pointer">
+                                        <span className="text-6xl drop-shadow-2xl filter">{animal.icon}</span>
+                                        <span className="text-xs text-white mt-3 bg-gray-900/80 px-3 py-1 rounded-full border border-gray-600 shadow-lg">{animal.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-black rounded-xl p-0 border border-gray-700 font-mono text-sm flex-grow flex flex-col shadow-inner overflow-hidden min-h-[200px]">
+                            <div className="bg-gray-900 px-4 py-2 border-b border-gray-800 flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-gray-400">
+                                    <Terminal size={14} />
+                                    <span className="font-bold">Console Output</span>
+                                </div>
+                                <button onClick={() => setLogs([])} className="text-xs text-gray-600 hover:text-gray-400">Clear</button>
+                            </div>
+                            
+                            <div className="p-4 flex-grow overflow-y-auto space-y-1 font-mono">
+                                {logs.length === 0 && <span className="text-gray-600 italic">// Warte auf Code-Eingabe...</span>}
+                                {logs.map((log, i) => (
+                                    <div key={i} className="text-green-400 border-l-2 border-green-900 pl-2 animate-in">
+                                        {log}
+                                    </div>
+                                ))}
+                                {status === 'error' && <div className="text-red-400 border-l-2 border-red-900 pl-2 bg-red-900/10 py-1">Error: Compilation failed. Check syntax.</div>}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ZooGame />);
+    </script>
+</body>
+</html>
