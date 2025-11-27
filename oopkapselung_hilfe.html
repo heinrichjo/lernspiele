@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOP Zoo-Manager: Azubi Edition V7</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --code-bg: #2d2d2d;
+            --text-color: #d4d4d4;
+            --keyword: #569cd6;
+            --string: #ce9178;
+            --class: #4ec9b0;
+            --method: #dcdcaa;
+            --comment: #6a9955;
+            --accent: #007acc;
+            --success: #4caf50;
+            --error: #f44336;
+            --warning: #ce9178;
+            --info: #e5c07b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 { color: var(--accent); margin-bottom: 5px; }
+        p.subtitle { color: #888; margin-bottom: 20px; font-size: 0.9em; }
+        
+        .game-wrapper {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 850px;
+            background-color: #252526;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #3e3e42;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .story-box {
+            background-color: #333333;
+            border-left: 5px solid var(--accent);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .story-box h3 { margin-top: 0; color: #fff; }
+        .story-box p { line-height: 1.5; margin-bottom: 10px; }
+        .explanation {
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #aaa;
+            border: 1px solid #444;
+            margin-top: 10px;
+        }
+        .explanation strong { color: var(--keyword); }
+
+        /* Code Editor Style */
+        .editor-area {
+            background-color: var(--code-bg);
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 16px;
+            line-height: 1.6;
+            border: 1px solid #444;
+            overflow-x: auto;
+            position: relative;
+            min-height: 120px;
+        }
+
+        /* Concept Visualization Style */
+        .concept-stage {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px dashed #555;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .concept-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+        .concept-item { 
+            display: inline-block; 
+            background: #333; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin: 10px; 
+            border: 2px solid #444;
+            width: 140px;
+            vertical-align: top;
+        }
+        .concept-arrow { font-size: 24px; color: var(--accent); vertical-align: middle; }
+        .concept-tag { 
+            display: block; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin-bottom: 5px; 
+            color: #888;
+        }
+
+        /* Inputs */
+        input.code-input {
+            background-color: #3c3c3c;
+            border: 1px solid #555;
+            color: white; 
+            font-family: inherit;
+            font-size: inherit;
+            padding: 4px 8px;
+            border-radius: 3px;
+            min-width: 80px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        input.code-input:focus { outline: 2px solid var(--accent); background-color: #444; }
+
+        /* Choice Buttons */
+        .choice-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .choice-btn {
+            background-color: #3a3a3a;
+            border: 1px solid #555;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 120px;
+            max-width: 250px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .choice-btn:hover { background-color: #444; border-color: var(--accent); }
+        .choice-btn.selected { background-color: var(--accent); border-color: var(--accent); }
+
+        /* Buttons */
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn:hover { background-color: #0062a3; }
+        .btn.hidden { display: none; }
+        
+        .btn-help {
+            background-color: #444;
+            color: var(--info);
+            border: 1px solid var(--info);
+        }
+        .btn-help:hover { background-color: #555; }
+
+        .feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+            text-align: left;
+        }
+        .feedback.visible { display: block; }
+        .feedback.success { background-color: rgba(76, 175, 80, 0.1); color: var(--success); border-left: 4px solid var(--success); }
+        .feedback.error { background-color: rgba(244, 67, 54, 0.1); color: var(--error); border-left: 4px solid var(--error); }
+
+        .progress-container {
+            width: 100%;
+            background-color: #333;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: var(--success);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 20px;
+            justify-content: center;
+            padding: 10px;
+            background: #252526;
+            border-radius: 8px;
+            border: 1px solid #3e3e42;
+            width: 100%;
+            max-width: 850px;
+        }
+        .nav-btn {
+            background: #333;
+            border: 1px solid #444;
+            color: #888;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { background: #444; color: white; }
+        .nav-btn.active { background: var(--accent); color: white; border-color: var(--accent); transform: scale(1.1); }
+        .nav-btn.completed { border-color: var(--success); color: var(--success); }
+
+        /* Modal / Help Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+        
+        .modal-content {
+            background: #252526;
+            width: 90%;
+            max-width: 600px;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid var(--info);
+            box-shadow: 0 0 20px rgba(0,0,0,0.7);
+            position: relative;
+        }
+        .modal-header { font-size: 1.2em; color: var(--info); margin-bottom: 15px; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .modal-body { line-height: 1.6; color: #ddd; font-size: 0.95em; }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: white; }
+
+        /* Footer Style */
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            text-align: center;
+            width: 100%;
+            max-width: 850px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        footer img {
+            height: 50px;
+            width: auto;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        footer img:hover { opacity: 1; }
+
+        /* Syntax Highlighting */
+        .kw { color: var(--keyword); }
+        .str { color: var(--string); }
+        .cls { color: var(--class); }
+        .mth { color: var(--method); }
+        .cmt { color: var(--comment); font-style: italic; }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <h1>🦁 OOP Zoo-Manager</h1>
+        <p class="subtitle">Interaktives Lernspiel zu Datenkapselung & Vererbung</p>
+        
+        <div class="game-container">
+            <div class="progress-container"><div class="progress-bar" id="progress"></div></div>
+            
+            <div id="level-area">
+                <!-- Content Injected via JS -->
+            </div>
+
+            <div class="feedback" id="feedback-msg"></div>
+            
+            <div class="btn-container">
+                <button class="btn btn-help" onclick="toggleHelp()">Hilfe / Theorie 💡</button>
+                <div style="text-align: right;">
+                    <button class="btn" id="check-btn" onclick="checkCurrentLevel()">Überprüfen ✅</button>
+                    <button class="btn hidden" id="next-btn" onclick="nextLevel()">Nächstes Level ➡️</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Bar -->
+        <div class="nav-bar" id="nav-container">
+            <!-- Buttons generated via JS -->
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="help-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="toggleHelp()">✖</button>
+            <div class="modal-header">📚 Theorie-Wissen</div>
+            <div class="modal-body" id="help-text">
+                <!-- Theory Injected Here -->
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Johannes Heinrich Erstellt mithilfe von Gemini • 2025</p>
+        <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="Logo Welserschule">
+    </footer>
+
+    <script>
+        const levels = [
+            // --- KAPITEL 1: DATENKAPSELUNG ---
+            {
+                type: "concept",
+                title: "1. Intro: Das offene Tor",
+                story: "Willkommen im Zoo! Wir haben ein Sicherheitsproblem. Ein Besucher konnte einfach zum Löwengehege gehen und das Namensschild ändern.",
+                visual: `
+                    <div class="concept-stage">
+                        <div class="concept-item" style="border-color: var(--error);">
+                            <span class="concept-tag">Besucher</span>
+                            <span class="concept-icon">👤</span>
+                            <div>"Nenne dich Maus!"</div>
+                        </div>
+                        <span class="concept-arrow">➡️ greift zu ➡️</span>
+                        <div class="concept-item">
+                            <span class="concept-tag">Löwe</span>
+                            <span class="concept-icon">🦁</span>
+                            <div style="color: var(--error);">name = "Maus"</div>
+                        </div>
+                    </div>
+                `,
+                question: "Wie nennt man das Prinzip, das verbietet, dass man von außen direkt in die Innereien eines Objekts greift?",
+                options: [
+                    { text: "Datenkapselung", correct: true },
+                    { text: "Datenbank", correct: false },
+                    { text: "Vererbung", correct: false }
+                ],
+                successMsg: "Richtig! Datenkapselung (oder 'Geheimnisprinzip') schützt die Daten.",
+                theory: "<b>Datenkapselung (PDF 1):</b><br>Als Datenkapselung bezeichnet man die Beschränkung des Zugriffs von außen auf Daten einer Klasse. Das Innere der Klasse ist 'geheim' und kann nicht von außen manipuliert werden. Dadurch werden Fehler minimiert."
+            },
+            {
+                type: "code",
+                title: "2. Zugriff beschränken",
+                story: "Wende das Prinzip der <b>Datenkapselung</b> an. Schütze das Attribut `name` vor direktem Zugriff von außen.",
+                code: `
+<span class="kw">public class</span> <span class="cls">Loewe</span> {
+    
+    <span class="cmt">// Nur diese Klasse darf den Namen sehen.</span>
+    <input type="text" id="inp1" class="code-input" placeholder="???"> <span class="cls">String</span> name; 
+
+    <span class="kw">public</span> <span class="cls">Loewe</span>(<span class="cls">String</span> name) {
+        <span class="kw">this</span>.name = name;
+    }
+}`,
+                answers: ["private"],
+                successMsg: "Perfekt! <code>private</code> schließt die Tür ab.",
+                theory: "<b>Zugriffsmodifikatoren:</b><br><code>private</code>: Zugriff nur innerhalb derselben Klasse.<br><code>protected</code>: Zugriff auch in Unterklassen (Vererbung).<br><code>public</code>: Zugriff für alle.<br><br>Für echte Kapselung von Attributen nutzen wir meist <code>private</code>."
+            },
+            {
+                type: "concept",
+                title: "3. Konzept: Getter",
+                story: "Die Daten sind jetzt `private`. Aber der Zoodirektor muss den Namen lesen können, um Schilder zu drucken.",
+                visual: `
+                    <div class="concept-stage">
+                        <div class="concept-item" style="border-color: var(--success);">
+                            <span class="concept-tag">Tresor (private)</span>
+                            <span class="concept-icon">🔒</span>
+                        </div>
+                        <span class="concept-arrow">❓</span>
+                        <div class="concept-item">
+                            <span class="concept-tag">Direktor</span>
+                            <span class="concept-icon">👮</span>
+                        </div>
+                    </div>
+                `,
+                question: "Was macht eine Getter-Methode?",
+                options: [
+                    { text: "Sie ändert den Wert.", correct: false },
+                    { text: "Sie liefert den Wert zurück.", correct: true },
+                    { text: "Sie löscht das Objekt.", correct: false }
+                ],
+                successMsg: "Genau! Ein Getter liefert (return) den Wert.",
+                theory: "<b>Getter-Methoden (PDF 1):</b><br>Da die Attribute privat sind, brauchen wir eine definierte Schnittstelle nach außen. Eine Getter-Methode erlaubt das Auslesen des Wertes. Konvention: <code>get</code> + Variablenname."
+            },
+            {
+                type: "code",
+                title: "4. Getter implementieren",
+                story: "Schreibe den Getter für den Löwen. Er muss öffentlich sein.",
+                code: `
+<span class="kw">public class</span> <span class="cls">Loewe</span> {
+    <span class="kw">private</span> <span class="cls">String</span> name;
+
+    <span class="cmt">// Konvention: get + Variablenname (Großgeschrieben)</span>
+    <span class="kw">public</span> <span class="cls">String</span> <input type="text" id="inp1" class="code-input" placeholder="???">() {
+        <span class="kw">return</span> name;
+    }
+}`,
+                answers: ["getName"],
+                successMsg: "Sehr gut. Zugriff erfolgt nun über `loewe.getName()`.",
+                theory: "<b>Syntax Getter:</b><br><code>public Datentyp getAttribut() { return attribut; }</code><br>Der Rückgabetyp der Methode muss zum Datentyp des Attributs passen (hier String)."
+            },
+            {
+                type: "code",
+                title: "5. Setter & 'this'",
+                story: "Wir wollen den Namen ändern können (z.B. Tippfehler). Dafür brauchen wir einen <b>Setter</b>. Achte auf das Schlüsselwort für das aktuelle Objekt.",
+                code: `
+<span class="kw">public class</span> <span class="cls">Loewe</span> {
+    <span class="kw">private</span> <span class="cls">String</span> name;
+
+    <span class="cmt">// Setter-Methode</span>
+    <span class="kw">public</span> <span class="kw">void</span> setName(<span class="cls">String</span> name) {
+        
+        <span class="cmt">// Attribut = Parameter</span>
+        <span class="cmt">// Referenz auf das eigene Objekt?</span>
+        <input type="text" id="inp1" class="code-input" placeholder="???">.name = name;
+    }
+}`,
+                answers: ["this"],
+                successMsg: "Exzellent! `this.name` ist das Attribut, `name` der Parameter.",
+                theory: "<b>Setter-Methoden & this (PDF 1):</b><br>Setter ändern den Wert eines privaten Attributs. Wenn der Parameter genauso heißt wie das Attribut, nutzen wir <code>this</code>. <br><code>this.name</code> = Das Attribut der Klasse.<br><code>name</code> = Der Parameter (lokale Variable)."
+            },
+            
+            // --- KAPITEL 2: VERERBUNG & ABSTRAKTION ---
+            {
+                type: "code",
+                title: "6. Abstrakte Klassen",
+                story: "Wir wollen vermeiden, dass jemand einfach nur ein 'Tier' erstellt. Es muss immer ein konkretes Tier (Löwe, Elefant) sein.<br>Mache die Klasse `Tier` abstrakt, damit sie nur als Vorlage dient.",
+                code: `
+<span class="cmt">// Diese Klasse darf nicht direkt instanziiert werden (new Tier() verboten)</span>
+<span class="kw">public</span> <input type="text" id="inp1" class="code-input" placeholder="???"> <span class="kw">class</span> <span class="cls">Tier</span> {
+    <span class="kw">protected</span> <span class="cls">String</span> name;
+    <span class="kw">public</span> <span class="cls">Tier</span>(<span class="cls">String</span> name) { <span class="kw">this</span>.name = name; }
+}
+`,
+                answers: ["abstract"],
+                successMsg: "Korrekt! Von einer `abstract class` können keine Objekte erzeugt werden, sie dient nur als Basis für Unterklassen.",
+                theory: "<b>Abstrakte Klassen:</b><br>Eine abstrakte Klasse dient als Vorlage. Man kann von ihr keine Objekte erzeugen (kein <code>new Tier()</code>). Sie ist dazu da, gemeinsame Eigenschaften für Unterklassen bereitzustellen (siehe PDF 2 'Zug als abstrakte Planungseinheit')."
+            },
+            {
+                type: "code",
+                title: "7. Vererbung",
+                story: "Der Elefant soll nun von dieser abstrakten Basisklasse erben.",
+                code: `
+<span class="cmt">// Unterklasse</span>
+<span class="kw">public class</span> <span class="cls">Elefant</span> <input type="text" id="inp1" class="code-input" placeholder="???"> <span class="cls">Tier</span> {
+    
+    <span class="kw">public</span> <span class="cls">Elefant</span>(<span class="cls">String</span> name) {
+        <span class="cmt">// Rufe den Konstruktor der Oberklasse auf</span>
+        <input type="text" id="inp2" class="code-input" placeholder="???">(name); 
+    }
+}`,
+                answers: ["extends", "super"],
+                successMsg: "Super! `extends` für Vererbung, `super()` für den Eltern-Konstruktor.",
+                theory: "<b>Vererbung (PDF 1):</b><br><code>extends</code>: Das Schlüsselwort, um eine Klasse von einer anderen erben zu lassen (Unterklasse extends Oberklasse).<br><code>super()</code>: Damit rufen wir den Konstruktor der Oberklasse auf, um die geerbten Attribute zu initialisieren."
+            },
+            {
+                type: "code",
+                title: "8. Polymorphie (Überschreiben)",
+                story: "Jedes Tier macht ein Geräusch, aber jedes ein anderes. Das nennt man <b>Polymorphie</b> (Vielgestaltigkeit).<br>Überschreibe die Methode `macheGeraeusch` im Löwen.",
+                code: `
+<span class="kw">public class</span> <span class="cls">Loewe</span> <span class="kw">extends</span> <span class="cls">Tier</span> {
+    
+    <span class="cmt">// Annotation, die dem Compiler sagt: "Ich überschreibe hier was!"</span>
+    @<input type="text" id="inp1" class="code-input" placeholder="???">
+    <span class="kw">public void</span> macheGeraeusch() {
+        System.out.println("Roaaar!");
+    }
+}`,
+                answers: ["Override"],
+                successMsg: "Richtig! Mit `@Override` stellen wir sicher, dass wir die Methode der Oberklasse wirklich ersetzen.",
+                theory: "<b>Polymorphie:</b><br>Bedeutet Vielgestaltigkeit. Eine Methode (z.B. <code>macheGeraeusch</code>) kann in verschiedenen Unterklassen unterschiedlich implementiert sein. Mit <code>@Override</code> zeigen wir an, dass wir die Methode der Oberklasse überschreiben."
+            },
+
+            // --- KAPITEL 3: BEZIEHUNGEN & UML ---
+            {
+                type: "concept",
+                title: "9. Aggregation (Lose Kopplung)",
+                story: "Ein Zoodirektor stellt einen <b>Tierpfleger</b> ein. Der Pfleger kümmert sich um den Zoo.<br>Frage: Wenn der Zoo pleite geht (gelöscht wird), wird der Pfleger dann auch gelöscht (stirbt er)? Nein, er sucht sich einen neuen Job.",
+                visual: `
+                    <div class="concept-stage">
+                        <div class="concept-item">
+                            <span class="concept-tag">Ganzes</span>
+                            <span class="concept-icon">🦁</span>
+                            <div>Zoo</div>
+                        </div>
+                        <span class="concept-arrow">➕ nutzt ➕</span>
+                        <div class="concept-item">
+                            <span class="concept-tag">Teil</span>
+                            <span class="concept-icon">👨‍🌾</span>
+                            <div>Pfleger</div>
+                        </div>
+                    </div>
+                `,
+                question: "Welche Aussage trifft auf Aggregation zu?",
+                options: [
+                    { text: "Starke Abhängigkeit (Teile werden mit gelöscht)", correct: false },
+                    { text: "Lose Verbindung (Teile existieren weiter)", correct: true },
+                    { text: "Keine Verbindung", correct: false }
+                ],
+                successMsg: "Richtig! Im UML-Diagramm ist das die <b>leere</b> Raute.",
+                theory: "<b>Aggregation (PDF 2):</b><br>Eine 'Teil-Ganzes'-Beziehung. Das Besondere: Die Teile (z.B. Reifen) können auch ohne das Ganze (z.B. Auto) existieren. Wenn das Ganze gelöscht wird, bleiben die Teile erhalten. Symbol: Leere Raute am Ganzen."
+            },
+            {
+                type: "concept",
+                title: "10. Komposition (Strenge Kopplung)",
+                story: "Nun schauen wir uns das <b>Löwenhaus</b> an. Es besteht aus fest eingebauten <b>Käfigen</b> (Räumen).<br>Wenn das Haus abgerissen wird, sind die Räume auch weg.",
+                visual: `
+                    <div class="concept-stage">
+                        <div class="concept-item">
+                            <span class="concept-tag">Ganzes</span>
+                            <span class="concept-icon">🏠</span>
+                            <div>Haus</div>
+                        </div>
+                        <span class="concept-arrow">⚠️ besitzt ⚠️</span>
+                        <div class="concept-item">
+                            <span class="concept-tag">Teil</span>
+                            <span class="concept-icon">🚪</span>
+                            <div>Raum</div>
+                        </div>
+                    </div>
+                `,
+                question: "Welches UML-Symbol steht für Komposition?",
+                options: [
+                    { text: "Leere Raute ◇", correct: false },
+                    { text: "Ausgefüllte Raute ◆", correct: true },
+                    { text: "Pfeil ->", correct: false }
+                ],
+                successMsg: "Richtig! Die schwarze Raute symbolisiert den 'starken Besitz' (Todessymbol).",
+                theory: "<b>Komposition (PDF 2):</b><br>Eine strenge 'Teil-Ganzes'-Beziehung (Existenzabhängigkeit). Wenn das Ganze (Haus) gelöscht wird, werden auch die Teile (Räume) gelöscht. Symbol: Ausgefüllte (schwarze) Raute am Ganzen."
+            },
+            {
+                type: "concept",
+                title: "11. Multiplizität",
+                story: "Wie viele Tiere passen in einen Käfig? Im UML-Diagramm stehen Zahlen an den Verbindungslinien.<br>Situation: Ein Käfig <b>kann leer sein</b>, kann aber auch <b>viele Tiere</b> enthalten.",
+                visual: `
+                    <div class="explanation">
+                        <strong>UML-Notation:</strong><br>
+                        <code>1</code> = Genau eins<br>
+                        <code>0..1</code> = Null oder eins<br>
+                        <code>1..*</code> = Mindestens eins, beliebig viele<br>
+                        <code>0..*</code> (oder <code>*</code>) = Beliebig viele (auch keins)
+                    </div>
+                `,
+                question: "Welche Multiplizität passt zu 'beliebig viele, auch keins'?",
+                options: [
+                    { text: "1..*", correct: false },
+                    { text: "0..*", correct: true },
+                    { text: "1", correct: false }
+                ],
+                successMsg: "Korrekt! Der Stern * steht für 'beliebig viele'.",
+                theory: "<b>Multiplizität (PDF 2):</b><br>Gibt an, wie viele Objekte in Beziehung stehen.<br>1 = genau eins.<br>0..1 = keins oder eins.<br>1..* = eins oder viele.<br>0..* = beliebig viele."
+            }
+        ];
+
+        // --- GAME ENGINE ---
+        let currentLevel = 0;
+        let selectedOption = -1;
+
+        function initGame() {
+            renderNav();
+            loadLevel();
+        }
+
+        function renderNav() {
+            const nav = document.getElementById('nav-container');
+            nav.innerHTML = '';
+            levels.forEach((lvl, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `nav-btn ${idx === currentLevel ? 'active' : ''}`;
+                btn.innerText = idx + 1;
+                btn.title = lvl.title;
+                btn.onclick = () => jumpToLevel(idx);
+                nav.appendChild(btn);
+            });
+        }
+
+        function jumpToLevel(idx) {
+            currentLevel = idx;
+            renderNav();
+            loadLevel();
+        }
+
+        function loadLevel() {
+            if (currentLevel >= levels.length) return;
+
+            const level = levels[currentLevel];
+            const area = document.getElementById('level-area');
+            const feedback = document.getElementById('feedback-msg');
+            
+            // UI Reset
+            feedback.className = "feedback";
+            feedback.innerHTML = "";
+            document.getElementById('check-btn').classList.remove('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+            selectedOption = -1;
+            
+            // Close help if open
+            document.getElementById('help-modal').classList.remove('open');
+
+            // Update Progress & Nav
+            const pct = ((currentLevel) / (levels.length - 1)) * 100;
+            document.getElementById('progress').style.width = Math.min(pct, 100) + "%";
+            
+            document.querySelectorAll('.nav-btn').forEach((btn, idx) => {
+                if (idx === currentLevel) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+            // Render Content
+            let contentHtml = `
+                <div class="story-box">
+                    <h3>${level.title}</h3>
+                    <p>${level.story}</p>
+                </div>
+            `;
+
+            if (level.type === 'concept') {
+                contentHtml += level.visual || "";
+                contentHtml += `<p style="margin-top:20px; font-weight:bold;">${level.question}</p>`;
+                contentHtml += `<div class="choice-container">`;
+                level.options.forEach((opt, idx) => {
+                    contentHtml += `<button class="choice-btn" id="opt-${idx}" onclick="selectOption(${idx})">${opt.text}</button>`;
+                });
+                contentHtml += `</div>`;
+            } else {
+                contentHtml += `
+                <div class="editor-area">
+                    ${level.code}
+                </div>`;
+            }
+
+            area.innerHTML = contentHtml;
+
+            if(level.type === 'code') {
+                setTimeout(() => {
+                    const input = document.querySelector('input.code-input');
+                    if(input) input.focus();
+                }, 100);
+            }
+        }
+
+        function selectOption(idx) {
+            const btns = document.querySelectorAll('.choice-btn');
+            btns.forEach(b => b.classList.remove('selected'));
+            document.getElementById(`opt-${idx}`).classList.add('selected');
+            selectedOption = idx;
+        }
+
+        function checkCurrentLevel() {
+            const level = levels[currentLevel];
+            const feedback = document.getElementById('feedback-msg');
+            let isCorrect = false;
+
+            if (level.type === 'concept') {
+                if (selectedOption === -1) {
+                    feedback.className = "feedback visible error";
+                    feedback.innerHTML = "Bitte wähle eine Antwort aus!";
+                    return;
+                }
+                if (level.options[selectedOption].correct) {
+                    isCorrect = true;
+                }
+            } else {
+                const inputs = document.querySelectorAll('input.code-input');
+                let allMatch = true;
+                inputs.forEach((inp, idx) => {
+                    if(inp.value.trim().toLowerCase() !== level.answers[idx].toLowerCase()) {
+                        allMatch = false;
+                        inp.style.borderColor = "var(--error)";
+                    } else {
+                        inp.style.borderColor = "var(--success)";
+                    }
+                });
+                isCorrect = allMatch;
+            }
+
+            if (isCorrect) {
+                feedback.className = "feedback visible success";
+                feedback.innerHTML = "✅ " + level.successMsg;
+                document.getElementById('check-btn').classList.add('hidden');
+                
+                document.querySelectorAll('.nav-btn')[currentLevel].classList.add('completed');
+
+                if (currentLevel < levels.length - 1) {
+                    document.getElementById('next-btn').classList.remove('hidden');
+                    document.getElementById('next-btn').focus();
+                } else {
+                    feedback.innerHTML += "<br><br>🏆 <b>GLÜCKWUNSCH! Du hast alle OOP-Module gemeistert!</b>";
+                    document.getElementById('progress').style.width = "100%";
+                }
+            } else {
+                feedback.className = "feedback visible error";
+                feedback.innerHTML = "❌ Leider falsch. Versuch es nochmal!";
+            }
+        }
+
+        function nextLevel() {
+            if (currentLevel < levels.length - 1) {
+                currentLevel++;
+                loadLevel();
+            }
+        }
+
+        // Help Modal Logic
+        function toggleHelp() {
+            const modal = document.getElementById('help-modal');
+            const content = document.getElementById('help-text');
+            
+            if (modal.classList.contains('open')) {
+                modal.classList.remove('open');
+            } else {
+                // Load theory for current level
+                content.innerHTML = levels[currentLevel].theory;
+                modal.classList.add('open');
+            }
+        }
+
+        // Close modal on outside click
+        document.getElementById('help-modal').addEventListener('click', function(e) {
+            if (e.target === this) toggleHelp();
+        });
+
+        // Start
+        initGame();
+
+        // Global Enter Key
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                const nextBtn = document.getElementById('next-btn');
+                if (!nextBtn.classList.contains('hidden')) {
+                    nextLevel();
+                } else {
+                    checkCurrentLevel();
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
