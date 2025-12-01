@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Liability Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .hud-value { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+        .calc-btn { transition: active 0.1s; }
+        .calc-btn:active { transform: scale(0.95); }
+        .calc-btn-pressed { transform: scale(0.90); background-color: #475569 !important; }
+        
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-anim { animation: shake 0.5s; }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop-anim { animation: pop 0.3s ease-out forwards; }
+
+        /* Start Screen Background Gradient */
+        .start-bg {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-gray-800" onkeydown="handleGlobalKey(event)">
+
+    <!-- Header -->
+    <header class="bg-slate-800 text-white p-4 shadow-lg flex justify-between items-center z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-truck-loading text-2xl text-blue-400"></i>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide">LOGISTICS LIABILITY MASTER</h1>
+                <p class="text-xs text-slate-400">Claims Management System v2.2</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-8 text-center">
+            <div>
+                <p class="text-xs text-slate-400 uppercase">Firmenkonto</p>
+                <p id="budget-display" class="text-xl font-bold text-green-400 hud-value">500.000 €</p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-400 uppercase">Aktueller Fall</p>
+                <p id="level-display" class="text-xl font-bold text-blue-400 hud-value">- / -</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="flex-1 flex overflow-hidden relative">
+        
+        <!-- LEFT: Cheat Sheet -->
+        <aside class="w-1/4 bg-slate-100 border-r border-slate-300 p-4 overflow-y-auto hidden md:block">
+            <div class="bg-white p-4 rounded-lg shadow mb-4 border-l-4 border-yellow-500">
+                <h3 class="font-bold text-slate-700 mb-2"><i class="fas fa-calculator mr-2"></i>Wichtige Werte</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between"><span>SZR Kurs (Exakt):</span> <span class="font-bold">1,20 €</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Faustformel (10€):</span> <span class="font-bold text-green-600">Erlaubt</span></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow mb-4 border-l-4 border-blue-500">
+                <h3 class="font-bold text-slate-700 mb-2"><i class="fas fa-box mr-2"></i>Haftungsgrenzen</h3>
+                <ul class="text-sm space-y-3">
+                    <li class="pb-2 border-b border-slate-100">
+                        <span class="block font-semibold text-blue-600">LKW Transport (HGB/ADSp)</span>
+                        8,33 SZR / kg
+                        <br><span class="text-xs text-gray-500">ADSp Cap: 1,25 Mio. € / Fall</span>
+                    </li>
+                    <li class="pb-2 border-b border-slate-100">
+                        <span class="block font-semibold text-orange-600">Lagerung (ADSp)</span>
+                        8,33 SZR / kg
+                        <br><span class="text-xs font-bold text-red-500">MAX 35.000 € / Fall</span>
+                    </li>
+                    <li>
+                        <span class="block font-semibold text-purple-600">Lieferverzug</span>
+                        3-fache Fracht
+                    </li>
+                </ul>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                <h3 class="font-bold text-slate-700 mb-2"><i class="fas fa-coins mr-2"></i>Vermögensschäden</h3>
+                <ul class="text-sm space-y-3">
+                    <li class="pb-2 border-b border-slate-100">
+                        <span class="block font-semibold text-green-600">ADSp 2017</span>
+                        3-fache Haftung wie bei Verlust
+                        <br><span class="text-xs font-bold text-red-500">MAX 125.000 € / Fall</span>
+                    </li>
+                    <li>
+                        <span class="block font-semibold text-red-600">HGB (Keine ADSp)</span>
+                        <span class="text-red-600 font-bold animate-pulse">UNBEGRENZT!</span>
+                        <br><span class="text-xs text-gray-500">Volle Verschuldenshaftung</span>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- CENTER: Workspace -->
+        <section class="flex-1 bg-slate-200 p-6 relative overflow-y-auto flex flex-col items-center">
+            
+            <!-- Scenario Card -->
+            <div id="scenario-card" class="glass-panel w-full max-w-3xl p-6 mb-6 pop-anim opacity-0">
+                <div class="flex justify-between items-start mb-4">
+                    <span id="scenario-role" class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded border border-blue-400">Rolle: ???</span>
+                    <span id="scenario-rules" class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded border border-purple-400">Regelwerk: ???</span>
+                </div>
+                
+                <h2 id="scenario-title" class="text-2xl font-bold text-slate-800 mb-2">Lade Szenario...</h2>
+                <p id="scenario-desc" class="text-gray-600 mb-6 leading-relaxed">Bitte warten...</p>
+
+                <!-- Data Grid -->
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase">Schadenhöhe (Forderung)</p>
+                        <p id="data-damage" class="text-lg font-bold text-red-600">0 €</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase">Relevantes Gewicht</p>
+                        <p id="data-weight" class="text-lg font-bold text-slate-700">0 kg</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase">Frachtkosten (Vereinbart)</p>
+                        <p id="data-freight" class="text-lg font-bold text-slate-700">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase">Schadensart</p>
+                        <p id="data-type" class="text-lg font-bold text-slate-700">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interaction Area -->
+            <div id="interaction-area" class="w-full max-w-3xl glass-panel p-6 flex flex-col md:flex-row gap-6 opacity-0">
+                
+                <!-- Calculator -->
+                <div class="flex-1 bg-slate-800 p-4 rounded-xl shadow-inner border border-slate-600">
+                    <div class="text-right text-green-400 font-mono text-xl mb-3 bg-slate-900 p-2 rounded border border-slate-700" id="calc-display">0</div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button id="btn-7" onclick="calcAppend('7')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">7</button>
+                        <button id="btn-8" onclick="calcAppend('8')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">8</button>
+                        <button id="btn-9" onclick="calcAppend('9')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">9</button>
+                        <button id="btn-div" onclick="calcOp('/')" class="calc-btn bg-orange-500 text-white p-2 rounded hover:bg-orange-400">÷</button>
+                        
+                        <button id="btn-4" onclick="calcAppend('4')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">4</button>
+                        <button id="btn-5" onclick="calcAppend('5')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">5</button>
+                        <button id="btn-6" onclick="calcAppend('6')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">6</button>
+                        <button id="btn-mul" onclick="calcOp('*')" class="calc-btn bg-orange-500 text-white p-2 rounded hover:bg-orange-400">×</button>
+                        
+                        <button id="btn-1" onclick="calcAppend('1')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">1</button>
+                        <button id="btn-2" onclick="calcAppend('2')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">2</button>
+                        <button id="btn-3" onclick="calcAppend('3')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">3</button>
+                        <button id="btn-sub" onclick="calcOp('-')" class="calc-btn bg-orange-500 text-white p-2 rounded hover:bg-orange-400">-</button>
+                        
+                        <button id="btn-clear" onclick="calcClear()" class="calc-btn bg-red-500 text-white p-2 rounded hover:bg-red-400">C</button>
+                        <button id="btn-0" onclick="calcAppend('0')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">0</button>
+                        <button id="btn-dot" onclick="calcAppend('.')" class="calc-btn bg-slate-600 text-white p-2 rounded hover:bg-slate-500">,</button>
+                        <button id="btn-add" onclick="calcOp('+')" class="calc-btn bg-orange-500 text-white p-2 rounded hover:bg-orange-400">+</button>
+                    </div>
+                    <button id="btn-enter" onclick="calcEqual()" class="w-full mt-2 bg-green-600 text-white p-2 rounded font-bold hover:bg-green-500">=</button>
+                    <p class="text-xs text-gray-400 mt-2 text-center">Tastatur-Steuerung aktiv (wenn Eingabefeld nicht fokussiert)</p>
+                </div>
+
+                <!-- Input & Action -->
+                <div class="flex-1 flex flex-col justify-between">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Entscheidung: Max. Haftungssumme (€)</label>
+                        <div class="relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">€</span>
+                            </div>
+                            <input type="number" id="user-input" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-lg border-gray-300 rounded-md py-3" placeholder="0.00">
+                        </div>
+                        <button onclick="copyCalcResult()" class="text-xs text-blue-600 hover:text-blue-800 mt-1 cursor-pointer underline">
+                            Ergebnis vom Rechner übernehmen
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 mt-4">
+                        <button onclick="submitAnswer(false)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition transform hover:-translate-y-1">
+                            <i class="fas fa-paper-plane mr-2"></i> Zahlung anweisen
+                        </button>
+                        
+                        <button onclick="submitAnswer(true)" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow border-2 border-red-800 transition transform hover:-translate-y-1">
+                            <i class="fas fa-exclamation-triangle mr-2"></i> UNBEGRENZTE Haftung
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- START SCREEN OVERLAY -->
+        <div id="start-screen" class="absolute inset-0 start-bg z-50 flex flex-col items-center justify-center text-white p-8">
+            <div class="max-w-4xl w-full text-center">
+                <i class="fas fa-balance-scale text-6xl text-blue-400 mb-6 animate-pulse"></i>
+                <h1 class="text-5xl font-bold mb-4 tracking-tight">Logistics Liability Master</h1>
+                <p class="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+                    Willkommen, Claims Manager! Ihre Aufgabe ist es, Schadensfälle rechtssicher zu bearbeiten. 
+                    Entscheiden Sie zwischen HGB und ADSp, beachten Sie Haftungshöchstgrenzen (SZR) und retten Sie das Firmenkonto vor der Insolvenz.
+                </p>
+                <p class="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+                Hinweis: Bei dem Spiel handelt es sich um einen Prototypen für den Einsatz im Unterricht. Angezeigte Ergebnisse können noch fehlerhaft sein.
+                </p>
+                <div class="flex flex-col md:flex-row gap-6 justify-center items-stretch">
+                    
+                    <!-- Campaign Mode -->
+                    <div class="bg-slate-800 p-8 rounded-xl border-2 border-slate-600 hover:border-blue-400 transition-all cursor-pointer w-full md:w-1/3 flex flex-col" onclick="startGame('campaign')">
+                        <div class="flex-1">
+                            <i class="fas fa-book text-4xl text-blue-400 mb-4"></i>
+                            <h2 class="text-2xl font-bold mb-2">Kampagne</h2>
+                            <p class="text-sm text-gray-400">Die klassische Ausbildung. 9 thematische Fälle, die von einfach bis komplex aufeinander aufbauen.</p>
+                        </div>
+                        <button class="mt-6 w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold">Starten</button>
+                    </div>
+
+                    <!-- Random Mode -->
+                    <div class="bg-slate-800 p-8 rounded-xl border-2 border-slate-600 hover:border-purple-400 transition-all cursor-pointer w-full md:w-1/3 flex flex-col" onclick="startGame('random')">
+                        <div class="flex-1">
+                            <i class="fas fa-dice text-4xl text-purple-400 mb-4"></i>
+                            <h2 class="text-2xl font-bold mb-2">Tagesgeschäft (Zufall)</h2>
+                            <p class="text-sm text-gray-400">Für Fortgeschrittene! 5 zufällig ausgewählte Fälle mit variablen Werten. Zahlen ändern sich bei jedem Spiel.</p>
+                        </div>
+                        <button class="mt-6 w-full bg-purple-600 hover:bg-purple-700 py-2 rounded font-bold">Zufalls-Mix</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white text-slate-500 py-3 px-6 flex justify-between items-center text-sm border-t border-slate-200 shrink-0 shadow-inner z-20 relative">
+        <div class="font-medium">&copy; Johannes Heinrich 2025</div>
+        <div>
+            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                 alt="Logo" 
+                 class="h-8 md:h-10 object-contain hover:opacity-100 transition-opacity">
+        </div>
+    </footer>
+
+    <!-- Modal for Feedback -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl transform transition-all scale-100">
+            <div id="modal-header" class="flex items-center mb-4">
+                <div id="modal-icon-bg" class="rounded-full p-3 mr-4">
+                    <i id="modal-icon" class="fas fa-check text-2xl text-white"></i>
+                </div>
+                <h3 id="modal-title" class="text-2xl font-bold">Ergebnis</h3>
+            </div>
+            
+            <div class="mb-6">
+                <p id="modal-message" class="text-gray-700 text-lg mb-2">Message goes here.</p>
+                <div class="bg-gray-100 p-3 rounded text-sm font-mono border-l-4 border-gray-500">
+                    <p>Korrekte Haftung: <span id="modal-correct-value" class="font-bold"></span></p>
+                    <p>Ihre Eingabe: <span id="modal-user-value"></span></p>
+                    <p id="modal-budget-impact" class="mt-2 font-bold"></p>
+                    <p class="text-xs text-gray-500 mt-2 italic">(Toleranz für 10€ Faustformel aktiv)</p>
+                </div>
+            </div>
+
+            <button onclick="nextLevel()" class="w-full bg-gray-800 text-white py-3 rounded font-bold hover:bg-gray-700">
+                Nächster Fall <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over / Victory Screen -->
+    <div id="end-screen" class="fixed inset-0 bg-slate-900 hidden flex-col items-center justify-center z-50 text-white text-center p-8">
+        <i id="end-icon" class="fas fa-trophy text-6xl text-yellow-400 mb-6"></i>
+        <h2 id="end-title" class="text-4xl font-bold mb-4">Spiel Beendet</h2>
+        <p id="end-desc" class="text-xl text-gray-300 mb-8 max-w-xl">Zusammenfassung...</p>
+        <p class="text-2xl mb-8">Endkontostand: <span id="end-score" class="font-bold text-green-400"></span></p>
+        <div class="flex gap-4">
+            <button onclick="location.reload()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg">
+                Startmenü
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME DATA: CAMPAIGN (FIXED) ---
+        const campaignScenarios = [
+            {
+                title: "Der klassische Wasserschaden",
+                role: "Frachtführer (Selbstfahrend)",
+                rules: "HGB (Keine ADSp)",
+                desc: "LKW-Unfall auf der A7. Eine Palette Druckerpapier ist nass geworden und unverkäuflich.",
+                damage: 2000,
+                weight: 500,
+                freight: 450,
+                type: "Güterschaden",
+                calcMode: "weight",
+                explanation: "HGB Standard: 500 kg * 8,33 SZR * 1,20 € = 4.998 €. Da der Schaden (2.000 €) geringer ist als die Haftungsgrenze, müssen wir den vollen Schaden zahlen."
+            },
+            {
+                title: "Teure Leichtgewichte",
+                role: "Spediteur (Selbsteintritt)",
+                rules: "ADSp 2017",
+                desc: "Ein Karton mit neuen Smartphones verschwindet beim Umladen. Der Kunde tobt.",
+                damage: 15000,
+                weight: 20,
+                freight: 120,
+                type: "Güterschaden",
+                calcMode: "weight",
+                explanation: "Die SZR-Falle! 20 kg * 8,33 SZR * 1,20 € = 199,92 €. Egal wie teuer die Handys waren, wir haften nur bis zur Gewichts-Grenze!"
+            },
+            {
+                title: "Bandstillstand durch Verzug",
+                role: "Spediteur",
+                rules: "ADSp 2017",
+                desc: "Der LKW kommt wegen eines Dispo-Fehlers 2 Tage zu spät. Das Band beim Kunden stand still. Kein Sachschaden an der Ware.",
+                damage: 20000,
+                weight: 10000,
+                freight: 1500,
+                type: "Lieferfristüberschreitung",
+                calcMode: "freight",
+                explanation: "Bei Lieferverzug ist das Gewicht egal. Die Grenze ist die 3-fache Fracht! 1.500 € * 3 = 4.500 €."
+            },
+            {
+                title: "Einbruch im Lager",
+                role: "Lagerhalter",
+                rules: "ADSp 2017",
+                desc: "Diebe haben nachts das Schloss geknackt und Kupferkabel gestohlen.",
+                damage: 60000,
+                weight: 4000,
+                freight: 0,
+                type: "Lagerschaden",
+                calcMode: "warehouse",
+                explanation: "Gewichtshaftung wäre: 4.000 * 8,33 * 1,20 = 39.984 €. ABER: Lagerung nach ADSp ist bei 35.000 € gedeckelt! Das Cap greift."
+            },
+            {
+                title: "Teilschaden beim Transport",
+                role: "Frachtführer",
+                rules: "HGB",
+                desc: "Transport von 10 Maschinen. Eine Maschine ist beim Abladen heruntergefallen. Nur diese ist kaputt.",
+                damage: 20000,
+                weight: 2000, 
+                freight: 2500,
+                type: "Güterschaden (Teil)",
+                calcMode: "weight",
+                explanation: "Es zählt nur das Gewicht des beschädigten Teils! 2.000 kg * 8,33 SZR * 1,20 € = 19.992 € (oder 20.000 € mit Faustformel). Das ist knapp weniger als der Schaden."
+            },
+            {
+                title: "Betrunken am Steuer",
+                role: "Geschäftsführer Spedition",
+                rules: "HGB / ADSp",
+                desc: "Der Geschäftsführer rammt betrunken mit dem Stapler eine Palette hochsensibler Elektronik. Vorsatz/Grobe Fahrlässigkeit.",
+                damage: 50000,
+                weight: 100,
+                freight: 0,
+                type: "Güterschaden (Qualifiziertes Verschulden)",
+                calcMode: "unlimited",
+                explanation: "Bei Vorsatz oder grober Fahrlässigkeit (besonders durch leitende Angestellte) fallen ALLE Haftungsgrenzen weg (§ 435 HGB). Wir zahlen voll."
+            },
+            {
+                title: "Der falsche Zoll-Code",
+                role: "Spediteur",
+                rules: "ADSp 2017",
+                desc: "Tippfehler bei der Verzollung. Kunde muss Strafe zahlen. Ware ist unversehrt. (Leichte Fahrlässigkeit).",
+                damage: 40000,
+                weight: 1000,
+                freight: 500,
+                type: "Reiner Vermögensschaden",
+                calcMode: "adsp_value",
+                explanation: "Kompliziert! 1. Gewichtsbasis: 1000*8,33*1,2 = 9.996 €. 2. Vermögensfaktor ADSp: Mal 3 = 29.988 €. 3. Cap prüfen (125k). Ergebnis: 29.988 € ist kleiner als der Schaden."
+            },
+            {
+                title: "Das Dispo-Desaster",
+                role: "Frachtführer",
+                rules: "HGB (Keine ADSp)",
+                desc: "Auftrag per Handschlag. Maschine vergessen abzuholen. Produktionsausfall beim Kunden. Organisationsverschulden.",
+                damage: 150000,
+                weight: 5000,
+                freight: 2000,
+                type: "Reiner Vermögensschaden",
+                calcMode: "unlimited",
+                explanation: "HGB-Falle! Ohne ADSp gibt es für reine Vermögensschäden bei Verschulden KEINE Obergrenze im Gesetz. Wir haften unbegrenzt!"
+            },
+            {
+                title: "Großbrand im Tunnel",
+                role: "Spediteur",
+                rules: "ADSp 2017",
+                desc: "LKW brennt komplett aus. Totalschaden an hochwertigen Maschinenteilen.",
+                damage: 2000000, 
+                weight: 24000, 
+                freight: 3000,
+                type: "Güterschaden (Katastrophe)",
+                calcMode: "weight", 
+                explanation: "Gewichtshaftung: 24.000 * 8,33 * 1,2 = ca. 240.000 €. Das ist weit unter dem Schaden und unter dem 1,25 Mio Cap. Hier greift also ganz normal die SZR-Berechnung."
+            }
+        ];
+
+        // --- GAME DATA: GENERATOR FUNCTIONS (FOR RANDOM MODE) ---
+        // Helper to get random int
+        const rInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        
+        const generators = [
+            // Generator 1: Standard Weight Liability (Heavy, Cheap)
+            () => {
+                const w = rInt(500, 2000);
+                const limit = w * 10;
+                const d = rInt(500, limit - 100); // Damage BELOW limit
+                return {
+                    title: "Standard Transportschaden",
+                    role: "Frachtführer",
+                    rules: "HGB",
+                    desc: `Ein LKW mit ${w} kg Maschinenteilen hatte einen Unfall. Ware beschädigt.`,
+                    weight: w,
+                    damage: d,
+                    freight: rInt(300, 800),
+                    type: "Güterschaden",
+                    calcMode: "weight",
+                    explanation: "Klassischer Fall: Schaden ist niedriger als Gewichtshaftung (8,33 SZR). Wir zahlen den Schaden."
+                };
+            },
+            // Generator 2: Light High Value (Limit Hit)
+            () => {
+                const w = rInt(10, 50);
+                const limit = w * 10;
+                const d = rInt(limit + 5000, limit + 20000); // Damage WAY above limit
+                return {
+                    title: "Teure Leichtgewichte",
+                    role: "Spediteur",
+                    rules: "ADSp 2017",
+                    desc: `Verlust von ${w} kg High-Tech Elektronik beim Umladen.`,
+                    weight: w,
+                    damage: d,
+                    freight: rInt(50, 200),
+                    type: "Güterschaden",
+                    calcMode: "weight",
+                    explanation: "Hier greift die Gewichtsgrenze voll! Schaden ist viel höher als 8,33 SZR * Gewicht."
+                };
+            },
+            // Generator 3: Delay (Freight based)
+            () => {
+                const f = rInt(500, 3000);
+                const limit = f * 3;
+                const d = rInt(limit + 1000, limit + 10000); // Damage above freight limit
+                return {
+                    title: "Produktionsstillstand (Verzug)",
+                    role: "Spediteur",
+                    rules: "ADSp 2017",
+                    desc: `Ware kam zu spät. Produktionsausfall beim Kunden. Vereinbarte Fracht war ${f} €.`,
+                    weight: rInt(5000, 15000), // Irrelevant
+                    damage: d,
+                    freight: f,
+                    type: "Lieferfristüberschreitung",
+                    calcMode: "freight",
+                    explanation: "Bei Verzug ist das Gewicht egal. Limit ist die 3-fache Fracht!"
+                };
+            },
+            // Generator 4: Warehouse Cap (35k)
+            () => {
+                const w = rInt(5000, 10000);
+                // SZR Value ~50k-100k -> Above 35k Cap
+                const d = rInt(60000, 100000);
+                return {
+                    title: "Lager-Diebstahl",
+                    role: "Lagerhalter",
+                    rules: "ADSp 2017",
+                    desc: `Diebstahl von ${w} kg Kupfer aus dem Lager.`,
+                    weight: w,
+                    damage: d,
+                    freight: 0,
+                    type: "Lagerschaden",
+                    calcMode: "warehouse",
+                    explanation: "Gewichtshaftung wäre hoch, aber ADSp Lagerhaftung ist bei 35.000 € gedeckelt!"
+                };
+            },
+             // Generator 5: Unlimited (Gross Negligence)
+             () => {
+                return {
+                    title: "Qualifiziertes Verschulden",
+                    role: "Frachtführer",
+                    rules: "HGB",
+                    desc: "Fahrer handelte grob fahrlässig (z.B. Alkohol, Rotlicht missachtet). Totalschaden.",
+                    weight: rInt(100, 5000),
+                    damage: rInt(20000, 100000),
+                    freight: rInt(500, 2000),
+                    type: "Güterschaden (Vorsatz/Grob)",
+                    calcMode: "unlimited",
+                    explanation: "Bei qualifiziertem Verschulden (§ 435 HGB) fallen alle Haftungsgrenzen weg."
+                };
+            },
+            // Generator 6: ADSp Property (125k Cap Logic)
+            () => {
+                const w = rInt(500, 2000);
+                // Base liability (10€/kg) * 3 = 30€/kg liability space.
+                // Weight 1000 -> 30k Limit. Weight 5000 -> 150k Limit (Hit 125k cap).
+                // Let's force a scenario below 125k first
+                return {
+                    title: "Falschverzolung (Vermögen)",
+                    role: "Spediteur",
+                    rules: "ADSp 2017",
+                    desc: `Zollfehler (leichte Fahrlässigkeit). Sendungsgewicht ${w} kg.`,
+                    weight: w,
+                    damage: rInt(40000, 80000), // High damage
+                    freight: 500,
+                    type: "Reiner Vermögensschaden",
+                    calcMode: "adsp_value",
+                    explanation: "Rechnung: Gewicht * 8,33 SZR * 3. Prüfen ob unter 125.000 €."
+                };
+            }
+        ];
+
+        function generateRandomScenarios(count) {
+            const pool = [];
+            for(let i=0; i<count; i++) {
+                // Pick random generator
+                const gen = generators[Math.floor(Math.random() * generators.length)];
+                pool.push(gen());
+            }
+            return pool;
+        }
+
+
+        // --- STATE MANAGEMENT ---
+        let currentScenarios = [];
+        let currentLevel = 0;
+        let budget = 500000;
+        let currentScenarioObj = null;
+
+        // --- DOM ELEMENTS ---
+        const uiBudget = document.getElementById('budget-display');
+        const uiLevel = document.getElementById('level-display');
+        const uiScenarioTitle = document.getElementById('scenario-title');
+        const uiScenarioDesc = document.getElementById('scenario-desc');
+        const uiRole = document.getElementById('scenario-role');
+        const uiRules = document.getElementById('scenario-rules');
+        const uiDamage = document.getElementById('data-damage');
+        const uiWeight = document.getElementById('data-weight');
+        const uiFreight = document.getElementById('data-freight');
+        const uiType = document.getElementById('data-type');
+        const uiInput = document.getElementById('user-input');
+        const startScreen = document.getElementById('start-screen');
+        const cardArea = document.getElementById('scenario-card');
+        const interactArea = document.getElementById('interaction-area');
+
+        // --- INIT ---
+        // Nothing on load, wait for start button
+
+        function startGame(mode) {
+            // Hide Start Screen
+            startScreen.classList.add('hidden');
+            
+            // Setup Scenarios
+            if (mode === 'campaign') {
+                currentScenarios = campaignScenarios;
+            } else {
+                currentScenarios = generateRandomScenarios(5);
+            }
+
+            // Reset Game State
+            currentLevel = 0;
+            budget = 500000;
+            updateBudgetDisplay();
+
+            // Show Game UI
+            cardArea.classList.remove('opacity-0');
+            interactArea.classList.remove('opacity-0');
+
+            loadLevel();
+        }
+
+        function loadLevel() {
+            if (currentLevel >= currentScenarios.length) {
+                endGame(true);
+                return;
+            }
+
+            currentScenarioObj = currentScenarios[currentLevel];
+            
+            // Reset UI
+            uiInput.value = '';
+            calcClear();
+            
+            // Populate Data
+            uiLevel.innerText = `${currentLevel + 1} / ${currentScenarios.length}`;
+            uiScenarioTitle.innerText = currentScenarioObj.title;
+            uiScenarioDesc.innerText = currentScenarioObj.desc;
+            uiRole.innerText = `Rolle: ${currentScenarioObj.role}`;
+            uiRules.innerText = `Regelwerk: ${currentScenarioObj.rules}`;
+            
+            uiDamage.innerText = formatMoney(currentScenarioObj.damage);
+            uiWeight.innerText = currentScenarioObj.weight > 0 ? currentScenarioObj.weight.toLocaleString() + " kg" : "-";
+            uiFreight.innerText = currentScenarioObj.freight > 0 ? formatMoney(currentScenarioObj.freight) : "-";
+            uiType.innerText = currentScenarioObj.type;
+
+            // Trigger animation
+            const card = document.getElementById('scenario-card');
+            card.classList.remove('pop-anim');
+            void card.offsetWidth; // trigger reflow
+            card.classList.add('pop-anim');
+        }
+
+        // --- KEYBOARD HANDLING ---
+        function handleGlobalKey(e) {
+            // If the main input is focused, let normal typing happen
+            if (document.activeElement === uiInput) return;
+
+            const keyMap = {
+                '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
+                '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
+                '+': 'add', '-': 'sub', '*': 'mul', '/': 'div',
+                '.': 'dot', ',': 'dot', 'Enter': 'enter', 'Backspace': 'clear', 'Escape': 'clear'
+            };
+
+            if (keyMap[e.key]) {
+                e.preventDefault();
+                // Simulate button click visually
+                const btnId = 'btn-' + keyMap[e.key];
+                const btn = document.getElementById(btnId);
+                
+                // Trigger logic
+                if("0123456789".includes(keyMap[e.key])) calcAppend(keyMap[e.key]);
+                else if(keyMap[e.key] === 'dot') calcAppend('.');
+                else if(keyMap[e.key] === 'add') calcOp('+');
+                else if(keyMap[e.key] === 'sub') calcOp('-');
+                else if(keyMap[e.key] === 'mul') calcOp('*');
+                else if(keyMap[e.key] === 'div') calcOp('/');
+                else if(keyMap[e.key] === 'enter') calcEqual();
+                else if(keyMap[e.key] === 'clear') calcClear();
+
+                // Visual feedback
+                if(btn) {
+                    btn.classList.add('calc-btn-pressed');
+                    setTimeout(() => btn.classList.remove('calc-btn-pressed'), 100);
+                }
+            }
+        }
+
+        // --- CORE LOGIC ---
+        function calculateLimits() {
+            const s = currentScenarioObj;
+            if (s.calcMode === "unlimited") return { precise: "UNLIMITED", rough: "UNLIMITED" };
+
+            // Factors
+            const szrFactorPrecise = 8.33 * 1.20; // 9.996
+            const szrFactorRough = 10.00; // 10.00
+
+            // Base Values
+            const valPrecise = s.weight * szrFactorPrecise;
+            const valRough = s.weight * szrFactorRough;
+
+            let limitPrecise = 0;
+            let limitRough = 0;
+
+            if (s.calcMode === "freight") {
+                // Verzug: 3x Fracht (No SZR involved)
+                limitPrecise = s.freight * 3;
+                limitRough = s.freight * 3;
+            } else if (s.calcMode === "warehouse") {
+                // Min(SZR, 35000)
+                limitPrecise = Math.min(valPrecise, 35000);
+                limitRough = Math.min(valRough, 35000);
+            } else if (s.calcMode === "adsp_value") {
+                // Min(3x SZR, 125000)
+                limitPrecise = Math.min(valPrecise * 3, 125000);
+                limitRough = Math.min(valRough * 3, 125000);
+            } else {
+                // Standard Goods "weight"
+                const cap = 1250000;
+                limitPrecise = Math.min(valPrecise, cap);
+                limitRough = Math.min(valRough, cap);
+            }
+
+            // Always capped by actual Damage
+            return {
+                precise: Math.min(s.damage, limitPrecise),
+                rough: Math.min(s.damage, limitRough)
+            };
+        }
+
+        function submitAnswer(userSaysUnlimited) {
+            const limits = calculateLimits();
+            const correctVal = limits.precise; // Default for display
+            
+            let isCorrect = false;
+            let userVal = 0;
+
+            if (userSaysUnlimited) {
+                isCorrect = (limits.precise === "UNLIMITED");
+                userVal = "UNBEGRENZT";
+            } else {
+                userVal = parseFloat(uiInput.value.replace(',', '.'));
+                if (isNaN(userVal)) {
+                    alert("Bitte geben Sie einen gültigen Betrag ein.");
+                    return;
+                }
+                
+                if (limits.precise === "UNLIMITED") {
+                    isCorrect = false;
+                } else {
+                    // Check against Precise OR Rough value
+                    // Tolerance is 5 Euro (to allow simple rounding errors)
+                    const matchesPrecise = Math.abs(userVal - limits.precise) < 5.0;
+                    const matchesRough = Math.abs(userVal - limits.rough) < 5.0;
+                    
+                    isCorrect = matchesPrecise || matchesRough;
+                }
+            }
+
+            showFeedback(isCorrect, correctVal, userVal);
+        }
+
+        function showFeedback(isCorrect, correctVal, userVal) {
+            const modal = document.getElementById('feedback-modal');
+            const iconBg = document.getElementById('modal-icon-bg');
+            const icon = document.getElementById('modal-icon');
+            const title = document.getElementById('modal-title');
+            const msg = document.getElementById('modal-message');
+            const valDisplay = document.getElementById('modal-correct-value');
+            const userDisplay = document.getElementById('modal-user-value');
+            const impact = document.getElementById('modal-budget-impact');
+
+            modal.style.display = 'flex';
+
+            let correctText = (correctVal === "UNLIMITED") ? "UNBEGRENZT" : formatMoney(correctVal);
+            let userText = (userVal === "UNBEGRENZT") ? "UNBEGRENZT" : formatMoney(userVal);
+
+            valDisplay.innerText = correctText;
+            userDisplay.innerText = userText;
+
+            if (isCorrect) {
+                // Success
+                iconBg.className = "bg-green-500 rounded-full p-3 mr-4";
+                icon.className = "fas fa-check text-2xl text-white";
+                title.innerText = "Ausgezeichnet!";
+                title.className = "text-2xl font-bold text-green-600";
+                msg.innerText = currentScenarioObj.explanation;
+                
+                impact.innerText = "Bilanz: + 5.000 € Bonus (Effizienz)";
+                impact.className = "mt-2 font-bold text-green-600";
+                budget += 5000;
+            } else {
+                // Fail
+                iconBg.className = "bg-red-500 rounded-full p-3 mr-4";
+                icon.className = "fas fa-times text-2xl text-white";
+                title.innerText = "Fehler in der Abrechnung!";
+                title.className = "text-2xl font-bold text-red-600";
+                msg.innerText = currentScenarioObj.explanation;
+                
+                let penalty = 0;
+                if (correctVal === "UNLIMITED") {
+                    penalty = 50000; 
+                } else if (userVal === "UNBEGRENZT") {
+                    penalty = 20000; 
+                } else {
+                    penalty = Math.abs(correctVal - userVal);
+                    if(penalty > 100000) penalty = 100000; 
+                }
+                
+                budget -= penalty;
+                impact.innerText = `Bilanz: - ${formatMoney(penalty)} (Strafzahlung/Verlust)`;
+                impact.className = "mt-2 font-bold text-red-600";
+                
+                // Shake effect on background
+                document.getElementById('scenario-card').classList.add('shake-anim');
+            }
+
+            updateBudgetDisplay();
+        }
+
+        function nextLevel() {
+            document.getElementById('feedback-modal').style.display = 'none';
+            if (budget <= 0) {
+                endGame(false);
+            } else {
+                currentLevel++;
+                loadLevel();
+            }
+        }
+
+        function endGame(victory) {
+            const screen = document.getElementById('end-screen');
+            const title = document.getElementById('end-title');
+            const desc = document.getElementById('end-desc');
+            const icon = document.getElementById('end-icon');
+            const score = document.getElementById('end-score');
+
+            screen.style.display = 'flex';
+            score.innerText = formatMoney(budget);
+
+            if (victory) {
+                title.innerText = "Beförderung!";
+                title.className = "text-4xl font-bold mb-4 text-green-400";
+                desc.innerText = "Sie haben alle Fälle bearbeitet und die Firma vor dem Ruin bewahrt. Ihr Haftungs-Management ist erstklassig.";
+                icon.className = "fas fa-crown text-6xl text-yellow-400 mb-6";
+            } else {
+                title.innerText = "Insolvenz angemeldet";
+                title.className = "text-4xl font-bold mb-4 text-red-500";
+                desc.innerText = "Das Firmenkonto ist leer. Zu viele fehlerhafte Haftungsentscheidungen haben das Unternehmen ruiniert.";
+                icon.className = "fas fa-skull-crossbones text-6xl text-gray-500 mb-6";
+            }
+        }
+
+        // --- UTILS ---
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
+        }
+
+        function updateBudgetDisplay() {
+            uiBudget.innerText = formatMoney(budget);
+            if (budget < 100000) uiBudget.className = "text-xl font-bold text-red-500 hud-value animate-pulse";
+            else uiBudget.className = "text-xl font-bold text-green-400 hud-value";
+        }
+
+        // --- CALCULATOR LOGIC ---
+        let calcInput = "";
+        
+        function calcAppend(val) {
+            calcInput += val;
+            updateCalc();
+        }
+        function calcOp(op) {
+            if("+-*/".includes(calcInput.slice(-1))) return;
+            calcInput += op;
+            updateCalc();
+        }
+        function calcClear() {
+            calcInput = "";
+            updateCalc();
+        }
+        function calcEqual() {
+            try {
+                const result = Function('"use strict";return (' + calcInput + ')')();
+                calcInput = result.toFixed(2); 
+                updateCalc();
+            } catch (e) {
+                calcInput = "Error";
+                updateCalc();
+                setTimeout(calcClear, 1000);
+            }
+        }
+        function updateCalc() {
+            document.getElementById('calc-display').innerText = calcInput === "" ? "0" : calcInput;
+        }
+        function copyCalcResult() {
+            if(calcInput && calcInput !== "Error") {
+                uiInput.value = calcInput;
+            }
+        }
+    </script>
+</body>
+</html>
