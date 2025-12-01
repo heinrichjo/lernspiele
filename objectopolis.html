@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Objectopolis - Das OOP Lernspiel</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel für JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons (Vanilla JS Version) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Scrollbar Styling für Webkit */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .mask-gradient {
+            mask-image: linear-gradient(to right, black 90%, transparent 100%);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ICON SYSTEM ADAPTER ---
+        // Da wir kein Build-System haben, nutzen wir die globale 'lucide' Variable vom CDN
+        // und mappen die React-Komponenten-Namen auf die Lucide-Icon-Namen (kebab-case).
+        
+        const IconWrapper = ({ name, size = 24, className, ...props }) => {
+            const iconData = window.lucide?.icons?.[name];
+            
+            if (!iconData) {
+                console.warn(`Icon "${name}" not found in Lucide library.`);
+                // Fallback square if icon missing
+                return (
+                    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} {...props}>
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    </svg>
+                );
+            }
+
+            // iconData ist ein Array von Arrays: z.B. [['path', { d: '...' }], ['circle', { ... }]]
+            return (
+                <svg 
+                    width={size} 
+                    height={size} 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className={className} 
+                    {...props}
+                >
+                    {iconData.map((entry, index) => {
+                        const [tag, attrs] = entry;
+                        return React.createElement(tag, { key: index, ...attrs });
+                    })}
+                </svg>
+            );
+        };
+
+        // Mapping der im Code verwendeten Icons
+        const Building = (p) => <IconWrapper name="building" {...p} />;
+        const Home = (p) => <IconWrapper name="home" {...p} />;
+        const Hammer = (p) => <IconWrapper name="hammer" {...p} />;
+        const Croissant = (p) => <IconWrapper name="croissant" {...p} />;
+        const Lock = (p) => <IconWrapper name="lock" {...p} />;
+        const Unlock = (p) => <IconWrapper name="unlock" {...p} />;
+        const ArrowRight = (p) => <IconWrapper name="arrow-right" {...p} />;
+        const Code = (p) => <IconWrapper name="code" {...p} />;
+        const Play = (p) => <IconWrapper name="play" {...p} />;
+        const RefreshCcw = (p) => <IconWrapper name="refresh-ccw" {...p} />;
+        const CheckCircle2 = (p) => <IconWrapper name="check-circle-2" {...p} />;
+        const AlertCircle = (p) => <IconWrapper name="alert-circle" {...p} />;
+        const MousePointer2 = (p) => <IconWrapper name="mouse-pointer-2" {...p} />;
+        const Sword = (p) => <IconWrapper name="sword" {...p} />;
+        const BedDouble = (p) => <IconWrapper name="bed-double" {...p} />;
+        const Coins = (p) => <IconWrapper name="coins" {...p} />;
+        const Network = (p) => <IconWrapper name="network" {...p} />;
+        const X = (p) => <IconWrapper name="x" {...p} />;
+        const ChevronDown = (p) => <IconWrapper name="chevron-down" {...p} />;
+        const ChevronUp = (p) => <IconWrapper name="chevron-up" {...p} />;
+        const Eye = (p) => <IconWrapper name="eye" {...p} />;
+        const EyeOff = (p) => <IconWrapper name="eye-off" {...p} />;
+        const Layers = (p) => <IconWrapper name="layers" {...p} />;
+        const Box = (p) => <IconWrapper name="box" {...p} />;
+        const Copy = (p) => <IconWrapper name="copy" {...p} />;
+        const GitBranch = (p) => <IconWrapper name="git-branch" {...p} />;
+        const GraduationCap = (p) => <IconWrapper name="graduation-cap" {...p} />;
+        const BookOpen = (p) => <IconWrapper name="book-open" {...p} />;
+        const HelpCircle = (p) => <IconWrapper name="help-circle" {...p} />;
+        const Trophy = (p) => <IconWrapper name="trophy" {...p} />;
+        const Star = (p) => <IconWrapper name="star" {...p} />;
+        const Award = (p) => <IconWrapper name="award" {...p} />;
+        const Terminal = (p) => <IconWrapper name="terminal" {...p} />;
+
+
+        // --- GAME LOGIC START ---
+
+        // (Original code adapted slightly for single file context)
+
+        function Objectopolis() {
+            const [hasStarted, setHasStarted] = useState(false); // Start Screen State
+            const [level, setLevel] = useState('intro');
+            const [objects, setObjects] = useState([]);
+            const [consoleLog, setConsoleLog] = useState([]);
+            const [selectedId, setSelectedId] = useState(null);
+            const [showUML, setShowUML] = useState(false);
+            const [introExpanded, setIntroExpanded] = useState(true);
+            
+            // Level Specific State
+            const [moneyPrivate, setMoneyPrivate] = useState(false);
+            const [getterAdded, setGetterAdded] = useState(false);
+            const [getterCalled, setGetterCalled] = useState(false);
+            const [hackedAttempted, setHackedAttempted] = useState(false);
+            const [polymorphActionTriggered, setPolymorphActionTriggered] = useState(false);
+
+            // Quiz State
+            const [quizIndex, setQuizIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [showCheatSheet, setShowCheatSheet] = useState(false);
+            const [quizFinished, setQuizFinished] = useState(false);
+
+            // --- Task System ---
+            const [tasks, setTasks] = useState([]);
+            const scrollRef = useRef(null);
+
+            // --- Quiz Questions ---
+            const quizQuestions = [
+                {
+                id: 1,
+                question: "Was ist der Unterschied zwischen einer Klasse und einem Objekt?",
+                options: [
+                    { id: 'a', text: "Keiner, es sind Synonyme.", correct: false },
+                    { id: 'b', text: "Klasse = Bauplan (Code), Objekt = Das konkrete Ding im Speicher.", correct: true },
+                    { id: 'c', text: "Objekte schreibt man groß, Klassen klein.", correct: false }
+                ],
+                explanation: "Richtig! Die Klasse definiert die Struktur, das Objekt ist eine Instanz davon."
+                },
+                {
+                id: 2,
+                question: "Welches Schlüsselwort erzeugt ein neues Objekt?",
+                visual: <div className="font-mono text-xs bg-slate-800 text-white p-2 rounded mb-2">Baekerei b = ___ Baekerei();</div>,
+                options: [
+                    { id: 'a', text: "create", correct: false },
+                    { id: 'b', text: "make", correct: false },
+                    { id: 'c', text: "new", correct: true }
+                ],
+                explanation: "Das Schlüsselwort 'new' reserviert Speicher für eine neue Instanz."
+                },
+                {
+                id: 3,
+                question: "Was bedeutet dieses UML-Symbol vor einem Attribut?",
+                visual: <div className="border p-2 bg-white inline-block mb-2 font-mono text-red-600 font-bold border-slate-300">- kasse : int</div>,
+                options: [
+                    { id: 'a', text: "Das Attribut ist negativ.", correct: false },
+                    { id: 'b', text: "Das Attribut ist private (geschützt).", correct: true },
+                    { id: 'c', text: "Das Attribut wurde gelöscht.", correct: false }
+                ],
+                explanation: "Im UML steht das Minus (-) für private Sichtbarkeit."
+                },
+                {
+                id: 4,
+                question: "Wozu dient ein Konstruktor?",
+                options: [
+                    { id: 'a', text: "Um das Gebäude abzureißen.", correct: false },
+                    { id: 'b', text: "Um Objekte beim Erstellen zu initialisieren (Startwerte setzen).", correct: true },
+                    { id: 'c', text: "Um Methoden zu konstruieren.", correct: false }
+                ],
+                explanation: "Der Konstruktor wird einmalig beim 'new'-Aufruf ausgeführt."
+                },
+                {
+                id: 5,
+                question: "Was passiert hier?",
+                visual: <div className="font-mono text-xs bg-slate-800 text-white p-2 rounded mb-2">
+                    class Schmiede extends Gebaeude {'{...}'}
+                </div>,
+                options: [
+                    { id: 'a', text: "Die Schmiede erbt alle Eigenschaften von Gebäude.", correct: true },
+                    { id: 'b', text: "Die Schmiede wird in ein Gebäude umgewandelt.", correct: false },
+                    { id: 'c', text: "Das Gebäude wird gelöscht.", correct: false }
+                ],
+                explanation: "Das Schlüsselwort 'extends' signalisiert Vererbung."
+                },
+                {
+                id: 6,
+                question: "Warum nutzen wir Getter-Methoden (z.B. getKasse)?",
+                options: [
+                    { id: 'a', text: "Weil wir nicht direkt auf private Variablen zugreifen können/sollen.", correct: true },
+                    { id: 'b', text: "Damit der Code länger aussieht.", correct: false },
+                    { id: 'c', text: "Um die Variable zu löschen.", correct: false }
+                ],
+                explanation: "Getter erlauben kontrollierten Lesezugriff auf gekapselte Daten."
+                },
+                {
+                    id: 7,
+                    question: "Welche Aussage zu Polymorphie ist WAHR?",
+                    options: [
+                        { id: 'a', text: "Jedes Objekt muss genau gleich heißen.", correct: false },
+                        { id: 'b', text: "Objekte unterschiedlicher Klassen können über ihre gemeinsame Elternklasse angesprochen werden.", correct: true },
+                        { id: 'c', text: "Es ist eine Krankheit bei Bäckern.", correct: false }
+                    ],
+                    explanation: "Polymorphie erlaubt es, z.B. alle Gebäude in einer Liste zu speichern und gemeinsam zu steuern."
+                },
+                {
+                    id: 8,
+                    question: "Was ist KEINE der 4 Säulen der OOP?",
+                    options: [
+                        { id: 'a', text: "Kapselung", correct: false },
+                        { id: 'b', text: "Kompilierung", correct: true },
+                        { id: 'c', text: "Vererbung", correct: false },
+                        { id: 'd', text: "Abstraktion", correct: false }
+                    ],
+                    explanation: "Kompilierung ist ein technischer Prozess, kein OOP-Prinzip."
+                },
+                {
+                    id: 9,
+                    question: "Was gibt dieser Code aus?",
+                    visual: <div className="font-mono text-xs bg-slate-800 text-white p-2 rounded mb-2">
+                        Baekerei b = new Baekerei("Hans");<br/>
+                        b.farbe = "rot";<br/>
+                        System.out.println(b.farbe);
+                    </div>,
+                    options: [
+                        { id: 'a', text: "Hans", correct: false },
+                        { id: 'b', text: "rot", correct: true },
+                        { id: 'c', text: "null", correct: false }
+                    ],
+                    explanation: "Wir haben das Attribut 'farbe' explizit auf 'rot' gesetzt."
+                },
+                {
+                    id: 10,
+                    question: "Welches UML-Symbol steht für Vererbung?",
+                    options: [
+                        { id: 'a', text: "Ein gefüllter Diamant.", correct: false },
+                        { id: 'b', text: "Ein Pfeil mit hohler, geschlossener Spitze.", correct: true },
+                        { id: 'c', text: "Eine gestrichelte Linie.", correct: false }
+                    ],
+                    explanation: "Der Pfeil zeigt von der Kindklasse auf die Elternklasse."
+                },
+                {
+                    id: 11,
+                    question: "Was bedeutet 'Abstraktion' im Kontext von Methoden?",
+                    options: [
+                        { id: 'a', text: "Dass der Code abstrakt aussieht (Kunst).", correct: false },
+                        { id: 'b', text: "Komplexe Abläufe verbergen und nur eine einfache Schnittstelle anbieten.", correct: true },
+                        { id: 'c', text: "Dass Methoden keinen Namen haben.", correct: false }
+                    ],
+                    explanation: "Wie beim Autofahren: Man drückt das Pedal, ohne die Einspritzanlage im Detail zu verstehen."
+                },
+                {
+                    id: 12,
+                    question: "Darf eine Klasse mehrere Objekte (Instanzen) haben?",
+                    options: [
+                        { id: 'a', text: "Nein, nur eines.", correct: false },
+                        { id: 'b', text: "Ja, beliebig viele.", correct: true },
+                        { id: 'c', text: "Maximal 16.", correct: false }
+                    ],
+                    explanation: "Ein Bauplan kann für unendlich viele Häuser genutzt werden."
+                },
+                {
+                    id: 13,
+                    question: "Was ist ein 'Attribut'?",
+                    options: [
+                        { id: 'a', text: "Eine Eigenschaft/Variable eines Objekts (Zustand).", correct: true },
+                        { id: 'b', text: "Eine Funktion, die etwas tut.", correct: false },
+                        { id: 'c', text: "Ein Fehler im Code.", correct: false }
+                    ],
+                    explanation: "Attribute speichern Daten wie Farbe, Name oder Geld."
+                },
+                {
+                    id: 14,
+                    question: "Wenn 'kasse' public ist, was ist das Risiko?",
+                    options: [
+                        { id: 'a', text: "Der Computer wird langsam.", correct: false },
+                        { id: 'b', text: "Jeder kann den Wert von außen beliebig ändern (unsicher).", correct: true },
+                        { id: 'c', text: "Man kann kein Geld mehr einzahlen.", correct: false }
+                    ],
+                    explanation: "Das verletzt das Prinzip der Kapselung."
+                },
+                {
+                    id: 15,
+                    question: "Welche Methode wird hier aufgerufen?",
+                    visual: <div className="font-mono text-xs bg-slate-800 text-white p-2 rounded mb-2">
+                        for(Gebaeude g : stadt) {'{'}<br/>
+                        &nbsp;&nbsp;g.arbeite();<br/>
+                        {'}'}
+                    </div>,
+                    options: [
+                        { id: 'a', text: "Immer nur die Methode der Elternklasse.", correct: false },
+                        { id: 'b', text: "Die spezifische Methode des jeweiligen Objekts (Backen oder Schmieden).", correct: true },
+                        { id: 'c', text: "Gar keine.", correct: false }
+                    ],
+                    explanation: "Zur Laufzeit entscheidet sich dynamisch, welche Implementierung gewählt wird (Polymorphie)."
+                }
+            ];
+
+            useEffect(() => {
+                // Reset logic
+                setHackedAttempted(false);
+                setPolymorphActionTriggered(false);
+                setGetterCalled(false);
+                
+                if (level === 'getter_setter') {
+                    setMoneyPrivate(true); 
+                    setGetterAdded(false);
+                }
+                if (level === 'quiz') {
+                    setQuizIndex(0);
+                    setScore(0);
+                    setQuizFinished(false);
+                }
+
+                let newTasks = [];
+                switch (level) {
+                case 'class_object':
+                    newTasks = [
+                    { id: '1', description: "Gründe dein erstes Gewerbe: Baue eine Bäckerei!", completed: false, check: (objs) => objs.some(o => o.type === 'Baekerei') },
+                    { id: '2', description: "Erweitere die Stadt: Errichte eine Schmiede.", completed: false, check: (objs) => objs.some(o => o.type === 'Schmiede') }
+                    ];
+                    break;
+                case 'attributes':
+                    newTasks = [
+                    { id: '1', description: "Marken-Identität: Eröffne eine ROTE Filiale.", completed: false, check: (objs) => objs.some(o => o.type === 'Baekerei' && o.color === '#ef4444') },
+                    { id: '2', description: "Konkurrenz: Baue eine BLAUE Schmiede gegenüber.", completed: false, check: (objs) => objs.some(o => o.type === 'Schmiede' && o.color === '#3b82f6') }
+                    ];
+                    break;
+                case 'methods': 
+                    newTasks = [
+                    { id: '1', description: "Die Nachfrage steigt! Backe 3 Brezeln.", completed: false, check: (objs) => objs.some(o => o.type === 'Baekerei' && o.inventory.brezeln >= 3) },
+                    { id: '2', description: "Rüste die Wache aus: Schmiede 2 Schwerter.", completed: false, check: (objs) => objs.some(o => o.type === 'Schmiede' && o.inventory.schwerter >= 2) }
+                    ];
+                    break;
+                case 'encapsulation': 
+                    newTasks = [
+                    { id: '1', description: "Sicherheitslücke finden: Versuche die 'public' Kasse zu hacken.", completed: false, check: (_, s) => s.hackedAttempted },
+                    { id: '2', description: "IT-Security Upgrade: Schalte auf 'private'.", completed: false, check: (_, s) => s.moneyPrivate },
+                    { id: '3', description: "Ehrliches Geschäft: Verdiene 5 Gold durch Verkauf.", completed: false, check: (objs) => objs.some(o => o.money >= 5) }
+                    ];
+                    break;
+                case 'getter_setter':
+                    newTasks = [
+                    { id: '1', description: "Buchhaltung: Programmiere getKasse().", completed: false, check: (_, s) => s.getterAdded },
+                    { id: '2', description: "Kassensturz: Rufe den Kontostand ab.", completed: false, check: (_, s) => s.getterCalled } 
+                    ];
+                    break;
+                case 'inheritance': 
+                    newTasks = [
+                    { id: '1', description: "Stadtviertel: Baue ein Wohnhaus.", completed: false, check: (objs) => objs.some(o => o.type === 'Wohnhaus') },
+                    { id: '2', description: "Industrie: Baue eine Schmiede.", completed: false, check: (objs) => objs.some(o => o.type === 'Schmiede') },
+                    { id: '3', description: "Metropole: Habe mind. 3 Gebäude.", completed: false, check: (objs) => objs.length >= 3 }
+                    ];
+                    break;
+                case 'polymorphism': 
+                    newTasks = [
+                    { id: '1', description: "Vorbereitung: Baue Bäckerei & Schmiede.", completed: false, check: (objs) => objs.some(o => o.type === 'Baekerei') && objs.some(o => o.type === 'Schmiede') },
+                    { id: '2', description: "Schichtbeginn: Lasse ALLE gleichzeitig arbeiten!", completed: false, check: (_, s) => s.polymorphActionTriggered }
+                    ];
+                    break;
+                default:
+                    newTasks = [];
+                }
+                setTasks(newTasks);
+            }, [level]);
+
+            useEffect(() => {
+                setTasks(prevTasks => prevTasks.map(task => {
+                if (task.completed) return task;
+                const isNowComplete = task.check(objects, { moneyPrivate, hackedAttempted, getterAdded, polymorphActionTriggered, getterCalled });
+                return { ...task, completed: isNowComplete };
+                }));
+            }, [objects, moneyPrivate, hackedAttempted, getterAdded, polymorphActionTriggered, getterCalled]);
+
+            const allTasksCompleted = tasks.length > 0 && tasks.every(t => t.completed);
+            const gridSize = 4;
+
+            const log = (msg) => {
+                setConsoleLog(prev => [...prev.slice(-5), `> ${msg}`]);
+            };
+
+            const resetLevel = () => {
+                setObjects([]);
+                setConsoleLog([]);
+                setMoneyPrivate(false);
+                setGetterAdded(false);
+                setGetterCalled(false);
+                setSelectedId(null);
+                setHackedAttempted(false);
+                setShowUML(false);
+                setPolymorphActionTriggered(false);
+            };
+
+            const createObject = (type, color, name) => {
+                if (objects.length >= gridSize * gridSize) {
+                log("Fehler: Stadt ist voll!");
+                return;
+                }
+                const idx = objects.length;
+                const x = idx % gridSize;
+                const y = Math.floor(idx / gridSize);
+
+                const newObj = {
+                id: Date.now(),
+                type,
+                x,
+                y,
+                color,
+                name,
+                money: 0,
+                inventory: { brezeln: 0, schwerter: 0 },
+                energy: 100
+                };
+                setObjects([...objects, newObj]);
+                log(`Konstruktor: new ${type}("${name}")`);
+            };
+
+            const executeMethod = (id, method) => {
+                setObjects(prev => prev.map(obj => {
+                if (obj.id !== id) return obj;
+
+                if (method === 'backeBrezel') {
+                    log(`${obj.name}.backeBrezel()`);
+                    return { ...obj, inventory: { ...obj.inventory, brezeln: obj.inventory.brezeln + 1 } };
+                }
+                if (method === 'schmiedeSchwert') {
+                    log(`${obj.name}.schmiedeSchwert()`);
+                    return { ...obj, inventory: { ...obj.inventory, schwerter: obj.inventory.schwerter + 1 } };
+                }
+                if (method === 'schlafe') {
+                    log(`${obj.name}.schlafe()`);
+                    return { ...obj, energy: 100 };
+                }
+                if (method === 'verkaufe') {
+                    let earned = 0;
+                    let newInv = { ...obj.inventory };
+                    if (obj.type === 'Baekerei' && newInv.brezeln > 0) { newInv.brezeln--; earned = 5; } 
+                    else if (obj.type === 'Schmiede' && newInv.schwerter > 0) { newInv.schwerter--; earned = 15; } 
+                    else { log(`Fehler: ${obj.name} ist leer!`); return obj; }
+                    
+                    log(`${obj.name}: +${earned} Gold (Safe Set).`);
+                    return { ...obj, inventory: newInv, money: obj.money + earned };
+                }
+                if (method === 'getKasse') {
+                    log(`${obj.name}.getKasse() -> Rückgabe: ${obj.money} Gold`);
+                    setGetterCalled(true);
+                    return obj;
+                }
+                if (method === 'hack') {
+                    if (moneyPrivate) {
+                        log(`FEHLER: Zugriff auf 'private kasse' verweigert!`);
+                    } else {
+                        log(`HACKER: ${obj.name}.kasse = 0 gesetzt!`);
+                        setHackedAttempted(true);
+                        return { ...obj, money: 0 };
+                    }
+                }
+                return obj;
+                }));
+            };
+
+            const executePolymorphism = () => {
+                setPolymorphActionTriggered(true);
+                log("--- Polymorphie: for (Gebaeude g : stadt) g.arbeite() ---");
+                setObjects(prev => prev.map(obj => {
+                    if (obj.type === 'Baekerei') {
+                        log(`${obj.name} -> backt.`);
+                        return { ...obj, inventory: { ...obj.inventory, brezeln: obj.inventory.brezeln + 1 } };
+                    }
+                    if (obj.type === 'Schmiede') {
+                        log(`${obj.name} -> schmiedet.`);
+                        return { ...obj, inventory: { ...obj.inventory, schwerter: obj.inventory.schwerter + 1 } };
+                    }
+                    if (obj.type === 'Wohnhaus') {
+                        log(`${obj.name} -> schläft.`);
+                        return { ...obj, energy: 100 };
+                    }
+                    return obj;
+                }));
+            };
+
+            const handleQuizAnswer = (isCorrect) => {
+                if (isCorrect) setScore(score + 1);
+                
+                if (quizIndex < quizQuestions.length - 1) {
+                    setQuizIndex(quizIndex + 1);
+                } else {
+                    setQuizFinished(true);
+                }
+            };
+
+            // --- Components ---
+
+            const StartScreen = () => (
+                <div className="absolute inset-0 z-50 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center p-8 text-center text-white">
+                    <div className="bg-blue-600 p-6 rounded-full mb-8 shadow-[0_0_50px_rgba(37,99,235,0.3)] animate-in zoom-in duration-700">
+                        <Building size={64} />
+                    </div>
+                    <h1 className="text-5xl font-black mb-4 tracking-tight">Objectopolis</h1>
+                    <p className="text-xl text-blue-200 mb-8 max-w-2xl leading-relaxed">
+                        Willkommen in der interaktiven Lernumgebung für <strong>Objektorientierte Programmierung (OOP)</strong>.
+                        <br/><br/>
+                        Hier lernst du nicht durch graue Theorie, sondern indem du eine Stadt baust.
+                        Verstehe Klassen, Objekte, Kapselung und Polymorphie, indem du Bäckereien und Schmieden programmierst.
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-12 text-sm text-slate-400">
+                        <div className="flex items-center gap-2"><CheckCircle2 className="text-green-500"/> Visuelles Lernen</div>
+                        <div className="flex items-center gap-2"><CheckCircle2 className="text-green-500"/> Interaktive Aufgaben</div>
+                        <div className="flex items-center gap-2"><CheckCircle2 className="text-green-500"/> Live Code Editor</div>
+                        <div className="flex items-center gap-2"><CheckCircle2 className="text-green-500"/> Abschlusszertifikat</div>
+                    </div>
+
+                    <button 
+                        onClick={() => setHasStarted(true)}
+                        className="group relative px-8 py-4 bg-white text-slate-900 rounded-full font-bold text-lg shadow-xl hover:scale-105 transition-all overflow-hidden"
+                    >
+                        <span className="relative z-10 flex items-center gap-2">Spiel Starten <ArrowRight className="group-hover:translate-x-1 transition-transform"/></span>
+                        <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                    </button>
+                </div>
+            );
+
+            const CheatSheetModal = () => (
+                <div className="absolute inset-0 bg-slate-900/90 z-[60] p-6 overflow-y-auto animate-in fade-in">
+                    <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-2xl p-8 relative">
+                        <button onClick={() => setShowCheatSheet(false)} className="absolute top-4 right-4 bg-slate-100 p-2 rounded-full hover:bg-slate-200"><X size={20}/></button>
+                        
+                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 border-b pb-4">
+                            <BookOpen className="text-blue-600"/> Handbuch für Architekten
+                        </h2>
+                        
+                        <div className="space-y-6">
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                                <h3 className="font-bold text-blue-800">1. Klasse vs. Objekt</h3>
+                                <p className="text-sm text-blue-700 mt-1">Die <strong>Klasse</strong> ist der Bauplan (Code). Das <strong>Objekt</strong> ist das fertige Haus im Speicher. Man erzeugt Objekte mit <code>new Klasse()</code>.</p>
+                            </div>
+                            
+                            <div>
+                                <h3 className="font-bold text-slate-800">Die 4 Säulen der OOP</h3>
+                                <ul className="mt-2 space-y-3 text-sm text-slate-600">
+                                    <li className="flex gap-2">
+                                        <span className="bg-slate-200 px-2 py-0.5 rounded font-mono text-xs font-bold h-fit">Abstraktion</span>
+                                        <span>Methoden (z.B. <code>backe()</code>) verbergen komplizierte Abläufe. Wir nutzen die Methode, ohne wissen zu müssen, wie sie innen funktioniert.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="bg-slate-200 px-2 py-0.5 rounded font-mono text-xs font-bold h-fit">Kapselung</span>
+                                        <span>Daten schützen! Variablen sind <code>private</code>, damit niemand Unsinn damit macht. Zugriff nur über Getter/Setter.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="bg-slate-200 px-2 py-0.5 rounded font-mono text-xs font-bold h-fit">Vererbung</span>
+                                        <span><code>class Kind extends Eltern</code>. Das Kind erbt Eigenschaften (x, y) von der Elternklasse. Spart Schreibarbeit.</span>
+                                    </li>
+                                    <li className="flex gap-2">
+                                        <span className="bg-slate-200 px-2 py-0.5 rounded font-mono text-xs font-bold h-fit">Polymorphie</span>
+                                        <span>"Vielgestaltigkeit". Wir können verschiedene Objekte (Bäcker, Schmied) gleich behandeln (als Gebäude), aber jeder reagiert anders auf Befehle.</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                <h3 className="font-bold text-yellow-800 text-sm">Syntax Hilfe</h3>
+                                <div className="font-mono text-xs mt-2 text-slate-700">
+                                    private int geld; <span className="text-slate-400">// Nur innen sichtbar</span><br/>
+                                    public int getGeld() {'{ return geld; }'} <span className="text-slate-400">// Lesezugriff</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const Certificate = ({ score, total }) => (
+                <div className="bg-white p-8 rounded-lg shadow-2xl border-8 border-double border-slate-200 max-w-lg mx-auto text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Building size={100}/>
+                    </div>
+                    
+                    <div className="mb-4 flex justify-center">
+                        <Award size={64} className="text-yellow-500"/>
+                    </div>
+                    
+                    <h2 className="text-3xl font-serif font-bold text-slate-800 mb-2 uppercase tracking-widest">Zertifikat</h2>
+                    <p className="text-slate-500 text-sm italic mb-6">für exzellente Leistungen in der Objektorientierung</p>
+                    
+                    <div className="mb-6">
+                        <p className="text-lg font-bold text-slate-900">Architekt/in</p>
+                        <div className="h-px w-32 bg-slate-300 mx-auto my-2"></div>
+                    </div>
+
+                    <div className="bg-slate-50 p-4 rounded-lg mb-6 border border-slate-100">
+                        <div className="text-sm text-slate-500">Erreichte Punktzahl</div>
+                        <div className="text-4xl font-bold text-blue-600">{score} / {total}</div>
+                        <div className="flex justify-center gap-1 mt-2">
+                            {Array.from({length: 5}).map((_, i) => (
+                                <Star key={i} size={16} className={i < Math.round((score/total)*5) ? "text-yellow-400 fill-yellow-400" : "text-slate-200"}/>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-end text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+                        <div>Ausgestellt am<br/>{new Date().toLocaleDateString()}</div>
+                        <div className="text-right">Unterschrift<br/>Objectopolis Academy</div>
+                    </div>
+                </div>
+            );
+
+            const SandboxCodeView = () => (
+                <div className="h-full p-4 font-mono text-xs md:text-sm text-slate-300 overflow-y-auto leading-relaxed space-y-8 select-text">
+                    <div>
+                        <div className="text-slate-500 mb-1">// Basisklasse für alle Gebäude</div>
+                        <span className="text-purple-400">abstract class</span> <span className="text-yellow-300">Gebaeude</span> {'{'}<br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">protected int</span> x, y;<br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">protected String</span> name;<br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">protected String</span> farbe;<br/><br/>
+                        &nbsp;&nbsp;<span className="text-slate-500">// Konstruktor der Elternklasse</span><br/>
+                        &nbsp;&nbsp;<span className="text-yellow-300">Gebaeude</span>(<span className="text-purple-400">String</span> n, <span className="text-purple-400">String</span> f) {'{'}<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">this</span>.name = n;<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">this</span>.farbe = f;<br/>
+                        &nbsp;&nbsp;{'}'}<br/><br/>
+                        &nbsp;&nbsp;<span className="text-slate-500">// Abstrakte Methode: Jedes Kind MUSS das implementieren</span><br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">abstract void</span> <span className="text-yellow-300">arbeite</span>();<br/>
+                        {'}'}
+                    </div>
+                    <div>
+                        <div className="text-slate-500 mb-1">// Kindklasse Bäckerei</div>
+                        <span className="text-purple-400">class</span> <span className="text-yellow-300">Baekerei</span> <span className="text-purple-400">extends</span> <span className="text-yellow-300">Gebaeude</span> {'{'}<br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">private int</span> brezeln = 0;<br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">private int</span> kasse = 0;<br/><br/>
+                        &nbsp;&nbsp;<span className="text-yellow-300">Baekerei</span>(<span className="text-purple-400">String</span> n) {'{'}<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">super</span>(n, <span className="text-orange-300">"orange"</span>);<br/>
+                        &nbsp;&nbsp;{'}'}<br/><br/>
+                        &nbsp;&nbsp;<span className="text-slate-500">// Implementierung der abstrakten Methode</span><br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">void</span> <span className="text-yellow-300">arbeite</span>() {'{'}<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;backeBrezel();<br/>
+                        &nbsp;&nbsp;{'}'}<br/><br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">void</span> <span className="text-yellow-300">backeBrezel</span>() {'{'}<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;brezeln++;<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">System</span>.out.println(<span className="text-orange-300">"Duftet lecker!"</span>);<br/>
+                        &nbsp;&nbsp;{'}'}<br/><br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">public int</span> <span className="text-yellow-300">getKasse</span>() {'{ '}<span className="text-purple-400">return</span> kasse; {'}'}<br/>
+                        {'}'}
+                    </div>
+                    <div>
+                        <div className="text-slate-500 mb-1">// Kindklasse Schmiede</div>
+                        <span className="text-purple-400">class</span> <span className="text-yellow-300">Schmiede</span> <span className="text-purple-400">extends</span> <span className="text-yellow-300">Gebaeude</span> {'{'}<br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">private int</span> schwerter = 0;<br/><br/>
+                        &nbsp;&nbsp;<span className="text-yellow-300">Schmiede</span>(<span className="text-purple-400">String</span> n) {'{'}<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">super</span>(n, <span className="text-orange-300">"grau"</span>);<br/>
+                        &nbsp;&nbsp;{'}'}<br/><br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">void</span> <span className="text-yellow-300">arbeite</span>() {'{'}<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;schmiedeSchwert();<br/>
+                        &nbsp;&nbsp;{'}'}<br/><br/>
+                        &nbsp;&nbsp;<span className="text-purple-400">void</span> <span className="text-yellow-300">schmiedeSchwert</span>() {'{'}<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;schwerter++;<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">System</span>.out.println(<span className="text-orange-300">"Clang!"</span>);<br/>
+                        &nbsp;&nbsp;{'}'}<br/>
+                        {'}'}
+                    </div>
+                </div>
+            );
+
+            const Sidebar = () => (
+                <div className="w-full md:w-1/3 bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-700 shadow-xl z-20">
+                    <div className="p-4 pb-2 flex items-center gap-3 bg-slate-950 border-b border-slate-800">
+                        <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-900/50">
+                            <Code size={20} className="text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-lg font-extrabold tracking-tight text-white">Objectopolis</h1>
+                            <p className="text-[10px] text-blue-400 font-mono uppercase tracking-widest">OOP Masterclass</p>
+                        </div>
+                    </div>
+
+                    {level === 'quiz' ? (
+                        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center bg-slate-900 overflow-y-auto">
+                            {!quizFinished && (
+                                <React.Fragment>
+                                    <div className="mb-6 bg-slate-800 p-4 rounded-full border border-slate-700 shadow-inner">
+                                        <GraduationCap size={48} className="text-blue-400"/>
+                                    </div>
+                                    <h2 className="text-2xl font-bold mb-2">Abschlussprüfung</h2>
+                                    <p className="text-slate-400 text-sm mb-8">Zeige, was du gelernt hast!</p>
+                                    
+                                    <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 w-full mb-8">
+                                        <div className="text-xs text-slate-500 uppercase tracking-widest mb-1">Fortschritt</div>
+                                        <div className="text-xl font-mono text-white mb-2">Frage {quizIndex + 1} / {quizQuestions.length}</div>
+                                        <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+                                            <div className="bg-blue-500 h-full transition-all duration-500" style={{ width: `${((quizIndex) / quizQuestions.length) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => setShowCheatSheet(true)}
+                                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm border border-slate-700 hover:border-slate-500 px-4 py-2 rounded-lg"
+                                    >
+                                        <HelpCircle size={16}/> Lerninhalte anzeigen
+                                    </button>
+                                </React.Fragment>
+                            )}
+                            
+                            {quizFinished && (
+                                <div className="text-center w-full">
+                                    <Certificate score={score} total={quizQuestions.length} />
+                                    
+                                    <div className="mt-8 flex justify-center gap-4">
+                                        <button onClick={() => { setQuizIndex(0); setScore(0); setQuizFinished(false); }} className="px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-slate-300 transition-colors">
+                                            Wiederholen
+                                        </button>
+                                        <button onClick={() => { setLevel('sandbox'); resetLevel(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg transition-transform hover:-translate-y-1">
+                                            Zurück zur Sandbox
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                            <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-xl border border-slate-700 shadow-md overflow-hidden flex-shrink-0">
+                                <div 
+                                    className="p-3 flex justify-between items-center cursor-pointer hover:bg-slate-700/50 transition-colors border-b border-slate-700/50"
+                                    onClick={() => setIntroExpanded(!introExpanded)}
+                                >
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="bg-blue-900 text-blue-200 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">
+                                                Kapitel {['intro', 'class_object', 'attributes', 'methods', 'encapsulation', 'getter_setter', 'inheritance', 'polymorphism', 'sandbox'].indexOf(level)}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-sm font-bold text-white leading-tight">
+                                            {level === 'intro' && "Willkommen in Objectopolis"}
+                                            {level === 'class_object' && "Klassen & Objekte"}
+                                            {level === 'attributes' && "Attribute & Konstruktor"}
+                                            {level === 'methods' && "OOP Säule 1: Abstraktion"}
+                                            {level === 'encapsulation' && "OOP Säule 2: Kapselung"}
+                                            {level === 'getter_setter' && "Getter & Setter"}
+                                            {level === 'inheritance' && "OOP Säule 3: Vererbung"}
+                                            {level === 'polymorphism' && "OOP Säule 4: Polymorphie"}
+                                            {level === 'sandbox' && "Sandbox Modus"}
+                                        </h2>
+                                    </div>
+                                    {introExpanded ? <ChevronUp size={16} className="text-slate-400"/> : <ChevronDown size={16} className="text-slate-400"/>}
+                                </div>
+                                
+                                {introExpanded && (
+                                    <div className="p-4 text-xs text-slate-300 leading-relaxed bg-slate-900/50">
+                                        {level === 'intro' && <p>Hier lernst du die vier Säulen der OOP spielerisch kennen. Baue eine Stadt durch Code!</p>}
+                                        {level === 'class_object' && <p><strong>Mission:</strong> Erwecke die toten Baupläne zum Leben!</p>}
+                                        {level === 'attributes' && <p>Eine Stadt voller gleicher Häuser ist langweilig. Nutze den Konstruktor für Vielfalt.</p>}
+                                        {level === 'methods' && <p>Deine Gebäude stehen nur rum. Hauche ihnen Leben ein mit Methoden (Verhalten).</p>}
+                                        {level === 'encapsulation' && <p>Vorsicht Hacker! Sichere deine Variablen mit <code>private</code>.</p>}
+                                        {level === 'getter_setter' && <p>Mache deine Kasse revisionssicher. Zugriff nur über offizielle Kanäle (Getter).</p>}
+                                        {level === 'inheritance' && <p>Sei effizient! Nutze Vererbung, um Code nicht doppelt zu schreiben.</p>}
+                                        {level === 'polymorphism' && <p>Der mächtigste Zauber: Ein Befehl, viele verschiedene Reaktionen.</p>}
+                                        {level === 'sandbox' && "Du bist nun ein OOP-Meister! Baue nach Belieben oder starte das Quiz."}
+                                    </div>
+                                )}
+                            </div>
+
+                            {level !== 'intro' && tasks.length > 0 && (
+                                <div className="bg-slate-800/50 border border-slate-700 p-3 rounded-lg flex-shrink-0">
+                                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                        <CheckCircle2 size={10}/> Missionen
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {tasks.map(task => (
+                                            <div key={task.id} className={`flex items-start gap-2 text-xs p-1.5 rounded transition-all ${task.completed ? 'bg-green-900/20 text-green-400 border border-green-900/30' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}>
+                                                <div className={`mt-0.5 ${task.completed ? 'text-green-500' : 'text-slate-600'}`}>
+                                                    {task.completed ? <CheckCircle2 size={12} /> : <div className="w-3 h-3 border border-current rounded-full"></div>}
+                                                </div>
+                                                <span className={task.completed ? 'line-through opacity-50' : ''}>{task.description}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex-grow flex flex-col min-h-[250px] bg-black rounded-xl border border-slate-800 shadow-inner overflow-hidden relative group">
+                                <div className="flex justify-between items-center bg-slate-900 p-1.5 border-b border-slate-800 select-none">
+                                    <span className="text-[10px] text-slate-500 font-mono px-2">
+                                        {level === 'sandbox' ? 'Project Explorer' : 'Klasse.java'}
+                                    </span>
+                                    <div className="flex gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-red-500/50"></div>
+                                        <div className="w-2 h-2 rounded-full bg-yellow-500/50"></div>
+                                        <div className="w-2 h-2 rounded-full bg-green-500/50"></div>
+                                    </div>
+                                </div>
+                                
+                                {level === 'sandbox' ? (
+                                    <SandboxCodeView />
+                                ) : (
+                                    <div className="p-3 font-mono text-xs overflow-auto flex-1 text-slate-300 leading-relaxed">
+                                        {level === 'class_object' && (
+                                            <React.Fragment>
+                                                <span className="text-slate-500">// Klassen Definition</span><br/>
+                                                <span className="text-purple-400">class</span> <span className="text-yellow-300">Baekerei</span> {'{ }'}<br/><br/>
+                                                <span className="text-slate-500">// Main Programm</span><br/>
+                                                <span className="text-yellow-300">Baekerei</span> b = <span className="text-purple-400">new</span> <span className="text-yellow-300">Baekerei</span>();
+                                            </React.Fragment>
+                                        )}
+                                        {level === 'attributes' && (
+                                            <React.Fragment>
+                                                <span className="text-purple-400">class</span> <span className="text-yellow-300">Baekerei</span> {'{'}<br/>
+                                                &nbsp;&nbsp;<span className="text-purple-400">String</span> farbe;<br/><br/>
+                                                &nbsp;&nbsp;<span className="text-slate-500">// Konstruktor</span><br/>
+                                                &nbsp;&nbsp;<span className="text-yellow-300">Baekerei</span>(<span className="text-purple-400">String</span> f) {'{'}<br/>
+                                                &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">this</span>.farbe = f;<br/>
+                                                &nbsp;&nbsp;{'}'}<br/>
+                                                {'}'}
+                                            </React.Fragment>
+                                        )}
+                                        {level === 'encapsulation' && (
+                                            <React.Fragment>
+                                                <span className="text-purple-400">class</span> <span className="text-yellow-300">Baekerei</span> {'{'}<br/>
+                                                &nbsp;&nbsp;<span className={moneyPrivate ? "text-red-400 font-bold" : "text-slate-500 line-through"}>private</span> <span className="text-purple-400">int</span> kasse;<br/>
+                                                &nbsp;&nbsp;<span className={!moneyPrivate ? "text-red-400 font-bold" : "text-slate-500 line-through"}>public</span> <span className="text-purple-400">int</span> kasse;<br/><br/>
+                                                &nbsp;&nbsp;<span className="text-slate-500">// Sichere Methode</span><br/>
+                                                &nbsp;&nbsp;<span className="text-purple-400">void</span> <span className="text-yellow-300">verkaufe</span>() {'{'}<br/>
+                                                &nbsp;&nbsp;&nbsp;&nbsp;kasse += 5;<br/>
+                                                &nbsp;&nbsp;{'}'}<br/>
+                                                {'}'}
+                                            </React.Fragment>
+                                        )}
+                                        {level === 'methods' && (
+                                            <React.Fragment>
+                                                <span className="text-purple-400">class</span> <span className="text-yellow-300">Baekerei</span> {'{'}<br/>
+                                                &nbsp;&nbsp;<span className="text-purple-400">int</span> brezeln = 0;<br/>
+                                                &nbsp;&nbsp;<span className="text-purple-400">void</span> <span className="text-yellow-300">backeBrezel</span>() {'{'}<br/>
+                                                &nbsp;&nbsp;&nbsp;&nbsp;brezeln++;<br/>
+                                                &nbsp;&nbsp;{'}'}<br/>
+                                                {'}'}
+                                            </React.Fragment>
+                                        )}
+                                        {level === 'getter_setter' && (
+                                            <React.Fragment>
+                                                <span className="text-purple-400">class</span> <span className="text-yellow-300">Baekerei</span> {'{'}<br/>
+                                                &nbsp;&nbsp;<span className="text-red-400 font-bold">private</span> <span className="text-purple-400">int</span> kasse;<br/><br/>
+                                                &nbsp;&nbsp;<span className="text-slate-500">// GET-Methode (Lesen)</span><br/>
+                                                {getterAdded ? (
+                                                    <div className="bg-green-900/30 -mx-1 px-1 rounded border-l-2 border-green-500">
+                                                        &nbsp;&nbsp;<span className="text-purple-400">public int</span> <span className="text-yellow-300">getKasse</span>() {'{'}<br/>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">return</span> kasse;<br/>
+                                                        &nbsp;&nbsp;{'}'}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-slate-600 italic">&nbsp;&nbsp;// TODO: Code hinzufügen...</div>
+                                                )}
+                                                <br/>
+                                                &nbsp;&nbsp;<span className="text-slate-500">// SET-Methode</span><br/>
+                                                &nbsp;&nbsp;<span className="text-purple-400">public void</span> <span className="text-yellow-300">setKasse</span>(<span className="text-purple-400">int</span> k) {'{'}<br/>
+                                                &nbsp;&nbsp;&nbsp;&nbsp;kasse = k;<br/>
+                                                &nbsp;&nbsp;{'}'}<br/>
+                                                {'}'}
+                                            </React.Fragment>
+                                        )}
+                                        {level === 'inheritance' && (
+                                            <React.Fragment>
+                                                <span className="text-purple-400">class</span> <span className="text-yellow-300">Gebaeude</span> {'{ '}<span className="text-purple-400">int</span> x, y; {'}'}<br/><br/>
+                                                <span className="text-purple-400">class</span> <span className="text-yellow-300">Schmiede</span> <span className="text-purple-400">extends</span> <span className="text-yellow-300">Gebaeude</span> {'{'}<br/>
+                                                &nbsp;&nbsp;<span className="text-purple-400">void</span> <span className="text-yellow-300">schmiedeSchwert</span>() {'{...}'}<br/>
+                                                {'}'}
+                                            </React.Fragment>
+                                        )}
+                                        {level === 'polymorphism' && (
+                                            <React.Fragment>
+                                                <span className="text-purple-400">List</span>&lt;<span className="text-yellow-300">Gebaeude</span>&gt; stadt = ...;<br/><br/>
+                                                <span className="text-purple-400">for</span> (<span className="text-yellow-300">Gebaeude</span> g : stadt) {'{'}<br/>
+                                                &nbsp;&nbsp;<span className="text-slate-500">// Jedes Gebäude weiß selbst,</span><br/>
+                                                &nbsp;&nbsp;<span className="text-slate-500">// wie es 'arbeitet'</span><br/>
+                                                &nbsp;&nbsp;g.<span className="text-yellow-300">arbeite</span>();<br/>
+                                                {'}'}
+                                            </React.Fragment>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+
+            const BottomNav = () => {
+                const levels = ['intro', 'class_object', 'attributes', 'methods', 'encapsulation', 'getter_setter', 'inheritance', 'polymorphism', 'sandbox', 'quiz'];
+                const currentIdx = levels.indexOf(level);
+
+                if (level === 'quiz') return null;
+
+                return (
+                    <div className="bg-white border-t border-slate-200 p-2 px-6 flex items-center justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-30">
+                        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar mask-gradient">
+                            {levels.filter(l => l !== 'quiz').map((l, idx) => (
+                                <button 
+                                    key={l}
+                                    onClick={() => {
+                                        if (idx <= currentIdx || allTasksCompleted || level === 'sandbox') {
+                                            resetLevel();
+                                            setLevel(l);
+                                        }
+                                    }}
+                                    disabled={idx > currentIdx + 1 && !allTasksCompleted && level !== 'sandbox'}
+                                    className={`
+                                        flex flex-col items-center justify-center w-8 h-8 rounded-full text-[10px] font-bold transition-all flex-shrink-0
+                                        ${l === level ? 'bg-blue-600 text-white scale-110 shadow-md' : 
+                                        idx < currentIdx ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : 
+                                        'bg-slate-100 text-slate-300'}
+                                    `}
+                                >
+                                    {idx}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-4 pl-4 border-l border-slate-200">
+                            <button 
+                                onClick={resetLevel}
+                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                title="Level neu starten"
+                            >
+                                <RefreshCcw size={18} />
+                            </button>
+                            
+                            <button 
+                                onClick={() => {
+                                    if (currentIdx < levels.length - 2) {
+                                        resetLevel();
+                                        setLevel(levels[currentIdx + 1]);
+                                    }
+                                }}
+                                disabled={(!allTasksCompleted && level !== 'intro' && level !== 'sandbox') || level === 'sandbox'}
+                                className={`
+                                    px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 transition-all
+                                    ${(!allTasksCompleted && level !== 'intro' && level !== 'sandbox') || level === 'sandbox'
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                                        : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-0.5'}
+                                `}
+                            >
+                                Weiter <ArrowRight size={16}/>
+                            </button>
+                        </div>
+                    </div>
+                );
+            };
+
+            const Footer = () => (
+                <div className="bg-slate-950 border-t border-slate-900 p-4 flex flex-col md:flex-row justify-between items-center text-slate-500 text-xs gap-4">
+                    <div className="flex items-center gap-2">
+                        <span>Johannes Heinrich Erstellt mithilfe von Gemini • 2025</span>
+                    </div>
+                    <img 
+                        src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+                        alt="Logo" 
+                        className="h-8 md:h-10 opacity-80 hover:opacity-100 transition-opacity"
+                    />
+                </div>
+            );
+
+            return (
+                <div className="flex flex-col h-screen w-full bg-slate-50 font-sans overflow-hidden">
+                    {!hasStarted && <StartScreen />}
+                    {showCheatSheet && <CheatSheetModal />}
+
+                    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                        <Sidebar />
+
+                        <div className="flex-1 flex flex-col relative bg-slate-100/50 overflow-hidden">
+                            <div className="bg-white border-b border-slate-200 p-4 flex justify-between items-center z-10 shadow-sm">
+                                <div>
+                                    <h2 className="text-xl font-bold text-slate-800">
+                                        {level === 'quiz' ? 'Prüfungsraum' : 'Stadtansicht'}
+                                    </h2>
+                                    <p className="text-slate-500 text-xs">
+                                        {level === 'quiz' ? 'Wähle die richtige Antwort aus.' : 'Visueller Output & Interaktion'}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    {level !== 'intro' && level !== 'quiz' && (
+                                        <button onClick={() => setShowUML(true)} className="flex items-center gap-2 bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-blue-600 transition-colors">
+                                            <Network size={14}/> UML
+                                        </button>
+                                    )}
+                                    {level === 'quiz' && (
+                                        <button onClick={() => {setLevel('sandbox'); resetLevel();}} className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200">
+                                        <X size={14}/> Beenden
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {level === 'quiz' ? (
+                                <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center">
+                                    {!quizFinished ? (
+                                        <div className="max-w-2xl w-full">
+                                            <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 animate-in slide-in-from-bottom-4 duration-500">
+                                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded mb-4 inline-block">FRAGE {quizIndex + 1}</span>
+                                                <h3 className="text-xl font-bold text-slate-800 mb-6">{quizQuestions[quizIndex].question}</h3>
+                                                
+                                                {quizQuestions[quizIndex].visual && (
+                                                    <div className="mb-6 rounded-lg overflow-hidden border border-slate-200 shadow-inner">
+                                                        {quizQuestions[quizIndex].visual}
+                                                    </div>
+                                                )}
+
+                                                <div className="space-y-3">
+                                                    {quizQuestions[quizIndex].options.map(option => (
+                                                        <button 
+                                                            key={option.id}
+                                                            onClick={() => handleQuizAnswer(option.correct)}
+                                                            className="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-between group"
+                                                        >
+                                                            <span className="text-slate-700 group-hover:text-blue-800">{option.text}</span>
+                                                            <ArrowRight size={16} className="text-transparent group-hover:text-blue-400 transition-colors"/>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center animate-in zoom-in duration-500 w-full max-w-2xl">
+                                            <Certificate score={score} total={quizQuestions.length} />
+                                            
+                                            <div className="mt-8 flex justify-center gap-4">
+                                                <button onClick={() => { setQuizIndex(0); setScore(0); setQuizFinished(false); }} className="px-6 py-3 bg-slate-200 hover:bg-slate-300 rounded-xl font-bold text-slate-700 transition-colors">
+                                                    Wiederholen
+                                                </button>
+                                                <button onClick={() => { setLevel('sandbox'); resetLevel(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg transition-transform hover:-translate-y-1">
+                                                    Zurück zur Sandbox
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto p-6">
+                                    <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
+                                        <div className="w-full lg:w-1/2 flex-shrink-0">
+                                            <div className="grid grid-cols-4 gap-3 bg-green-100 p-6 rounded-3xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] border-8 border-green-200/50 aspect-square mx-auto relative">
+                                                {Array.from({ length: 16 }).map((_, i) => {
+                                                    const x = i % gridSize;
+                                                    const y = Math.floor(i / gridSize);
+                                                    const obj = objects.find(o => o.x === x && o.y === y);
+                                                    const isSelected = obj?.id === selectedId;
+
+                                                    return (
+                                                    <div 
+                                                        key={i} 
+                                                        onClick={() => obj && setSelectedId(obj.id)}
+                                                        className={`
+                                                            rounded-xl flex items-center justify-center relative transition-all duration-300
+                                                            ${obj ? 'cursor-pointer' : ''}
+                                                            ${isSelected ? 'ring-4 ring-blue-400/50 bg-white/60 z-10 scale-105 shadow-xl' : 'bg-green-200/30 hover:bg-green-200/50'}
+                                                        `}
+                                                    >
+                                                        {obj && (
+                                                        <div className="flex flex-col items-center animate-in zoom-in duration-300">
+                                                            <div 
+                                                                className={`p-3 rounded-2xl shadow-lg text-white transition-transform ${isSelected ? 'scale-110' : 'hover:scale-105'}`}
+                                                                style={{ backgroundColor: obj.color }}
+                                                            >
+                                                                {obj.type === 'Baekerei' && <Croissant size={20} />}
+                                                                {obj.type === 'Schmiede' && <Hammer size={20} />}
+                                                                {obj.type === 'Wohnhaus' && <Home size={20} />}
+                                                            </div>
+                                                            <div className="mt-2 bg-white/90 px-2 py-0.5 rounded text-[9px] font-bold text-slate-700 shadow-sm max-w-[70px] truncate text-center pointer-events-none">
+                                                                {obj.name}
+                                                            </div>
+                                                            
+                                                            <div className="flex gap-1 mt-1 h-2">
+                                                                {(obj.inventory.brezeln > 0 || obj.inventory.schwerter > 0) && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" title="Produkte verfügbar"/>}
+                                                                {obj.money > 0 && <div className="w-2 h-2 rounded-full bg-yellow-400" title="Hat Umsatz gemacht"/>}
+                                                            </div>
+                                                        </div>
+                                                        )}
+                                                    </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            
+                                            <div className="mt-6">
+                                                <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                                    <MousePointer2 size={16}/> 
+                                                    {level === 'polymorphism' || level === 'sandbox' ? 'Stadt bauen' : 'Objekt Instanziierung'}
+                                                </h3>
+                                                
+                                                {level === 'class_object' && (
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <button onClick={() => createObject('Baekerei', '#d97706', 'Bäckerei')} className="bg-white border-2 border-amber-500 hover:bg-amber-50 text-slate-800 p-3 rounded-xl flex flex-col items-center gap-2 transition-all shadow-sm">
+                                                            <Croissant size={24} className="text-amber-600"/> <span className="text-xs font-mono font-bold">new Baekerei()</span>
+                                                        </button>
+                                                        <button onClick={() => createObject('Schmiede', '#475569', 'Schmiede')} className="bg-white border-2 border-slate-500 hover:bg-slate-50 text-slate-800 p-3 rounded-xl flex flex-col items-center gap-2 transition-all shadow-sm">
+                                                            <Hammer size={24} className="text-slate-600"/> <span className="text-xs font-mono font-bold">new Schmiede()</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {level === 'attributes' && (
+                                                    <div className="space-y-2">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <button onClick={() => createObject('Baekerei', '#ef4444', 'Brotfabrik')} className="bg-red-500 text-white p-2 rounded shadow text-xs hover:bg-red-600">new Baekerei("rot")</button>
+                                                            <button onClick={() => createObject('Baekerei', '#3b82f6', 'Frostbäcker')} className="bg-blue-500 text-white p-2 rounded shadow text-xs hover:bg-blue-600">new Baekerei("blau")</button>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <button onClick={() => createObject('Schmiede', '#ef4444', 'Feuerforge')} className="bg-red-500 text-white p-2 rounded shadow text-xs hover:bg-red-600">new Schmiede("rot")</button>
+                                                            <button onClick={() => createObject('Schmiede', '#3b82f6', 'Eisschmiede')} className="bg-blue-500 text-white p-2 rounded shadow text-xs hover:bg-blue-600">new Schmiede("blau")</button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {['methods', 'encapsulation', 'getter_setter', 'inheritance', 'polymorphism', 'sandbox'].includes(level) && (
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        <button onClick={() => createObject('Baekerei', '#d97706', 'Bäckerei')} className="bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 p-2 rounded flex flex-col items-center gap-1 shadow-sm" title="new Baekerei()">
+                                                        <Croissant size={20} /> <span className="text-[10px] font-bold">Bäckerei</span>
+                                                    </button>
+                                                        <button onClick={() => createObject('Schmiede', '#475569', 'Schmiede')} className="bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 p-2 rounded flex flex-col items-center gap-1 shadow-sm" title="new Schmiede()">
+                                                        <Hammer size={20} /> <span className="text-[10px] font-bold">Schmiede</span>
+                                                    </button>
+                                                    {['inheritance', 'polymorphism', 'sandbox'].includes(level) && (
+                                                        <button onClick={() => createObject('Wohnhaus', '#16a34a', 'Haus')} className="bg-green-100 hover:bg-green-200 border border-green-300 text-green-900 p-2 rounded flex flex-col items-center gap-1 shadow-sm" title="new Wohnhaus()">
+                                                            <Home size={20} /> <span className="text-[10px] font-bold">Haus</span>
+                                                        </button>
+                                                    )}
+                                                    </div>
+                                                )}
+
+                                                {level === 'encapsulation' && (
+                                                    <div className="mt-4 p-3 bg-slate-100 rounded border border-slate-200">
+                                                        <div className="text-xs font-bold text-slate-500 mb-2 text-center uppercase">Editor Zugriff</div>
+                                                        <div className="flex gap-2 justify-center">
+                                                            <button onClick={() => { setMoneyPrivate(false); log("kasse = public"); }} className={`p-2 rounded border flex items-center gap-2 text-xs transition-colors ${!moneyPrivate ? 'bg-red-100 border-red-400 text-red-800' : 'bg-white'}`}>
+                                                                <Unlock size={14} /> public
+                                                            </button>
+                                                            <button onClick={() => { setMoneyPrivate(true); log("kasse = private"); }} className={`p-2 rounded border flex items-center gap-2 text-xs transition-colors ${moneyPrivate ? 'bg-green-100 border-green-400 text-green-800' : 'bg-white'}`}>
+                                                                <Lock size={14} /> private
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {level === 'getter_setter' && (
+                                                    <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+                                                        <div className="text-xs font-bold text-blue-800 mb-2 text-center uppercase">Code Editor</div>
+                                                        <button 
+                                                            onClick={() => { setGetterAdded(true); log("Methode getKasse() hinzugefügt."); }}
+                                                            disabled={getterAdded}
+                                                            className={`w-full p-2 rounded border flex justify-center items-center gap-2 text-xs transition-colors ${getterAdded ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-blue-100 border-blue-300 text-blue-700'}`}
+                                                        >
+                                                            {getterAdded ? <CheckCircle2 size={14}/> : <Code size={14}/>} 
+                                                            {getterAdded ? "Getter implementiert" : "getKasse() implementieren"}
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {(level === 'polymorphism' || level === 'sandbox') && (
+                                                    <div className="mt-4">
+                                                        <button 
+                                                            onClick={executePolymorphism}
+                                                            className="w-full bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+                                                        >
+                                                            <Layers size={18}/> 
+                                                            <span className="font-bold">Alle arbeiten lassen</span>
+                                                        </button>
+                                                        <div className="text-[10px] text-center text-slate-400 mt-2">Ruft .arbeite() auf allen Gebäuden gleichzeitig auf</div>
+                                                    </div>
+                                                )}
+
+                                                {level === 'sandbox' && (
+                                                    <div className="mt-4 pt-4 border-t border-slate-200">
+                                                        <button 
+                                                            onClick={() => setLevel('quiz')}
+                                                            className="w-full bg-slate-800 hover:bg-slate-900 text-white p-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105 group"
+                                                        >
+                                                            <GraduationCap className="group-hover:text-blue-400 transition-colors"/> 
+                                                            <span className="font-bold">Abschlussprüfung starten</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full lg:w-1/2 flex flex-col gap-4 min-h-[400px]">
+                                            <div className="relative flex-1 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 min-h-[200px]">
+                                                {selectedId ? (
+                                                    <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-xl absolute top-4 right-4 w-64 animate-in slide-in-from-right fade-in duration-300 z-40">
+                                                        <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
+                                                            <div>
+                                                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                                                    {objects.find(o => o.id === selectedId).type === 'Baekerei' && <Croissant size={16} className="text-amber-600"/>}
+                                                                    {objects.find(o => o.id === selectedId).type === 'Schmiede' && <Hammer size={16} className="text-slate-600"/>}
+                                                                    {objects.find(o => o.id === selectedId).type === 'Wohnhaus' && <Home size={16} className="text-green-600"/>}
+                                                                    {objects.find(o => o.id === selectedId).name}
+                                                                </h3>
+                                                                <div className="text-xs text-slate-400 font-mono">ID: {objects.find(o => o.id === selectedId).id}</div>
+                                                            </div>
+                                                            <button onClick={() => setSelectedId(null)} className="text-slate-400 hover:text-slate-600">×</button>
+                                                        </div>
+
+                                                        <div className="space-y-2 mb-4 text-sm">
+                                                            <div className={`flex justify-between p-1.5 rounded ${level === 'getter_setter' && !getterAdded ? 'bg-red-50 border border-red-200' : 'bg-slate-50'}`}>
+                                                                <span className="text-slate-500">Kasse:</span>
+                                                                {level === 'getter_setter' && !getterAdded ? (
+                                                                    <span className="font-mono text-red-500 text-xs flex items-center gap-1"><Lock size={10}/> hidden</span>
+                                                                ) : (
+                                                                    <span className="font-mono font-bold text-green-600">{objects.find(o => o.id === selectedId).money} €</span>
+                                                                )}
+                                                            </div>
+                                                            {objects.find(o => o.id === selectedId).type === 'Baekerei' && (
+                                                                <div className="flex justify-between bg-amber-50 p-1.5 rounded">
+                                                                    <span className="text-slate-500">Brezeln:</span>
+                                                                    <span className="font-mono font-bold text-amber-700">{objects.find(o => o.id === selectedId).inventory.brezeln}</span>
+                                                                </div>
+                                                            )}
+                                                            {objects.find(o => o.id === selectedId).type === 'Schmiede' && (
+                                                                <div className="flex justify-between bg-slate-50 p-1.5 rounded">
+                                                                    <span className="text-slate-500">Schwerter:</span>
+                                                                    <span className="font-mono font-bold text-slate-700">{objects.find(o => o.id === selectedId).inventory.schwerter}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <div className="text-xs font-bold text-slate-400 uppercase">Methoden</div>
+                                                            
+                                                            {objects.find(o => o.id === selectedId).type === 'Baekerei' && (
+                                                                <button onClick={() => executeMethod(objects.find(o => o.id === selectedId).id, 'backeBrezel')} className="w-full flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-2 rounded text-sm transition-colors border border-amber-200">
+                                                                    <Croissant size={16}/> backeBrezel()
+                                                                </button>
+                                                            )}
+                                                            {objects.find(o => o.id === selectedId).type === 'Schmiede' && (
+                                                                <button onClick={() => executeMethod(objects.find(o => o.id === selectedId).id, 'schmiedeSchwert')} className="w-full flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-2 rounded text-sm transition-colors border border-slate-200">
+                                                                    <Sword size={16}/> schmiedeSchwert()
+                                                                </button>
+                                                            )}
+                                                            
+                                                            {(level === 'getter_setter' && getterAdded) && (
+                                                                <button onClick={() => executeMethod(objects.find(o => o.id === selectedId).id, 'getKasse')} className="w-full flex items-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-900 px-3 py-2 rounded text-sm transition-colors border border-blue-200">
+                                                                    <Eye size={16}/> getKasse() <span className="text-[10px] opacity-60 ml-auto">Getter</span>
+                                                                </button>
+                                                            )}
+
+                                                            {(level === 'encapsulation' || level === 'getter_setter' || level === 'inheritance' || level === 'polymorphism' || level === 'sandbox') && (
+                                                                <React.Fragment>
+                                                                    <button onClick={() => executeMethod(objects.find(o => o.id === selectedId).id, 'verkaufe')} className="w-full flex items-center gap-2 bg-green-100 hover:bg-green-200 text-green-900 px-3 py-2 rounded text-sm transition-colors border border-green-200">
+                                                                        <Coins size={16}/> verkaufe() <span className="text-[10px] opacity-60 ml-auto">Setter</span>
+                                                                    </button>
+                                                                    
+                                                                    {level === 'encapsulation' && (
+                                                                        <div className="relative group pt-2">
+                                                                            <button onClick={() => executeMethod(objects.find(o => o.id === selectedId).id, 'hack')} className="w-full flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded text-sm transition-colors border border-red-200">
+                                                                                <Lock size={16}/> Hacken (Direkt)
+                                                                            </button>
+                                                                            {moneyPrivate && <div className="hidden group-hover:block absolute bottom-full mb-2 left-0 w-full text-[10px] bg-black text-white p-2 rounded z-50">
+                                                                                Compiler Fehler: Zugriff verweigert!
+                                                                            </div>}
+                                                                        </div>
+                                                                    )}
+                                                                </React.Fragment>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+                                                        <MousePointer2 size={32} className="mb-4 opacity-20"/>
+                                                        <p className="text-sm font-medium">Wähle ein Gebäude im Raster aus</p>
+                                                        <p className="text-xs mt-1 opacity-70">Hier erscheinen Details und Methoden</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="bg-slate-900 rounded-xl overflow-hidden shadow-lg border border-slate-800 flex flex-col h-48">
+                                                <div className="bg-slate-950 p-2 border-b border-slate-800 flex justify-between items-center px-3">
+                                                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-2"><Terminal size={12}/> Terminal Output</span>
+                                                    <button onClick={() => setConsoleLog([])} className="text-[10px] text-slate-500 hover:text-white transition-colors">Clear</button>
+                                                </div>
+                                                <div className="p-3 font-mono text-xs text-green-400 overflow-y-auto flex-1 space-y-1">
+                                                    {consoleLog.length === 0 && <span className="text-slate-600 italic opacity-50">System bereit...</span>}
+                                                    {consoleLog.map((l, i) => <div key={i} className="break-all border-l-2 border-slate-800 pl-2 hover:border-slate-600 transition-colors">{l}</div>)}
+                                                    <div ref={scrollRef}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {showUML && (
+                                <div className="absolute inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full relative">
+                                        <button onClick={() => setShowUML(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-100 p-1 rounded-full"><X size={20}/></button>
+                                        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Network className="text-blue-600"/> Klassendiagramm</h3>
+                                        
+                                        <div className="flex justify-center bg-slate-50 p-8 rounded-xl border border-slate-200 min-h-[200px] items-center">
+                                            {level === 'inheritance' || level === 'polymorphism' || level === 'sandbox' ? (
+                                                <div className="flex flex-col items-center gap-8">
+                                                    <div className="border-2 border-slate-800 bg-yellow-50 w-32 shadow-md rounded">
+                                                        <div className="border-b-2 border-slate-800 text-center font-bold text-xs p-1.5">Gebaeude</div>
+                                                        <div className="text-[10px] p-1.5 font-mono text-slate-600"># x: int<br/># y: int</div>
+                                                    </div>
+                                                    <div className="flex flex-col items-center -my-3 relative z-10">
+                                                        <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[12px] border-b-slate-800 mb-[-2px]"></div>
+                                                        <div className="w-0.5 h-6 bg-slate-800"></div>
+                                                        <div className="w-32 h-0.5 bg-slate-800"></div>
+                                                        <div className="flex justify-between w-32"><div className="w-0.5 h-4 bg-slate-800"></div><div className="w-0.5 h-4 bg-slate-800"></div></div>
+                                                    </div>
+                                                    <div className="flex gap-4">
+                                                        <div className="border-2 border-slate-800 bg-white w-24 shadow-md rounded"><div className="border-b-2 border-slate-800 text-center font-bold text-[10px] p-1">Baekerei</div></div>
+                                                        <div className="border-2 border-slate-800 bg-white w-24 shadow-md rounded"><div className="border-b-2 border-slate-800 text-center font-bold text-[10px] p-1">Schmiede</div></div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="border-2 border-slate-800 bg-yellow-50 w-56 shadow-lg rounded overflow-hidden">
+                                                    <div className="bg-yellow-100 border-b-2 border-slate-800 text-center font-bold p-2 text-sm">Baekerei</div>
+                                                    <div className="border-b-2 border-slate-800 p-3 text-xs font-mono bg-white text-slate-600 space-y-1">
+                                                        {level === 'class_object' ? <span className="italic opacity-50">-- leer --</span> : <div>+ farbe: String</div>}
+                                                        {level === 'getter_setter' && <div><span className="text-red-500 font-bold">-</span> kasse: int</div>}
+                                                        {(level === 'encapsulation' || level === 'sandbox') && !moneyPrivate && level !== 'getter_setter' && <div>+ kasse: int</div>}
+                                                        {(level === 'encapsulation' || level === 'sandbox') && moneyPrivate && level !== 'getter_setter' && <div><span className="text-red-500 font-bold">-</span> kasse: int</div>}
+                                                    </div>
+                                                    <div className="p-3 text-xs font-mono bg-white text-slate-600 space-y-1">
+                                                        {level === 'methods' && <div>+ backeBrezel()</div>}
+                                                        {level === 'getter_setter' && (
+                                                            <React.Fragment>
+                                                                <div>+ getKasse(): int</div>
+                                                                <div>+ setKasse(int): void</div>
+                                                            </React.Fragment>
+                                                        )}
+                                                        {level === 'encapsulation' && <div>+ verkaufe()</div>}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <BottomNav />
+                    <Footer />
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Objectopolis />);
+    </script>
+</body>
+</html>
