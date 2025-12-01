@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haftungs-Check: Spedition vs. Fracht</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #c0392b;
+            --light: #ecf0f1;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        .app-container {
+            background: white;
+            width: 100%;
+            max-width: 400px; /* Smartphone Breite */
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background-color: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .status-bar {
+            background-color: #34495e;
+            color: #bdc3c7;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .case-box {
+            background-color: #e8f4fc;
+            border-left: 5px solid var(--accent);
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .question-text {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        .btn {
+            background-color: white;
+            border: 2px solid var(--accent);
+            color: var(--primary);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .btn.selected-correct {
+            background-color: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+        .btn.selected-wrong {
+            background-color: var(--error);
+            color: white;
+            border-color: var(--error);
+        }
+        .feedback-box {
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #fdf2ce;
+            border: 1px solid #f1c40f;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .next-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.2rem;
+            margin-top: auto;
+            cursor: pointer;
+            display: none;
+        }
+        .hidden { display: none; }
+        
+        /* Start Screen */
+        #start-screen { text-align: center; padding-top: 50px; }
+        .big-btn { background: var(--accent); color: white; border: none; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">Logistik Haftungs-Trainer</div>
+    <div class="status-bar">
+        <span id="progress-text">Fall 1 / 6</span>
+        <span>SZR-Kurs Spiel: 1,25 €</span>
+    </div>
+
+    <div id="start-screen" class="content">
+        <h2>Bist du bereit?</h2>
+        <p>Teste dein Wissen zu Fracht- und Speditionsrecht.</p>
+        <p><strong>Regeln:</strong><br>
+        Rechne mit <strong>1 SZR = 1,25 €</strong>.<br>
+        Lies genau: Geht es um HGB oder ADSp?</p>
+        <button class="btn big-btn" onclick="startGame()">Spiel starten</button>
+    </div>
+
+    <div id="game-screen" class="content hidden">
+        <div class="case-box" id="case-text">
+            </div>
+
+        <div id="quiz-area">
+            <div class="question-text" id="question-text">Frage?</div>
+            <div id="options-container">
+                </div>
+        </div>
+
+        <div class="feedback-box" id="feedback">
+            </div>
+    </div>
+    
+    <button class="next-btn" id="next-btn" onclick="nextStep()">Weiter</button>
+
+    <div id="end-screen" class="content hidden" style="text-align: center;">
+        <h2>Geschafft!</h2>
+        <p>Du hast alle Fälle bearbeitet.</p>
+        <p id="final-score"></p>
+        <button class="btn big-btn" onclick="location.reload()">Nochmal spielen</button>
+    </div>
+</div>
+
+<script>
+    // DATEN - Die Fälle
+    // SZR Kurs fest auf 1,25 €
+    const cases = [
+        {
+            text: "<b>Fall 1: Der Klassiker</b><br>Spediteur 'Speedy' vereinbart mit Kunde K einen <b>Festpreis</b> von 450 € für den Transport von 1.000 kg Maschinenteilen. Speedy fährt nicht selbst, sondern beauftragt einen Frachtführer. Unterwegs baut der Frachtführer einen Unfall. Ware (Wert 20.000 €) ist Totalschaden.",
+            steps: [
+                {
+                    q: "Welches Recht gilt für den Vertrag zwischen Kunde K und Spediteur Speedy?",
+                    options: [
+                        { text: "Nur Speditionsrecht (Dienstleistung)", correct: false, hint: "Schau nochmal genau hin: Wurde ein fester Preis vereinbart?" },
+                        { text: "HGB Frachtrecht (Fixkostenspedition)", correct: true, hint: "" },
+                        { text: "BGB Werkvertragsrecht", correct: false, hint: "Im Handelsrecht (HGB) gibt es speziellere Regeln." }
+                    ]
+                },
+                {
+                    q: "Wie hoch ist der entstandene Vermögensschaden (Warenwert)?",
+                    options: [
+                        { text: "450 €", correct: false, hint: "Das ist nur die Fracht, nicht der Schaden an der Ware." },
+                        { text: "1.250 €", correct: false, hint: "Rechne noch nicht mit SZR. Was war die Ware wert?" },
+                        { text: "20.000 €", correct: true, hint: "" }
+                    ]
+                },
+                {
+                    q: "Wie hoch haftet Speedy nach HGB (Gesetz)? (1.000 kg, 8,33 SZR, Kurs 1,25€)",
+                    options: [
+                        { text: "20.000 € (Voller Wert)", correct: false, hint: "Nach HGB gibt es eine Gewichtshaftung, keinen Wertersatz." },
+                        { text: "10.412,50 €", correct: false, hint: "Formel: kg * 8,33 * Kurs." },
+                        { text: "10.412,50 SZR", correct: false, hint: "Achtung: SZR ist die Währung, wir suchen Euro." },
+                        { text: "10.412,50 € (Rechnung: 1000 * 8,33 * 1,25)", correct: true, hint: "" }
+                    ]
+                },
+                {
+                    q: "Wie hoch haftet Speedy, wenn die ADSp vereinbart wurden?",
+                    options: [
+                        { text: "Maximal 1.000 €", correct: false, hint: "Zu wenig." },
+                        { text: "Ebenfalls 10.412,50 €", correct: true, hint: "Richtig! Die ADSp ändern bei diesem Gewicht nichts an den 8,33 SZR, sie deckeln nur nach oben bei Großschäden." },
+                        { text: "Gar nicht, ADSp schließen Haftung aus.", correct: false, hint: "Das wäre unwirksam." }
+                    ]
+                }
+            ]
+        },
+        {
+            text: "<b>Fall 2: Das leichte Teure</b><br>Transport von Smartphones. Gewicht: 100 kg. Wert: 50.000 €. Die Ware wird gestohlen. ADSp sind vereinbart. (Kurs: 1,25 €)",
+            steps: [
+                {
+                    q: "Nach welchem Prinzip wird die Haftungshöchstgrenze berechnet?",
+                    options: [
+                        { text: "Nach dem Warenwert", correct: false, hint: "Transportrecht geht fast immer nach Gewicht." },
+                        { text: "Nach dem Gewicht (8,33 SZR/kg)", correct: true, hint: "" }
+                    ]
+                },
+                {
+                    q: "Berechne die Haftungssumme (100 kg * 8,33 SZR * 1,25 €).",
+                    options: [
+                        { text: "1.041,25 €", correct: true, hint: "" },
+                        { text: "50.000 €", correct: false, hint: "Leider nein. Der Kunde bleibt auf dem Rest sitzen (dafür gibt es Transportversicherungen)." },
+                        { text: "833,00 €", correct: false, hint: "Du hast den SZR-Kurs vergessen einzurechnen." }
+                    ]
+                }
+            ]
+        },
+        {
+            text: "<b>Fall 3: Zu spät!</b><br>Die Ware (Wert 10.000 €) kommt heil an, aber 2 Tage zu spät. Dadurch Produktionsstillstand. Schaden: 4.000 €. Vereinbarte Fracht: 500 €.",
+            steps: [
+                {
+                    q: "Um welche Schadensart handelt es sich?",
+                    options: [
+                        { text: "Güterschaden", correct: false, hint: "Die Ware ist ja heil." },
+                        { text: "Güterfolgeschaden", correct: false, hint: "Nein, das wäre ein Folge eines Sachschadens. Hier ist es ein reiner Vermögensschaden durch Verspätung." },
+                        { text: "Lieferfristüberschreitung (Vermögensschaden)", correct: true, hint: "" }
+                    ]
+                },
+                {
+                    q: "Wie hoch ist die Haftung nach HGB und ADSp?",
+                    options: [
+                        { text: "4.000 € (Voller Schaden)", correct: false, hint: "Verspätung ist gedeckelt." },
+                        { text: "8,33 SZR pro kg", correct: false, hint: "Gewichtshaftung gilt nur bei Sachschäden." },
+                        { text: "1.500 € (3-fache Fracht)", correct: true, hint: "Korrekt: 3 * 500 €." }
+                    ]
+                }
+            ]
+        },
+        {
+            text: "<b>Fall 4: Der Schreibtisch-Fehler</b><br>Spediteur S organisiert nur (kein Festpreis, keine Sammelladung). Er vergisst, dem Frachtführer eine wichtige Weisung weiterzugeben. Die Ware wird falsch verzollt. Strafzoll (Schaden): 100.000 €. Ware ist okay.",
+            steps: [
+                {
+                    q: "Welches Recht gilt hier primär?",
+                    options: [
+                        { text: "Frachtrecht (HGB)", correct: false, hint: "Er fährt nicht, er hat keinen Festpreis. Er ist reiner Spediteur." },
+                        { text: "Speditionsrecht (HGB)", correct: true, hint: "Richtig, Organisationsverschulden." }
+                    ]
+                },
+                {
+                    q: "Wie hoch wäre die Haftung nur nach HGB (Gesetz) ohne ADSp?",
+                    options: [
+                        { text: "Unbegrenzt (100.000 €)", correct: true, hint: "Genau. Das ist die große Gefahr im HGB Speditionsrecht." },
+                        { text: "8,33 SZR/kg", correct: false, hint: "Das gilt nur bei Güterschäden/Frachtrecht." }
+                    ]
+                },
+                {
+                    q: "Wie ist es, wenn die ADSp vereinbart sind?",
+                    options: [
+                        { text: "Auch unbegrenzt", correct: false, hint: "Nein, die ADSp schützen den Spediteur hier." },
+                        { text: "Begrenzt (Haftungsdeckel)", correct: true, hint: "Richtig. Die ADSp begrenzen die Haftung bei Organisationsverschulden." }
+                    ]
+                }
+            ]
+        },
+        {
+            text: "<b>Fall 5: Sammelladung</b><br>Spediteur packt Ware von 5 Kunden auf einen LKW. Ein Paket (20kg) geht verloren.",
+            steps: [
+                {
+                    q: "Der Spediteur hat nur organisiert. Haftet er trotzdem wie ein Frachtführer?",
+                    options: [
+                        { text: "Ja, wegen Sammelladung (§ 460 HGB)", correct: true, hint: "" },
+                        { text: "Nein, er hat den LKW nicht gefahren", correct: false, hint: "Sammelladung ist einer der 3 Fälle, wo er haftet wie ein Frachtführer." }
+                    ]
+                },
+                {
+                    q: "Wie hoch ist die Haftung? (20kg)",
+                    options: [
+                        { text: "208,25 € (20 * 8,33 * 1,25)", correct: true, hint: "" },
+                        { text: "Wertersatz", correct: false, hint: "Nein, 8,33 SZR Regel." }
+                    ]
+                }
+            ]
+        },
+        {
+            text: "<b>Fall 6: Der Super-GAU</b><br>Ein LKW brennt ab. Wertvolle Elektronik (10 Tonnen). Wert: 3.000.000 €. <br>Berechnete Haftung nach Gewicht (10.000kg * 8,33 * 1,25) wäre ca. 104.000 €.",
+            steps: [
+                {
+                    q: "Was greift hier in den ADSp zusätzlich zur Gewichtshaftung?",
+                    options: [
+                        { text: "Nichts, es bleibt bei ca. 104.000 €", correct: true, hint: "Richtig! Die ADSp deckeln bei 1,25 Mio € PRO SCHADENFALL. Da die Gewichtshaftung hier niedriger ist (104k), gilt der niedrigere Wert. (Falle erkannt?)" },
+                        { text: "Die 1,25 Mio € Obergrenze", correct: false, hint: "Die Obergrenze kappt Spitzen. Hier liegt die Gewichtshaftung (104k) aber UNTER der Obergrenze (1,25 Mio). Man zahlt immer den niedrigeren Wert." }
+                    ]
+                }
+            ]
+        }
+    ];
+
+    // Status Variablen
+    let currentCaseIndex = 0;
+    let currentStepIndex = 0;
+    let mistakesInCurrentStep = 0;
+
+    // DOM Elemente
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const endScreen = document.getElementById('end-screen');
+    const caseText = document.getElementById('case-text');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const feedbackBox = document.getElementById('feedback');
+    const nextBtn = document.getElementById('next-btn');
+    const progressText = document.getElementById('progress-text');
+
+    function startGame() {
+        startScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        currentCaseIndex = 0;
+        currentStepIndex = 0;
+        loadStep();
+    }
+
+    function loadStep() {
+        const currentCase = cases[currentCaseIndex];
+        const currentStep = currentCase.steps[currentStepIndex];
+
+        // Update UI
+        progressText.innerText = `Fall ${currentCaseIndex + 1} / ${cases.length}`;
+        caseText.innerHTML = currentCase.text;
+        questionText.innerText = currentStep.q;
+        
+        // Reset Feedback & Buttons
+        feedbackBox.style.display = 'none';
+        feedbackBox.innerHTML = '';
+        nextBtn.style.display = 'none';
+        optionsContainer.innerHTML = '';
+        mistakesInCurrentStep = 0;
+
+        // Generate Buttons
+        currentStep.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.innerText = opt.text;
+            btn.onclick = () => checkAnswer(opt, btn);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(option, btnElement) {
+        // Deaktiviere Klicks auf bereits gewählte falsche Buttons
+        if (btnElement.classList.contains('selected-wrong')) return;
+
+        if (option.correct) {
+            // Richtig
+            btnElement.classList.add('selected-correct');
+            feedbackBox.style.display = 'block';
+            feedbackBox.style.backgroundColor = '#d4edda';
+            feedbackBox.style.borderColor = '#c3e6cb';
+            feedbackBox.style.color = '#155724';
+            feedbackBox.innerHTML = "<b>Richtig!</b> " + option.hint;
+            
+            // Alle anderen Buttons deaktivieren
+            const allBtns = optionsContainer.querySelectorAll('.btn');
+            allBtns.forEach(b => b.disabled = true);
+            
+            nextBtn.style.display = 'block';
+        } else {
+            // Falsch
+            btnElement.classList.add('selected-wrong');
+            feedbackBox.style.display = 'block';
+            feedbackBox.style.backgroundColor = '#f8d7da';
+            feedbackBox.style.borderColor = '#f5c6cb';
+            feedbackBox.style.color = '#721c24';
+            feedbackBox.innerHTML = "<b>Leider falsch.</b> " + option.hint + "<br>Versuch es nochmal!";
+        }
+    }
+
+    function nextStep() {
+        const currentCase = cases[currentCaseIndex];
+        
+        // Gibt es noch weitere Fragen in diesem Fall?
+        if (currentStepIndex < currentCase.steps.length - 1) {
+            currentStepIndex++;
+            loadStep();
+        } else {
+            // Nächster Fall
+            if (currentCaseIndex < cases.length - 1) {
+                currentCaseIndex++;
+                currentStepIndex = 0;
+                loadStep();
+            } else {
+                // Spiel Ende
+                gameScreen.classList.add('hidden');
+                endScreen.classList.remove('hidden');
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
