@@ -20,6 +20,8 @@
             --bg-panel: #282a36;
             --accent: #bd93f9;
             --success: #50fa7b;
+            --warning: #ffb86c;
+            --error: #ff5555;
             --text: #f8f8f2;
             --font-mono: 'Courier New', Courier, monospace;
         }
@@ -57,7 +59,7 @@
             height: 14px; 
             background: #44475a; 
             border-radius: 50%; 
-            cursor: pointer; /* Zeigt an, dass es klickbar ist */
+            cursor: pointer; 
             transition: all 0.2s ease;
             position: relative;
         }
@@ -88,13 +90,23 @@
 
         .task-title { font-size: 1.4rem; margin-bottom: 10px; color: var(--success); }
         .task-desc { line-height: 1.6; margin-bottom: 20px; }
+        
+        /* Hint Boxes */
         .hint-box {
             background: rgba(189, 147, 249, 0.1);
             border-left: 4px solid var(--accent);
             padding: 10px;
-            margin-top: auto;
+            margin-top: 10px;
             display: none;
             font-size: 0.9rem;
+        }
+
+        .code-hint-box {
+            background: rgba(255, 184, 108, 0.1);
+            border-left: 4px solid var(--warning);
+            font-family: var(--font-mono);
+            white-space: pre-wrap;
+            margin-top: 10px;
         }
         
         .btn {
@@ -104,10 +116,22 @@
             cursor: pointer;
             font-weight: bold;
             transition: all 0.2s;
-            margin-top: 10px;
+            margin-top: 5px;
         }
+        
+        /* Sidebar Buttons */
+        .sidebar-buttons {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
         .btn-hint { background: #44475a; color: white; width: 100%; }
         .btn-hint:hover { background: #6272a4; }
+
+        .btn-code-hint { background: #6272a4; color: white; width: 100%; }
+        .btn-code-hint:hover { background: var(--warning); color: #282a36; }
 
         /* Editor Area */
         .editor-area {
@@ -211,10 +235,17 @@
             <div class="task-desc" id="taskDesc"></div>
         </div>
         
-        <div id="hintContainer" class="hint-box">
-            <strong>Tipp:</strong> <span id="hintText"></span>
+        <div class="sidebar-buttons">
+            <button class="btn btn-hint" onclick="toggleHint()">💡 Tipp anzeigen</button>
+            <div id="hintContainer" class="hint-box">
+                <strong>Tipp:</strong> <span id="hintText"></span>
+            </div>
+
+            <button class="btn btn-code-hint" onclick="toggleCodeHint()">🧩 Code-Hilfe</button>
+            <div id="codeHintContainer" class="hint-box code-hint-box" style="display:none;">
+                <!-- Content will be injected via JS -->
+            </div>
         </div>
-        <button class="btn btn-hint" onclick="toggleHint()">💡 Hilfe anzeigen</button>
     </div>
 
     <div class="editor-area">
@@ -258,6 +289,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 <p><strong>Wichtig:</strong> Vergessen Sie nicht, die Eingabe in eine Zahl umzuwandeln!</p>
             `,
             hint: "Nutzen Sie <code>int(input(...))</code>, um Text in eine Zahl zu verwandeln. Rechnen Sie: <code>aktuelles_jahr - geburtsjahr</code>.",
+            codeHint: `aktuelles_jahr = 2025\ngeburtsjahr = int(input("Geburtsjahr: "))\nalter = aktuelles_jahr - geburtsjahr\nprint(f"Du bist dieses Jahr {alter} Jahre alt.")`,
             prefill: "# Schreiben Sie hier Ihren Code:\naktuelles_jahr = 2025\n\n",
             check: (code, output) => {
                 return code.includes("input") && code.includes("int(") && output.includes("Jahre alt");
@@ -274,6 +306,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 </ul>
             `,
             hint: "Verwenden Sie <code>if alter >= 18:</code> und <code>else:</code>. Achten Sie auf die Einrückung!",
+            codeHint: `alter = int(input("Wie alt bist du? "))\n\nif alter >= 18:\n    print("Willkommen im Club!")\nelse:\n    print("Du bist leider noch zu jung.")`,
             prefill: "alter = int(input('Wie alt bist du? '))\n\n",
             check: (code, output) => {
                 return (code.includes("if") && code.includes("else") && (output.includes("Willkommen") || output.includes("zu jung")));
@@ -287,6 +320,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 <p>Nach der 1 soll <em>"Start!"</em> ausgegeben werden.</p>
             `,
             hint: "<code>range(Start, Ende, Schrittweite)</code>. Um rückwärts zu zählen, ist die Schrittweite -1. Das Ende ist exklusiv (d.h. bis 0 für die 1).",
+            codeHint: `for i in range(10, 0, -1):\n    print(i)\nprint("Start!")`,
             prefill: "# Starten Sie hier den Countdown\nfor i in range(...):\n    print(i)\n",
             check: (code, output) => {
                 return code.includes("for") && code.includes("range") && output.includes("10") && output.includes("1") && output.includes("Start");
@@ -300,6 +334,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 <p>Erst wenn der Benutzer "ja" eingibt, antwortet das Programm: <em>"Endlich!"</em>.</p>
             `,
             hint: "Nutzen Sie eine <code>while</code>-Schleife. Zum Beispiel: <code>while antwort != 'ja':</code>.",
+            codeHint: `antwort = ""\nwhile antwort != "ja":\n    antwort = input("Sind wir schon da? ")\nprint("Endlich!")`,
             prefill: "antwort = ''\n\n",
             check: (code, output) => {
                 return code.includes("while") && code.includes("input") && output.includes("Endlich");
@@ -313,6 +348,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 <ul><li>Falsch: "Zugriff verweigert"</li><li>Richtig: "Zugriff erlaubt"</li></ul>
             `,
             hint: "Ähnlich wie bei der Nervensäge. Prüfen Sie innerhalb der Schleife mit <code>if</code>, ob die Eingabe stimmt oder nicht.",
+            codeHint: `passwort = "Geheim"\neingabe = ""\n\nwhile eingabe != passwort:\n    eingabe = input("Passwort: ")\n    if eingabe != passwort:\n        print("Zugriff verweigert")\n\nprint("Zugriff erlaubt")`,
             prefill: "passwort = 'Geheim'\n\n",
             check: (code, output) => {
                 return code.includes("while") && output.includes("Zugriff");
@@ -325,6 +361,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 <p>Erstellen Sie eine Variable <code>summe = 0</code>. Nutzen Sie eine Schleife, um alle Zahlen zu addieren.</p>
             `,
             hint: "<code>summe = summe + zahl</code> innerhalb der Schleife.",
+            codeHint: `summe = 0\nfor zahl in range(1, 101):\n    summe = summe + zahl\nprint(summe)`,
             prefill: "summe = 0\n",
             check: (code, output) => {
                 return code.includes("for") && output.includes("5050"); // 5050 ist die Summe von 1-100
@@ -338,6 +375,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 <p>Ausgabe z.B.: <em>"Die Zahl 5 ist ungerade."</em></p>
             `,
             hint: "Nutzen Sie den Modulo-Operator <code>%</code>. <code>zahl % 2 == 0</code> bedeutet gerade.",
+            codeHint: `for i in range(1, 21):\n    if i % 2 == 0:\n        print(f"Die Zahl {i} ist gerade.")\n    else:\n        print(f"Die Zahl {i} ist ungerade.")`,
             prefill: "",
             check: (code, output) => {
                 return code.includes("%") && code.includes("if") && (output.includes("gerade") || output.includes("ungerade"));
@@ -350,6 +388,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 <p>Format: <code>1 * 5 = 5</code> ...</p>
             `,
             hint: "Rechnen Sie in der Schleife: <code>ergebnis = i * zahl</code>.",
+            codeHint: `zahl = int(input("Zahl: "))\nfor i in range(1, 11):\n    ergebnis = i * zahl\n    print(f"{i} * {zahl} = {ergebnis}")`,
             prefill: "",
             check: (code, output) => {
                 return code.includes("for") && code.includes("*") && output.includes("=");
@@ -368,6 +407,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
                 </ul>
             `,
             hint: "Nutzen Sie die Struktur: <code>if ... elif ... elif ... else ...</code>.",
+            codeHint: `punkte = int(input("Punkte: "))\nif punkte > 90:\n    print("Note 1")\nelif punkte > 75:\n    print("Note 2")\nelif punkte > 50:\n    print("Note 3")\nelse:\n    print("Durchgefallen")`,
             prefill: "",
             check: (code, output) => {
                 return code.includes("elif") && (output.includes("Note") || output.includes("Durchgefallen"));
@@ -378,6 +418,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
     // --- SETUP EDITOR ---
     let currentLevelIndex = 0;
     let isFirstLoad = true; // Flag to prevent saving empty code on startup
+    let codeHintClickCount = 0; // Zähler für die Klicks auf den Hilfe-Button
 
     const editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
         mode: { name: "python", version: 3, singleLineStringErrors: false },
@@ -417,11 +458,16 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
         currentLevelIndex = index;
         const level = levels[index];
         
-        // 3. Update UI
+        // 3. Reset Hint Logic
+        codeHintClickCount = 0;
+        document.getElementById('codeHintContainer').style.display = 'none';
+        
+        // 4. Update UI
         document.getElementById('taskTitle').innerHTML = level.title;
         document.getElementById('taskDesc').innerHTML = level.desc;
         document.getElementById('hintText').innerHTML = level.hint;
         document.getElementById('hintContainer').style.display = 'none';
+
         document.getElementById('nextBtn').style.display = 'none';
         document.getElementById('consoleOutput').innerText = "Bereit zum Ausführen...";
         
@@ -431,7 +477,7 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
             if(i === index) d.classList.add('active');
         });
 
-        // 4. Restore or Set Code
+        // 5. Restore or Set Code
         // If we have saved code for this level, use it. Otherwise use prefill.
         if (level.savedCode !== undefined) {
             editor.setValue(level.savedCode);
@@ -443,6 +489,39 @@ Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
     function toggleHint() {
         const hintBox = document.getElementById('hintContainer');
         hintBox.style.display = hintBox.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function toggleCodeHint() {
+        const hintBox = document.getElementById('codeHintContainer');
+        const level = levels[currentLevelIndex];
+
+        // Wenn die Box offen ist, einfach schließen
+        if (hintBox.style.display === 'block') {
+            hintBox.style.display = 'none';
+            return;
+        }
+
+        // Wenn sie zu ist, Klick zählen
+        codeHintClickCount++;
+
+        // Logik für die 3 Klicks
+        if (codeHintClickCount < 3) {
+            let message = "Bitte versuche es erst einmal selbst! 🤔";
+            if (codeHintClickCount === 2) message = "Bist du sicher? Probier es noch einmal ohne Hilfe! 💪";
+            
+            // Warnung anzeigen
+            hintBox.innerHTML = `<strong>Geduld!</strong><p style="margin:5px 0">${message}</p><small style="opacity:0.7">(Klicke noch ${3 - codeHintClickCount}x für die Lösung)</small>`;
+            hintBox.style.borderLeft = "4px solid var(--error)";
+            hintBox.style.background = "rgba(255, 85, 85, 0.1)";
+            hintBox.style.display = 'block';
+
+        } else {
+            // Echten Code anzeigen
+            hintBox.innerHTML = `<strong>Mögliche Struktur:</strong><pre style="margin: 5px 0 0 0; color: #f1fa8c;">${level.codeHint}</pre>`;
+            hintBox.style.borderLeft = "4px solid var(--warning)";
+            hintBox.style.background = "rgba(255, 184, 108, 0.1)";
+            hintBox.style.display = 'block';
+        }
     }
 
     function nextLevel() {
