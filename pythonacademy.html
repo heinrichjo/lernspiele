@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Academy - Interaktiver Kurs</title>
+    
+    <!-- Externe Bibliotheken für Editor und Python-Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #1e1e2e;
+            --bg-panel: #282a36;
+            --accent: #bd93f9;
+            --success: #50fa7b;
+            --text: #f8f8f2;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--bg-panel);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
+        .progress-container { display: flex; gap: 8px; }
+        
+        /* Updated Level Dots Style */
+        .level-dot { 
+            width: 14px; 
+            height: 14px; 
+            background: #44475a; 
+            border-radius: 50%; 
+            cursor: pointer; /* Zeigt an, dass es klickbar ist */
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .level-dot:hover {
+            transform: scale(1.3);
+            background: #6272a4;
+        }
+        .level-dot.active { background: var(--accent); box-shadow: 0 0 10px var(--accent); transform: scale(1.2); }
+        .level-dot.completed { background: var(--success); }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar (Task Info) */
+        .sidebar {
+            width: 30%;
+            padding: 20px;
+            background: #21222c;
+            overflow-y: auto;
+            border-right: 1px solid #44475a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .task-title { font-size: 1.4rem; margin-bottom: 10px; color: var(--success); }
+        .task-desc { line-height: 1.6; margin-bottom: 20px; }
+        .hint-box {
+            background: rgba(189, 147, 249, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 10px;
+            margin-top: auto;
+            display: none;
+            font-size: 0.9rem;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+        .btn-hint { background: #44475a; color: white; width: 100%; }
+        .btn-hint:hover { background: #6272a4; }
+
+        /* Editor Area */
+        .editor-area {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .CodeMirror {
+            height: 60%;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+        }
+
+        .controls {
+            padding: 10px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .btn-run { background: var(--success); color: #000; font-size: 1.1rem; padding: 12px 30px; }
+        .btn-run:hover { transform: scale(1.05); }
+        .btn-next { background: var(--accent); color: white; display: none; }
+        .btn-next:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Console */
+        .console {
+            height: 35%;
+            background: #000;
+            color: #0f0;
+            font-family: var(--font-mono);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #44475a;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--bg-panel);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid var(--accent);
+            font-size: 0.9rem;
+            color: #aaa;
+            flex-shrink: 0;
+        }
+
+        footer img {
+            height: 30px;
+            margin-left: 15px;
+        }
+
+        /* Input Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .input-modal {
+            background: var(--bg-panel);
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid var(--accent);
+            text-align: center;
+        }
+        .input-modal input {
+            padding: 10px;
+            font-size: 1.2rem;
+            margin-top: 15px;
+            width: 200px;
+            background: #44475a;
+            border: none;
+            color: white;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🐍 Python Academy</h1>
+    <div class="progress-container" id="levelDots">
+        <!-- Dots generated by JS -->
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="sidebar">
+        <div id="taskContent">
+            <h2 class="task-title" id="taskTitle">Lade Level...</h2>
+            <div class="task-desc" id="taskDesc"></div>
+        </div>
+        
+        <div id="hintContainer" class="hint-box">
+            <strong>Tipp:</strong> <span id="hintText"></span>
+        </div>
+        <button class="btn btn-hint" onclick="toggleHint()">💡 Hilfe anzeigen</button>
+    </div>
+
+    <div class="editor-area">
+        <textarea id="codeEditor"></textarea>
+        
+        <div class="controls">
+            <button class="btn btn-run" onclick="runCode()">▶ Code ausführen</button>
+            <button class="btn btn-next" id="nextBtn" onclick="nextLevel()">Nächstes Level ➔</button>
+        </div>
+
+        <div class="console" id="consoleOutput">Willkommen bei der Python Academy.
+Drücken Sie "Code ausführen", um Ihr Programm zu starten.</div>
+    </div>
+</div>
+
+<footer>
+    Johannes Heinrich 2025
+    <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="BS4 Logo">
+</footer>
+
+<!-- Custom Input Modal -->
+<div class="modal-overlay" id="inputModal">
+    <div class="input-modal">
+        <h3 id="inputPromptText">Eingabe erforderlich:</h3>
+        <input type="text" id="userInputValue" autocomplete="off">
+        <br>
+        <button class="btn btn-run" style="margin-top:15px" onclick="submitInput()">Senden</button>
+    </div>
+</div>
+
+<script>
+    // --- DATEN & LEVEL CONFIG ---
+    const levels = [
+        {
+            title: "Level 1: Der persönliche Rechner",
+            desc: `
+                <p>Willkommen, Rekrut! Ihre erste Aufgabe ist einfach.</p>
+                <p>Erstellen Sie eine Variable <code>aktuelles_jahr</code> (z.B. 2025). Fragen Sie den Benutzer nach seinem <strong>Geburtsjahr</strong>.</p>
+                <p>Berechnen Sie das Alter und geben Sie exakt folgenden Satz aus:<br>
+                <em>"Du bist dieses Jahr [Alter] Jahre alt."</em></p>
+                <p><strong>Wichtig:</strong> Vergessen Sie nicht, die Eingabe in eine Zahl umzuwandeln!</p>
+            `,
+            hint: "Nutzen Sie <code>int(input(...))</code>, um Text in eine Zahl zu verwandeln. Rechnen Sie: <code>aktuelles_jahr - geburtsjahr</code>.",
+            prefill: "# Schreiben Sie hier Ihren Code:\naktuelles_jahr = 2025\n\n",
+            check: (code, output) => {
+                return code.includes("input") && code.includes("int(") && output.includes("Jahre alt");
+            }
+        },
+        {
+            title: "Level 2: Der Türsteher",
+            desc: `
+                <p>Gut gemacht. Jetzt programmieren wir die Sicherheitsschleuse.</p>
+                <p>Fragen Sie den Benutzer: <em>"Wie alt bist du?"</em></p>
+                <ul>
+                    <li>Wenn das Alter <strong>18 oder größer</strong> ist, geben Sie aus: <em>"Willkommen im Club!"</em></li>
+                    <li>Sonst geben Sie aus: <em>"Du bist leider noch zu jung."</em></li>
+                </ul>
+            `,
+            hint: "Verwenden Sie <code>if alter >= 18:</code> und <code>else:</code>. Achten Sie auf die Einrückung!",
+            prefill: "alter = int(input('Wie alt bist du? '))\n\n",
+            check: (code, output) => {
+                return (code.includes("if") && code.includes("else") && (output.includes("Willkommen") || output.includes("zu jung")));
+            }
+        },
+        {
+            title: "Level 3: Der Countdown",
+            desc: `
+                <p>Wir starten den Antrieb. Wir brauchen einen Countdown!</p>
+                <p>Schreiben Sie ein Programm, das mithilfe einer <code>for</code>-Schleife von <strong>10 herunterzählt bis 1</strong>.</p>
+                <p>Nach der 1 soll <em>"Start!"</em> ausgegeben werden.</p>
+            `,
+            hint: "<code>range(Start, Ende, Schrittweite)</code>. Um rückwärts zu zählen, ist die Schrittweite -1. Das Ende ist exklusiv (d.h. bis 0 für die 1).",
+            prefill: "# Starten Sie hier den Countdown\nfor i in range(...):\n    print(i)\n",
+            check: (code, output) => {
+                return code.includes("for") && code.includes("range") && output.includes("10") && output.includes("1") && output.includes("Start");
+            }
+        },
+        {
+            title: "Level 4: Die Nervensäge",
+            desc: `
+                <p>Das Navigationssystem hängt. Schreiben Sie ein Programm, das fragt: <em>"Sind wir schon da?"</em>.</p>
+                <p>Solange die Antwort <strong>nicht</strong> "ja" lautet, soll das Programm immer wieder fragen.</p>
+                <p>Erst wenn der Benutzer "ja" eingibt, antwortet das Programm: <em>"Endlich!"</em>.</p>
+            `,
+            hint: "Nutzen Sie eine <code>while</code>-Schleife. Zum Beispiel: <code>while antwort != 'ja':</code>.",
+            prefill: "antwort = ''\n\n",
+            check: (code, output) => {
+                return code.includes("while") && code.includes("input") && output.includes("Endlich");
+            }
+        },
+        {
+            title: "Bonus Level 5: Das Passwort-System",
+            desc: `
+                <p>Sichern Sie den Hauptcomputer.</p>
+                <p>Legen Sie ein Passwort fest (z.B. "Geheim"). Fragen Sie in einer Schleife so lange nach dem Passwort, bis es stimmt.</p>
+                <ul><li>Falsch: "Zugriff verweigert"</li><li>Richtig: "Zugriff erlaubt"</li></ul>
+            `,
+            hint: "Ähnlich wie bei der Nervensäge. Prüfen Sie innerhalb der Schleife mit <code>if</code>, ob die Eingabe stimmt oder nicht.",
+            prefill: "passwort = 'Geheim'\n\n",
+            check: (code, output) => {
+                return code.includes("while") && output.includes("Zugriff");
+            }
+        },
+        {
+            title: "Bonus Level 6: Der Summen-Sammler",
+            desc: `
+                <p>Wir müssen Daten analysieren. Berechnen Sie die Summe aller Zahlen von 1 bis 100.</p>
+                <p>Erstellen Sie eine Variable <code>summe = 0</code>. Nutzen Sie eine Schleife, um alle Zahlen zu addieren.</p>
+            `,
+            hint: "<code>summe = summe + zahl</code> innerhalb der Schleife.",
+            prefill: "summe = 0\n",
+            check: (code, output) => {
+                return code.includes("for") && output.includes("5050"); // 5050 ist die Summe von 1-100
+            }
+        },
+        {
+            title: "Bonus Level 7: Gerade oder Ungerade?",
+            desc: `
+                <p>Analysieren Sie den Datenstrom.</p>
+                <p>Laufen Sie von 1 bis 20. Prüfen Sie bei jeder Zahl, ob sie <strong>gerade</strong> oder <strong>ungerade</strong> ist.</p>
+                <p>Ausgabe z.B.: <em>"Die Zahl 5 ist ungerade."</em></p>
+            `,
+            hint: "Nutzen Sie den Modulo-Operator <code>%</code>. <code>zahl % 2 == 0</code> bedeutet gerade.",
+            prefill: "",
+            check: (code, output) => {
+                return code.includes("%") && code.includes("if") && (output.includes("gerade") || output.includes("ungerade"));
+            }
+        },
+        {
+            title: "Bonus Level 8: Das kleine Einmaleins",
+            desc: `
+                <p>Fragen Sie den Benutzer nach einer Zahl. Geben Sie das Einmaleins dieser Zahl von 1 bis 10 aus.</p>
+                <p>Format: <code>1 * 5 = 5</code> ...</p>
+            `,
+            hint: "Rechnen Sie in der Schleife: <code>ergebnis = i * zahl</code>.",
+            prefill: "",
+            check: (code, output) => {
+                return code.includes("for") && code.includes("*") && output.includes("=");
+            }
+        },
+        {
+            title: "Bonus Level 9: Der Noten-Umrechner",
+            desc: `
+                <p>Letzte Aufgabe: Bewerten Sie die Systemleistung.</p>
+                <p>Fragen Sie nach einer Punktzahl (0-100).</p>
+                <ul>
+                <li>> 90: "Note 1"</li>
+                <li>> 75: "Note 2"</li>
+                <li>> 50: "Note 3"</li>
+                <li>Sonst: "Durchgefallen"</li>
+                </ul>
+            `,
+            hint: "Nutzen Sie die Struktur: <code>if ... elif ... elif ... else ...</code>.",
+            prefill: "",
+            check: (code, output) => {
+                return code.includes("elif") && (output.includes("Note") || output.includes("Durchgefallen"));
+            }
+        }
+    ];
+
+    // --- SETUP EDITOR ---
+    let currentLevelIndex = 0;
+    let isFirstLoad = true; // Flag to prevent saving empty code on startup
+
+    const editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
+        mode: { name: "python", version: 3, singleLineStringErrors: false },
+        theme: "dracula",
+        lineNumbers: true,
+        indentUnit: 4,
+        matchBrackets: true
+    });
+
+    // --- GAME LOGIC ---
+
+    function initGame() {
+        const dotsContainer = document.getElementById('levelDots');
+        dotsContainer.innerHTML = '';
+        levels.forEach((lvl, index) => {
+            const dot = document.createElement('div');
+            dot.className = `level-dot ${index === 0 ? 'active' : ''}`;
+            dot.id = `dot-${index}`;
+            
+            // Interaction: Title and Click Event
+            dot.title = lvl.title; 
+            dot.onclick = () => loadLevel(index);
+            
+            dotsContainer.appendChild(dot);
+        });
+        loadLevel(0);
+    }
+
+    function loadLevel(index) {
+        // 1. Save state of current level (only if not the very first init load)
+        if (!isFirstLoad) {
+            levels[currentLevelIndex].savedCode = editor.getValue();
+        }
+        isFirstLoad = false;
+
+        // 2. Switch Index
+        currentLevelIndex = index;
+        const level = levels[index];
+        
+        // 3. Update UI
+        document.getElementById('taskTitle').innerHTML = level.title;
+        document.getElementById('taskDesc').innerHTML = level.desc;
+        document.getElementById('hintText').innerHTML = level.hint;
+        document.getElementById('hintContainer').style.display = 'none';
+        document.getElementById('nextBtn').style.display = 'none';
+        document.getElementById('consoleOutput').innerText = "Bereit zum Ausführen...";
+        
+        // Update Dots Active State
+        document.querySelectorAll('.level-dot').forEach((d, i) => {
+            d.classList.remove('active');
+            if(i === index) d.classList.add('active');
+        });
+
+        // 4. Restore or Set Code
+        // If we have saved code for this level, use it. Otherwise use prefill.
+        if (level.savedCode !== undefined) {
+            editor.setValue(level.savedCode);
+        } else {
+            editor.setValue(level.prefill || "");
+        }
+    }
+
+    function toggleHint() {
+        const hintBox = document.getElementById('hintContainer');
+        hintBox.style.display = hintBox.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function nextLevel() {
+        if (currentLevelIndex < levels.length - 1) {
+            loadLevel(currentLevelIndex + 1);
+        } else {
+            alert("Herzlichen Glückwunsch! Sie haben alle Aufgaben gemeistert!");
+        }
+    }
+
+    // --- PYTHON EXECUTION (SKULPT) ---
+
+    // Custom Input Handler with Modal
+    let inputResolver = null;
+
+    function inputHandler(promptText) {
+        return new Promise((resolve) => {
+            document.getElementById('inputPromptText').innerText = promptText || "Eingabe erforderlich:";
+            document.getElementById('inputModal').style.display = 'flex';
+            document.getElementById('userInputValue').value = "";
+            document.getElementById('userInputValue').focus();
+            inputResolver = resolve;
+        });
+    }
+
+    function submitInput() {
+        const val = document.getElementById('userInputValue').value;
+        document.getElementById('inputModal').style.display = 'none';
+        if (inputResolver) {
+            inputResolver(val);
+            inputResolver = null;
+        }
+    }
+    
+    // Allow Enter key in modal
+    document.getElementById('userInputValue').addEventListener("keyup", function(event) {
+        if (event.key === "Enter") submitInput();
+    });
+
+    function outf(text) { 
+        const consoleDiv = document.getElementById("consoleOutput");
+        consoleDiv.innerText += text; 
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    } 
+
+    function runCode() { 
+        const prog = editor.getValue(); 
+        const consoleDiv = document.getElementById("consoleOutput");
+        consoleDiv.innerText = ""; // Clear console
+        
+        // Configure Skulpt
+        Sk.pre = "output";
+        Sk.configure({
+            output: outf,
+            inputfun: inputHandler, // Use our modal
+            inputfunTakesPrompt: true,
+            read: builtinRead
+        }); 
+
+        const myPromise = Sk.misceval.asyncToPromise(function() { 
+            return Sk.importMainWithBody("<stdin>", false, prog, true); 
+        }); 
+
+        myPromise.then(function(mod) { 
+            consoleDiv.innerText += "\n--- Programm beendet ---\n";
+            checkSolution(prog, consoleDiv.innerText);
+        }, function(err) { 
+            consoleDiv.innerText += "\nFEHLER:\n" + err.toString(); 
+        }); 
+    } 
+
+    function builtinRead(x) {
+        if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+            throw "File not found: '" + x + "'";
+        return Sk.builtinFiles["files"][x];
+    }
+
+    // --- VALIDATION ---
+
+    function checkSolution(code, output) {
+        const currentLevel = levels[currentLevelIndex];
+        
+        // Basic Check Logic
+        if (currentLevel.check(code, output)) {
+            document.getElementById('consoleOutput').innerText += "\n✅ Aufgabe erfolgreich gelöst!";
+            document.getElementById('dot-' + currentLevelIndex).classList.add('completed');
+            
+            const nextBtn = document.getElementById('nextBtn');
+            nextBtn.style.display = 'block';
+            
+            // Confetti
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        } else {
+            document.getElementById('consoleOutput').innerText += "\n⚠️ Die Lösung scheint noch nicht ganz korrekt zu sein. Prüfen Sie die Anforderungen.";
+        }
+    }
+
+    // Init
+    initGame();
+
+</script>
+</body>
+</html>
