@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Welser Logistik - Kommunikationstraining</title>
+    <!-- Tailwind CSS für schnelles, responsives Design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Noto Sans für gute Lesbarkeit -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons für moderne Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            background-color: #f3f4f6;
+            overscroll-behavior-y: none;
+        }
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .chat-bubble {
+            position: relative;
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            animation: popIn 0.3s ease-out both;
+        }
+        .chat-left {
+            background-color: #e5e7eb;
+            color: #1f2937;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        .chat-right {
+            background-color: #3b82f6;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .ear-card {
+            transition: transform 0.1s;
+            cursor: pointer;
+        }
+        .ear-card:active {
+            transform: scale(0.95);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        main {
+            flex: 1;
+            padding-bottom: 80px;
+        }
+        /* Styles für das Quiz in Kap 2 */
+        .quiz-btn {
+            transition: all 0.2s;
+        }
+        .quiz-btn.correct {
+            background-color: #dcfce7 !important; /* green-100 */
+            border-color: #22c55e !important; /* green-500 */
+            color: #15803d !important;
+        }
+        .quiz-btn.wrong {
+            background-color: #fee2e2 !important; /* red-100 */
+            border-color: #ef4444 !important; /* red-500 */
+            color: #b91c1c !important;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container relative">
+
+    <!-- Header & Navigation -->
+    <header class="bg-slate-800 text-white p-4 sticky top-0 z-50 flex justify-between items-center shadow-md">
+        <div class="flex items-center gap-2">
+            <i data-lucide="package" class="h-6 w-6 text-orange-500"></i>
+            <h1 class="font-bold text-lg">Welser Logistik Campus</h1>
+        </div>
+        <button onclick="toggleMenu()" class="p-2 focus:outline-none">
+            <i data-lucide="menu" class="h-6 w-6"></i>
+        </button>
+    </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="menuOverlay" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex flex-col justify-center items-center text-white space-y-6 text-xl transform transition-transform">
+        <button onclick="toggleMenu()" class="absolute top-4 right-4"><i data-lucide="x" class="h-8 w-8"></i></button>
+        <a href="#" onclick="navigate(1); toggleMenu()" class="hover:text-orange-500">1. Start & Intro</a>
+        <a href="#" onclick="navigate(2); toggleMenu()" class="hover:text-orange-500">2. Das 4-Seiten Modell</a>
+        <a href="#" onclick="navigate(3); toggleMenu()" class="hover:text-orange-500">3. Trainings-Camp</a>
+        <a href="#" onclick="navigate(4); toggleMenu()" class="hover:text-orange-500">4. Challenge</a>
+    </div>
+
+    <!-- Main Content Area -->
+    <main id="contentArea" class="p-4 overflow-y-auto">
+        <!-- Content will be injected via JS -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 p-3 fixed bottom-0 w-full max-w-[600px] flex items-center justify-between text-xs text-gray-500 z-40">
+        <div>
+            <span class="block font-bold">Johannes Heinrich 2025</span>
+            <span>Welser Logistik Training</span>
+        </div>
+        <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
+             alt="Logo" 
+             class="h-10 object-contain"
+             onerror="this.style.display='none'; this.parentElement.innerHTML+=' (Logo)'">
+    </footer>
+
+</div>
+
+<script>
+    // --- State Management ---
+    let currentChapter = 1;
+    let retoureQuizIndex = 0; // State für Kap 2 Quiz
+
+    // --- Content Data ---
+    const chapters = {
+        1: {
+            title: "Das Missverständnis",
+            render: () => `
+                <div class="fade-in space-y-6">
+                    <div class="bg-orange-100 border-l-4 border-orange-500 p-4 text-orange-700">
+                        <p class="font-bold">Situation:</p>
+                        <p>Ein normaler Tag im Lager. Sie schauen auf Ihr Handy und sehen diesen Chatverlauf zwischen dem Lagerleiter und einem Azubi.</p>
+                    </div>
+                    
+                    <div class="flex flex-col space-y-2 p-4 bg-white rounded-lg shadow-inner h-64 overflow-y-auto" id="chatSim">
+                        <!-- Chat JS injects here -->
+                    </div>
+
+                    <div class="text-center space-y-4">
+                        <button id="playChatBtn" onclick="startChat()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-full text-sm font-semibold mb-2 flex items-center justify-center mx-auto gap-2">
+                            <i data-lucide="play-circle" class="w-4 h-4"></i> Chat abspielen
+                        </button>
+                        
+                        <!-- Reflection Section (Initially Visible) -->
+                        <div id="reflectionArea" class="hidden text-left bg-white p-4 rounded shadow-lg border border-gray-100">
+                            <label class="block font-bold text-slate-800 mb-2">Deine Meinung:</label>
+                            <p class="text-sm text-gray-600 mb-3">Warum reagiert der Azubi so zickig? Der Chef hat doch nur eine Frage gestellt.</p>
+                            <textarea id="userReflection" class="w-full p-2 border border-gray-300 rounded mb-3 text-sm" rows="2" placeholder="Tippe hier deine Idee ein..."></textarea>
+                            <button onclick="revealAnalysis()" class="w-full bg-orange-500 text-white font-bold py-2 rounded shadow hover:bg-orange-600 transition">
+                                Auflösung zeigen
+                            </button>
+                        </div>
+
+                        <!-- Analysis (Initially Hidden) -->
+                        <div id="analysisArea" class="hidden p-4 bg-blue-50 rounded shadow text-left border-l-4 border-blue-500 fade-in">
+                            <h3 class="font-bold text-slate-800 mb-2">Die Analyse:</h3>
+                            <p class="text-sm text-gray-700">Genau! Das Problem ist nicht, was der Chef <em>gesagt</em> hat (Sachebene), sondern was der Azubi <em>gehört</em> hat.</p>
+                            <p class="text-sm text-gray-700 mt-2 font-semibold">Der Chef sendete: "Ist die Palette fertig?"</p>
+                            <p class="text-sm text-gray-700 font-semibold text-red-600">Der Azubi hörte: "Du bist zu langsam! Mach hinne!"</p>
+                            
+                            <button onclick="navigate(2)" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
+                                Weiter zu Kapitel 2 <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            `,
+            init: () => {
+                // Reset Chat visibility
+                document.getElementById('reflectionArea').classList.add('hidden');
+            }
+        },
+        2: {
+            title: "Das 4-Seiten Modell",
+            render: () => `
+                <div class="fade-in space-y-5">
+                    <p class="text-gray-600 text-sm">Der Kommunikations-Profi <strong>Friedemann Schulz von Thun</strong> sagt: Jede Nachricht ist ein Paket mit 4 Seiten. Wir senden (Schnabel) und hören (Ohr) immer auf 4 Kanälen.</p>
+
+                    <!-- Theorie Teil -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-blue-100 p-2 rounded text-xs text-blue-800 font-bold text-center border border-blue-200">1. Sachinhalt<br><span class="font-normal text-[10px]">Fakten & Daten</span></div>
+                        <div class="bg-green-100 p-2 rounded text-xs text-green-800 font-bold text-center border border-green-200">2. Selbstoffenbarung<br><span class="font-normal text-[10px]">Ich-Botschaft</span></div>
+                        <div class="bg-yellow-100 p-2 rounded text-xs text-yellow-800 font-bold text-center border border-yellow-200">3. Beziehung<br><span class="font-normal text-[10px]">Wir-Botschaft</span></div>
+                        <div class="bg-red-100 p-2 rounded text-xs text-red-800 font-bold text-center border border-red-200">4. Appell<br><span class="font-normal text-[10px]">Befehl/Wunsch</span></div>
+                    </div>
+
+                    <div class="border-t border-gray-300 my-4"></div>
+
+                    <!-- Interaktive Übung: Retoure -->
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                        <div class="bg-slate-800 text-white p-3 flex items-center gap-2">
+                            <i data-lucide="gamepad-2" class="w-5 h-5 text-orange-400"></i>
+                            <h3 class="font-bold text-sm">Übung: Die Retoure</h3>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-sm italic text-gray-500 mb-2">Situation: Der Lagerleiter kommt vorbei und sagt:</p>
+                            <div class="bg-gray-100 p-3 rounded-lg border-l-4 border-slate-500 mb-4 font-bold text-slate-800">
+                                "Da vorne steht ja immer noch die Retoure von gestern!"
+                            </div>
+                            
+                            <!-- Quiz Container -->
+                            <div id="retoureQuizContainer">
+                                <!-- Quiz JS injects here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="kap2NextBtn" class="hidden">
+                        <button onclick="navigate(3)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
+                            Weiter zum Training <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            `,
+            init: () => {
+                retoureQuizIndex = 0;
+                renderRetoureQuiz();
+            }
+        },
+        3: {
+            title: "Das Trainings-Camp",
+            render: () => `
+                <div class="fade-in space-y-6">
+                    <p class="text-sm text-gray-600">Bevor wir E-Mails schreiben, trainieren wir deine Ohren. Löse die folgenden Aufgaben.</p>
+
+                    <!-- Aufgabe 1: Speed Round -->
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-purple-500">
+                        <h3 class="font-bold text-purple-900 mb-2 flex items-center gap-2"><i data-lucide="zap" class="w-4 h-4"></i> Blitz-Runde: Sache oder Appell?</h3>
+                        <p class="text-xs text-gray-500 mb-4">Oft verwechseln wir Fakten mit Aufforderungen. Entscheide schnell!</p>
+                        
+                        <div id="speedRoundContainer" class="space-y-4">
+                            <!-- Q1 -->
+                            <div class="border-b pb-3">
+                                <p class="font-medium text-sm mb-2">"Der Mülleimer ist voll."</p>
+                                <div class="flex gap-2">
+                                    <button onclick="solveSpeed(this, 'sach')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-blue-100 border hover:border-blue-400">Sachinhalt</button>
+                                    <button onclick="solveSpeed(this, 'appell')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-red-100 border hover:border-red-400">Appell</button>
+                                </div>
+                                <p class="hidden mt-1 text-[10px] text-gray-500">Auflösung: Sachinhalt = Er ist voll. Appell = Bring ihn weg!</p>
+                            </div>
+                            <!-- Q2 -->
+                            <div class="border-b pb-3">
+                                <p class="font-medium text-sm mb-2">"Wir haben keine Kartons mehr Größe M."</p>
+                                <div class="flex gap-2">
+                                    <button onclick="solveSpeed(this, 'sach')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-blue-100 border hover:border-blue-400">Sachinhalt</button>
+                                    <button onclick="solveSpeed(this, 'appell')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-red-100 border hover:border-red-400">Appell</button>
+                                </div>
+                                <p class="hidden mt-1 text-[10px] text-gray-500">Eigentlich Sachinhalt, enthält aber oft den Appell "Bestell neue!".</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 2: Die Horror Mail -->
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-red-500">
+                        <h3 class="font-bold text-red-900 mb-2 flex items-center gap-2"><i data-lucide="mail-warning" class="w-4 h-4"></i> Die Horror-Mail Analyse</h3>
+                        <div class="bg-gray-50 p-2 rounded border border-gray-200 text-xs font-mono mb-3">
+                            <strong>Von:</strong> Lager (Müller)<br>
+                            <strong>Betreff:</strong> SCHON WIEDER KAPUTT!!!<br><br>
+                            Sagen Sie mal, sind Ihre Fahrer blind? Die Lieferung ist eine Katastrophe. Wenn Sie keine Lust haben zu arbeiten, suchen wir wen anders.
+                        </div>
+
+                        <div id="mailQuizContainer" class="space-y-3">
+                            <div class="bg-gray-50 p-2 rounded">
+                                <p class="text-xs font-bold mb-1">"Sind Ihre Fahrer blind?" - Welches Ohr hört hier zu?</p>
+                                <div class="grid grid-cols-2 gap-1">
+                                    <button onclick="solveMail(this, false)" class="bg-white border p-1 rounded text-xs">Sachinhalt</button>
+                                    <button onclick="solveMail(this, true)" class="bg-white border p-1 rounded text-xs">Beziehung</button>
+                                </div>
+                                <div class="feedback hidden mt-1 text-[10px]"></div>
+                            </div>
+
+                            <div class="bg-gray-50 p-2 rounded">
+                                <p class="text-xs font-bold mb-1">Was ist die Selbstoffenbarung von Herrn Müller?</p>
+                                <div class="grid grid-cols-1 gap-1">
+                                    <button onclick="solveMail(this, true)" class="bg-white border p-1 rounded text-xs text-left px-2">"Ich bin wütend und kontrolliere streng."</button>
+                                    <button onclick="solveMail(this, false)" class="bg-white border p-1 rounded text-xs text-left px-2">"Die Ware ist beschädigt."</button>
+                                </div>
+                                <div class="feedback hidden mt-1 text-[10px]"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="navigate(4)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
+                        Weiter zur Challenge <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            `,
+            init: () => {}
+        },
+        4: {
+            title: "Deine Challenge",
+            render: () => `
+                 <div class="fade-in space-y-6 text-center">
+                    <div class="bg-slate-800 text-white p-6 rounded-xl shadow-xl">
+                        <i data-lucide="users" class="w-12 h-12 mx-auto mb-4 text-orange-400"></i>
+                        <h2 class="text-2xl font-bold mb-2">Partnerarbeit</h2>
+                        <p class="text-slate-300 text-sm">Such dir einen Partner im Klassenzimmer oder chatte mit deinem Sitznachbarn.</p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg shadow-md border border-gray-200 text-left">
+                        <h3 class="font-bold text-orange-600 uppercase text-xs mb-2">Mission:</h3>
+                        <p class="font-bold mb-2">Verwandle die "Wut-Mail" in eine Profi-Mail!</p>
+                        <p class="text-sm text-gray-700 mb-4">Herr Müller hat die Beziehungsebene vergiftet. Formuliert gemeinsam mündlich oder per WhatsApp einen Satz, der:</p>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            <li>Den Sachinhalt klar nennt (Ware kaputt).</li>
+                            <li>Auf der Beziehungsebene höflich bleibt.</li>
+                            <li>Einen klaren Appell enthält.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                        <h4 class="font-bold text-green-800 mb-1">Musterlösung anzeigen?</h4>
+                        <p class="text-xs text-green-700 mb-3">Erst selbst probieren!</p>
+                        <button onclick="document.getElementById('solution').classList.remove('hidden')" class="bg-green-600 text-white px-3 py-1 rounded text-sm shadow hover:bg-green-700">Lösung zeigen</button>
+                        
+                        <div id="solution" class="hidden mt-4 text-left bg-white p-3 rounded text-sm text-gray-800 border-l-4 border-green-500 animate-pulse">
+                            "Sehr geehrte Damen und Herren, leider kam die Lieferung beschädigt an. Bitte senden Sie uns bis zum [Datum] Ersatz."
+                        </div>
+                    </div>
+
+                    <button onclick="navigate(1)" class="text-gray-400 underline text-sm mt-8">Zurück zum Start</button>
+                </div>
+            `,
+            init: () => {}
+        }
+    };
+
+    // --- Logic for Chapter 2 (Retoure Quiz) ---
+    const retoureQuestions = [
+        {
+            text: "Der Azubi hört: 'Der Chef hat schlechte Laune, weil hier Chaos ist.'",
+            correct: "selbst",
+            feedback: "Richtig! Das ist die Selbstoffenbarung des Chefs."
+        },
+        {
+            text: "Der Azubi hört: 'Fakt ist: Die Ware steht noch am Warenausgang.'",
+            correct: "sach",
+            feedback: "Korrekt. Das ist die reine Sachebene."
+        },
+        {
+            text: "Der Azubi hört: 'Er hält mich für faul und unorganisiert.'",
+            correct: "bez",
+            feedback: "Genau. Das ist die (negative) Beziehungsebene."
+        },
+        {
+            text: "Der Azubi hört: 'Ich muss das sofort wegräumen!'",
+            correct: "appell",
+            feedback: "Stimmt! Das ist die Handlungsaufforderung (Appell)."
+        }
+    ];
+
+    function renderRetoureQuiz() {
+        const container = document.getElementById('retoureQuizContainer');
+        const nextBtn = document.getElementById('kap2NextBtn');
+
+        if (retoureQuizIndex >= retoureQuestions.length) {
+            container.innerHTML = `
+                <div class="text-center p-4 bg-green-50 rounded">
+                    <i data-lucide="check-circle" class="w-12 h-12 text-green-500 mx-auto mb-2"></i>
+                    <p class="font-bold text-green-800">Super gemacht!</p>
+                    <p class="text-sm text-green-700">Du hast alle 4 Ohren richtig zugeordnet.</p>
+                </div>
+            `;
+            nextBtn.classList.remove('hidden');
+            lucide.createIcons();
+            return;
+        }
+
+        const q = retoureQuestions[retoureQuizIndex];
+        
+        container.innerHTML = `
+            <div class="fade-in">
+                <p class="font-bold text-sm mb-3 min-h-[40px]">${q.text}</p>
+                <p class="text-xs text-gray-400 mb-2 uppercase tracking-wide">Welches Ohr ist aktiv?</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="checkRetoure('sach')" class="quiz-btn border border-blue-200 bg-blue-50 text-blue-800 p-2 rounded text-xs font-bold hover:bg-blue-100">Sachinhalt</button>
+                    <button onclick="checkRetoure('selbst')" class="quiz-btn border border-green-200 bg-green-50 text-green-800 p-2 rounded text-xs font-bold hover:bg-green-100">Selbstoffenbarung</button>
+                    <button onclick="checkRetoure('bez')" class="quiz-btn border border-yellow-200 bg-yellow-50 text-yellow-800 p-2 rounded text-xs font-bold hover:bg-yellow-100">Beziehung</button>
+                    <button onclick="checkRetoure('appell')" class="quiz-btn border border-red-200 bg-red-50 text-red-800 p-2 rounded text-xs font-bold hover:bg-red-100">Appell</button>
+                </div>
+                <div id="retoureFeedback" class="hidden mt-3 text-sm font-bold"></div>
+            </div>
+        `;
+    }
+
+    function checkRetoure(answer) {
+        const q = retoureQuestions[retoureQuizIndex];
+        const feedbackEl = document.getElementById('retoureFeedback');
+        
+        if (answer === q.correct) {
+            feedbackEl.innerText = q.feedback;
+            feedbackEl.className = "mt-3 text-sm font-bold text-green-600 fade-in";
+            feedbackEl.classList.remove('hidden');
+            setTimeout(() => {
+                retoureQuizIndex++;
+                renderRetoureQuiz();
+            }, 1500);
+        } else {
+            feedbackEl.innerText = "Nicht ganz richtig. Versuch es nochmal!";
+            feedbackEl.className = "mt-3 text-sm font-bold text-red-500 fade-in";
+            feedbackEl.classList.remove('hidden');
+        }
+    }
+
+
+    // --- Core Functions ---
+
+    function toggleMenu() {
+        const menu = document.getElementById('menuOverlay');
+        menu.classList.toggle('hidden');
+    }
+
+    function startChat() {
+        const chatContainer = document.getElementById('chatSim');
+        const playBtn = document.getElementById('playChatBtn');
+        const reflectionArea = document.getElementById('reflectionArea');
+        
+        if(!chatContainer) return;
+        
+        chatContainer.innerHTML = ''; // Reset
+        playBtn.classList.add('hidden'); // Hide button
+        
+        const messages = [
+            { text: "Chef: Ist die Palette fertig?", side: "left", delay: 500 },
+            { text: "Azubi: Ich mach ja schon so schnell ich kann!!", side: "right", delay: 2000 },
+            { text: "Chef: ??? Ich wollte nur wissen, ob sie fertig ist für den LKW.", side: "left", delay: 4000 },
+            { text: "Azubi: Achso... Ups. Ja, steht bereit.", side: "right", delay: 6500 }
+        ];
+
+        let cumDelay = 0;
+        messages.forEach(msg => {
+            cumDelay += msg.delay;
+            setTimeout(() => {
+                const bubble = document.createElement('div');
+                bubble.className = `chat-bubble ${msg.side === 'left' ? 'chat-left' : 'chat-right'}`;
+                bubble.innerText = msg.text;
+                chatContainer.appendChild(bubble);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, cumDelay);
+        });
+
+        // Show Reflection area after chat ends
+        setTimeout(() => {
+            reflectionArea.classList.remove('hidden');
+            reflectionArea.classList.add('fade-in');
+        }, cumDelay + 1000);
+    }
+
+    function revealAnalysis() {
+        const userInput = document.getElementById('userReflection').value;
+        const analysisArea = document.getElementById('analysisArea');
+        const reflectionBtn = document.querySelector('#reflectionArea button');
+        
+        if (userInput.trim() === "") {
+            alert("Schreib kurz deine Meinung rein, bevor du auflöst! 😉");
+            return;
+        }
+
+        reflectionBtn.classList.add('hidden'); // Hide button
+        document.getElementById('userReflection').disabled = true; // Disable input
+        analysisArea.classList.remove('hidden');
+        
+        // Scroll to analysis
+        setTimeout(() => {
+             analysisArea.scrollIntoView({behavior: "smooth"});
+        }, 100);
+    }
+
+    function solveSpeed(btn, type) {
+        // Simple visual feedback for Speed Round (Kap 3)
+        // Sache is usually "blue", Appell "red" contextually here
+        // But logic is simpler:
+        // Q1: "Mülleimer voll" -> Sach (is technically fact) BUT meant as Appell.
+        // Let's allow both but explain.
+        
+        const explanation = btn.parentElement.nextElementSibling;
+        explanation.classList.remove('hidden');
+        explanation.classList.add('fade-in');
+        
+        // Highlight clicked button
+        btn.classList.add('ring-2', 'ring-offset-1', 'ring-slate-400');
+    }
+
+    function solveMail(btn, isCorrect) {
+        const feedbackDiv = btn.parentElement.nextElementSibling;
+        const allBtns = btn.parentElement.querySelectorAll('button');
+        
+        allBtns.forEach(b => {
+            b.classList.remove('bg-green-100', 'bg-red-100', 'border-green-500', 'border-red-500');
+            b.classList.add('bg-white');
+        });
+
+        if (isCorrect) {
+            btn.classList.remove('bg-white');
+            btn.classList.add('bg-green-100', 'border-green-500');
+            feedbackDiv.innerHTML = "<span class='text-green-600 font-bold'>Richtig!</span>";
+            feedbackDiv.classList.remove('hidden');
+        } else {
+            btn.classList.remove('bg-white');
+            btn.classList.add('bg-red-100', 'border-red-500');
+            feedbackDiv.innerHTML = "<span class='text-red-600 font-bold'>Falsch.</span>";
+            feedbackDiv.classList.remove('hidden');
+        }
+    }
+
+    function navigate(chapterId) {
+        currentChapter = chapterId;
+        renderChapter(chapterId);
+        window.scrollTo(0,0);
+    }
+
+    function renderChapter(id) {
+        const contentArea = document.getElementById('contentArea');
+        const chapter = chapters[id];
+        
+        if (!chapter) return;
+
+        // Render Title
+        const html = `
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 mb-1">Kapitel ${id}</h2>
+                <h3 class="text-lg text-orange-600 font-semibold border-b border-orange-200 pb-2">${chapter.title}</h3>
+            </div>
+            ${chapter.render()}
+        `;
+
+        contentArea.innerHTML = html;
+        lucide.createIcons(); // Refresh icons
+        
+        if (chapter.init) {
+            chapter.init();
+        }
+    }
+
+    // --- Init App ---
+    document.addEventListener('DOMContentLoaded', () => {
+        renderChapter(1);
+        lucide.createIcons();
+    });
+
+</script>
+</body>
+</html>
