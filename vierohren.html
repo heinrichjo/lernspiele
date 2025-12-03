@@ -51,11 +51,15 @@
             to { transform: scale(1); opacity: 1; }
         }
         .ear-card {
-            transition: transform 0.1s;
+            transition: all 0.2s;
             cursor: pointer;
         }
         .ear-card:active {
-            transform: scale(0.95);
+            transform: scale(0.98);
+        }
+        .ear-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .fade-in {
             animation: fadeIn 0.5s ease-in-out;
@@ -68,7 +72,7 @@
             flex: 1;
             padding-bottom: 80px;
         }
-        /* Styles für das Quiz in Kap 2 */
+        /* Styles für das Quiz in Kap 3 */
         .quiz-btn {
             transition: all 0.2s;
         }
@@ -104,9 +108,11 @@
     <div id="menuOverlay" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex flex-col justify-center items-center text-white space-y-6 text-xl transform transition-transform">
         <button onclick="toggleMenu()" class="absolute top-4 right-4"><i data-lucide="x" class="h-8 w-8"></i></button>
         <a href="#" onclick="navigate(1); toggleMenu()" class="hover:text-orange-500">1. Start & Intro</a>
-        <a href="#" onclick="navigate(2); toggleMenu()" class="hover:text-orange-500">2. Das 4-Seiten Modell</a>
-        <a href="#" onclick="navigate(3); toggleMenu()" class="hover:text-orange-500">3. Trainings-Camp</a>
-        <a href="#" onclick="navigate(4); toggleMenu()" class="hover:text-orange-500">4. Challenge</a>
+        <a href="#" onclick="navigate(2); toggleMenu()" class="hover:text-orange-500">2. Das Modell (Theorie)</a>
+        <a href="#" onclick="navigate(3); toggleMenu()" class="hover:text-orange-500">3. Übung: Retoure</a>
+        <a href="#" onclick="navigate(4); toggleMenu()" class="hover:text-orange-500">4. Blitz-Runde</a>
+        <a href="#" onclick="navigate(5); toggleMenu()" class="hover:text-orange-500">5. E-Mail Check</a>
+        <a href="#" onclick="navigate(6); toggleMenu()" class="hover:text-orange-500">6. Challenge</a>
     </div>
 
     <!-- Main Content Area -->
@@ -131,7 +137,7 @@
 <script>
     // --- State Management ---
     let currentChapter = 1;
-    let retoureQuizIndex = 0; // State für Kap 2 Quiz
+    let retoureQuizIndex = 0; // State für Kap 3 Quiz
 
     // --- Content Data ---
     const chapters = {
@@ -179,7 +185,6 @@
                 </div>
             `,
             init: () => {
-                // Reset Chat visibility
                 document.getElementById('reflectionArea').classList.add('hidden');
             }
         },
@@ -187,40 +192,100 @@
             title: "Das 4-Seiten Modell",
             render: () => `
                 <div class="fade-in space-y-5">
-                    <p class="text-gray-600 text-sm">Der Kommunikations-Profi <strong>Friedemann Schulz von Thun</strong> sagt: Jede Nachricht ist ein Paket mit 4 Seiten. Wir senden (Schnabel) und hören (Ohr) immer auf 4 Kanälen.</p>
+                    <p class="text-gray-600 text-sm">Der Kommunikations-Profi <strong>Friedemann Schulz von Thun</strong> sagt: Jede Nachricht ist ein Paket mit 4 Seiten. Wir senden (Schnabel) und hören (Ohr) immer auf 4 Kanälen gleichzeitig.</p>
+                    <p class="text-xs text-slate-400 text-center font-bold uppercase tracking-wider mb-2">Tippe auf eine Karte für mehr Infos</p>
 
-                    <!-- Theorie Teil -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="bg-blue-100 p-2 rounded text-xs text-blue-800 font-bold text-center border border-blue-200">1. Sachinhalt<br><span class="font-normal text-[10px]">Fakten & Daten</span></div>
-                        <div class="bg-green-100 p-2 rounded text-xs text-green-800 font-bold text-center border border-green-200">2. Selbstoffenbarung<br><span class="font-normal text-[10px]">Ich-Botschaft</span></div>
-                        <div class="bg-yellow-100 p-2 rounded text-xs text-yellow-800 font-bold text-center border border-yellow-200">3. Beziehung<br><span class="font-normal text-[10px]">Wir-Botschaft</span></div>
-                        <div class="bg-red-100 p-2 rounded text-xs text-red-800 font-bold text-center border border-red-200">4. Appell<br><span class="font-normal text-[10px]">Befehl/Wunsch</span></div>
-                    </div>
-
-                    <div class="border-t border-gray-300 my-4"></div>
-
-                    <!-- Interaktive Übung: Retoure -->
-                    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                        <div class="bg-slate-800 text-white p-3 flex items-center gap-2">
-                            <i data-lucide="gamepad-2" class="w-5 h-5 text-orange-400"></i>
-                            <h3 class="font-bold text-sm">Übung: Die Retoure</h3>
-                        </div>
-                        <div class="p-4">
-                            <p class="text-sm italic text-gray-500 mb-2">Situation: Der Lagerleiter kommt vorbei und sagt:</p>
-                            <div class="bg-gray-100 p-3 rounded-lg border-l-4 border-slate-500 mb-4 font-bold text-slate-800">
-                                "Da vorne steht ja immer noch die Retoure von gestern!"
+                    <!-- Theorie Teil: Klickbar -->
+                    <div class="grid grid-cols-1 gap-3">
+                        
+                        <!-- 1. Sache -->
+                        <div onclick="toggleInfo('sach-info')" class="ear-card bg-blue-50 border-l-4 border-blue-500 p-3 rounded shadow-sm">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-blue-800 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i> 1. Der Sachinhalt</h3>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-blue-400"></i>
                             </div>
-                            
-                            <!-- Quiz Container -->
-                            <div id="retoureQuizContainer">
-                                <!-- Quiz JS injects here -->
+                            <div id="sach-info" class="hidden mt-2 text-sm text-gray-700 border-t border-blue-100 pt-2">
+                                👉 <strong>Worüber informiere ich?</strong><br>
+                                Hier geht es um reine Daten, Fakten und Sachverhalte. Ist die Aussage wahr oder falsch? Relevant oder unwichtig?
+                                <br><em class="text-xs text-blue-600">Beispiel: "Die Lieferung ist unvollständig."</em>
                             </div>
                         </div>
+
+                        <!-- 2. Selbstoffenbarung -->
+                        <div onclick="toggleInfo('self-info')" class="ear-card bg-green-50 border-l-4 border-green-500 p-3 rounded shadow-sm">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-green-800 flex items-center gap-2"><i data-lucide="user" class="w-4 h-4"></i> 2. Selbstoffenbarung</h3>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-green-400"></i>
+                            </div>
+                            <div id="self-info" class="hidden mt-2 text-sm text-gray-700 border-t border-green-100 pt-2">
+                                👉 <strong>Was gebe ich von mir preis?</strong><br>
+                                Infos über den Sender: Wie geht es ihm? Ist er gestresst? Professionell?
+                                <br><em class="text-xs text-green-600">Beispiel: Wer schreit, offenbart: "Ich habe meine Emotionen nicht im Griff."</em>
+                            </div>
+                        </div>
+
+                        <!-- 3. Beziehung -->
+                        <div onclick="toggleInfo('bez-info')" class="ear-card bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded shadow-sm">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-yellow-800 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> 3. Beziehungsebene</h3>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-yellow-400"></i>
+                            </div>
+                            <div id="bez-info" class="hidden mt-2 text-sm text-gray-700 border-t border-yellow-100 pt-2">
+                                👉 <strong>Wie stehe ich zu dir?</strong><br>
+                                Zeigt sich oft im Tonfall, Anrede oder Mimik. "Du-Botschaften" sind hier oft kritisch.
+                                <br><em class="text-xs text-yellow-600">Beispiel: Keine Begrüßung signalisiert "Du bist mir egal".</em>
+                            </div>
+                        </div>
+
+                        <!-- 4. Appell -->
+                        <div onclick="toggleInfo('appell-info')" class="ear-card bg-red-50 border-l-4 border-red-500 p-3 rounded shadow-sm">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-red-800 flex items-center gap-2"><i data-lucide="megaphone" class="w-4 h-4"></i> 4. Appell</h3>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-red-400"></i>
+                            </div>
+                            <div id="appell-info" class="hidden mt-2 text-sm text-gray-700 border-t border-red-100 pt-2">
+                                👉 <strong>Wozu will ich dich veranlassen?</strong><br>
+                                Der Sender will Einfluss nehmen. Der Empfänger soll etwas tun, denken oder fühlen.
+                                <br><em class="text-xs text-red-600">Beispiel: "Wir brauchen die Ware bis 12 Uhr!" (Mach hinne!)</em>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <div id="kap2NextBtn" class="hidden">
-                        <button onclick="navigate(3)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
-                            Weiter zum Training <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    <button onclick="navigate(3)" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
+                        Weiter zur ersten Übung <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            `,
+            init: () => {}
+        },
+        3: {
+            title: "Übung 1: Die Retoure",
+            render: () => `
+                <div class="fade-in space-y-5">
+                     <div class="bg-slate-800 text-white p-4 rounded-lg shadow mb-4 flex gap-3 items-center">
+                        <i data-lucide="gamepad-2" class="w-8 h-8 text-orange-400"></i>
+                        <div>
+                            <h3 class="font-bold">Hörtest im Lager</h3>
+                            <p class="text-xs text-slate-300">Ordne die Aussagen richtig zu.</p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                        <p class="text-sm italic text-gray-500 mb-2">Situation: Der Lagerleiter kommt vorbei und sagt:</p>
+                        <div class="bg-gray-100 p-3 rounded-lg border-l-4 border-slate-500 mb-4 font-bold text-slate-800">
+                            "Da vorne steht ja immer noch die Retoure von gestern!"
+                        </div>
+                        
+                        <!-- Quiz Container -->
+                        <div id="retoureQuizContainer">
+                            <!-- Quiz JS injects here -->
+                        </div>
+                    </div>
+
+                    <div id="kap3NextBtn" class="hidden">
+                        <button onclick="navigate(4)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
+                            Weiter zur Blitz-Runde <i data-lucide="arrow-right" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
@@ -230,77 +295,97 @@
                 renderRetoureQuiz();
             }
         },
-        3: {
-            title: "Das Trainings-Camp",
+        4: {
+            title: "Übung 2: Blitz-Runde",
             render: () => `
                 <div class="fade-in space-y-6">
-                    <p class="text-sm text-gray-600">Bevor wir E-Mails schreiben, trainieren wir deine Ohren. Löse die folgenden Aufgaben.</p>
+                    <p class="text-sm text-gray-600">Oft verwechseln wir Fakten mit Aufforderungen. Entscheide schnell: Ist das primär eine Sachinfo oder ein versteckter Appell?</p>
 
-                    <!-- Aufgabe 1: Speed Round -->
                     <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-purple-500">
-                        <h3 class="font-bold text-purple-900 mb-2 flex items-center gap-2"><i data-lucide="zap" class="w-4 h-4"></i> Blitz-Runde: Sache oder Appell?</h3>
-                        <p class="text-xs text-gray-500 mb-4">Oft verwechseln wir Fakten mit Aufforderungen. Entscheide schnell!</p>
+                        <h3 class="font-bold text-purple-900 mb-4 flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5"></i> Speed-Check</h3>
                         
-                        <div id="speedRoundContainer" class="space-y-4">
+                        <div id="speedRoundContainer" class="space-y-6">
                             <!-- Q1 -->
-                            <div class="border-b pb-3">
-                                <p class="font-medium text-sm mb-2">"Der Mülleimer ist voll."</p>
+                            <div class="border-b border-gray-100 pb-4">
+                                <div class="bg-gray-50 p-2 rounded mb-2 font-mono text-sm">"Der Mülleimer ist voll."</div>
                                 <div class="flex gap-2">
-                                    <button onclick="solveSpeed(this, 'sach')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-blue-100 border hover:border-blue-400">Sachinhalt</button>
-                                    <button onclick="solveSpeed(this, 'appell')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-red-100 border hover:border-red-400">Appell</button>
+                                    <button onclick="solveSpeed(this, 'sach')" class="flex-1 bg-white border border-gray-300 py-3 rounded text-sm font-bold shadow-sm hover:bg-blue-50 text-blue-700">Sachinhalt</button>
+                                    <button onclick="solveSpeed(this, 'appell')" class="flex-1 bg-white border border-gray-300 py-3 rounded text-sm font-bold shadow-sm hover:bg-red-50 text-red-700">Appell</button>
                                 </div>
-                                <p class="hidden mt-1 text-[10px] text-gray-500">Auflösung: Sachinhalt = Er ist voll. Appell = Bring ihn weg!</p>
+                                <div class="hidden mt-2 p-2 bg-slate-100 text-xs text-gray-600 rounded">
+                                    <strong>Auflösung:</strong> Beides! Sachlich: "Er ist voll." Aber meistens gemeint: "Bring ihn weg!" (Appell).
+                                </div>
                             </div>
+
                             <!-- Q2 -->
-                            <div class="border-b pb-3">
-                                <p class="font-medium text-sm mb-2">"Wir haben keine Kartons mehr Größe M."</p>
+                            <div class="pb-2">
+                                <div class="bg-gray-50 p-2 rounded mb-2 font-mono text-sm">"Wir haben keine Kartons mehr Größe M."</div>
                                 <div class="flex gap-2">
-                                    <button onclick="solveSpeed(this, 'sach')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-blue-100 border hover:border-blue-400">Sachinhalt</button>
-                                    <button onclick="solveSpeed(this, 'appell')" class="flex-1 bg-gray-100 py-2 rounded text-xs font-bold hover:bg-red-100 border hover:border-red-400">Appell</button>
+                                    <button onclick="solveSpeed(this, 'sach')" class="flex-1 bg-white border border-gray-300 py-3 rounded text-sm font-bold shadow-sm hover:bg-blue-50 text-blue-700">Sachinhalt</button>
+                                    <button onclick="solveSpeed(this, 'appell')" class="flex-1 bg-white border border-gray-300 py-3 rounded text-sm font-bold shadow-sm hover:bg-red-50 text-red-700">Appell</button>
                                 </div>
-                                <p class="hidden mt-1 text-[10px] text-gray-500">Eigentlich Sachinhalt, enthält aber oft den Appell "Bestell neue!".</p>
+                                <div class="hidden mt-2 p-2 bg-slate-100 text-xs text-gray-600 rounded">
+                                    <strong>Auflösung:</strong> Auch hier versteckt sich oft der Appell: "Bestell sofort neue!"
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Aufgabe 2: Die Horror Mail -->
-                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-red-500">
-                        <h3 class="font-bold text-red-900 mb-2 flex items-center gap-2"><i data-lucide="mail-warning" class="w-4 h-4"></i> Die Horror-Mail Analyse</h3>
-                        <div class="bg-gray-50 p-2 rounded border border-gray-200 text-xs font-mono mb-3">
-                            <strong>Von:</strong> Lager (Müller)<br>
-                            <strong>Betreff:</strong> SCHON WIEDER KAPUTT!!!<br><br>
-                            Sagen Sie mal, sind Ihre Fahrer blind? Die Lieferung ist eine Katastrophe. Wenn Sie keine Lust haben zu arbeiten, suchen wir wen anders.
-                        </div>
-
-                        <div id="mailQuizContainer" class="space-y-3">
-                            <div class="bg-gray-50 p-2 rounded">
-                                <p class="text-xs font-bold mb-1">"Sind Ihre Fahrer blind?" - Welches Ohr hört hier zu?</p>
-                                <div class="grid grid-cols-2 gap-1">
-                                    <button onclick="solveMail(this, false)" class="bg-white border p-1 rounded text-xs">Sachinhalt</button>
-                                    <button onclick="solveMail(this, true)" class="bg-white border p-1 rounded text-xs">Beziehung</button>
-                                </div>
-                                <div class="feedback hidden mt-1 text-[10px]"></div>
-                            </div>
-
-                            <div class="bg-gray-50 p-2 rounded">
-                                <p class="text-xs font-bold mb-1">Was ist die Selbstoffenbarung von Herrn Müller?</p>
-                                <div class="grid grid-cols-1 gap-1">
-                                    <button onclick="solveMail(this, true)" class="bg-white border p-1 rounded text-xs text-left px-2">"Ich bin wütend und kontrolliere streng."</button>
-                                    <button onclick="solveMail(this, false)" class="bg-white border p-1 rounded text-xs text-left px-2">"Die Ware ist beschädigt."</button>
-                                </div>
-                                <div class="feedback hidden mt-1 text-[10px]"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button onclick="navigate(4)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
-                        Weiter zur Challenge <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    <button onclick="navigate(5)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
+                        Weiter zur E-Mail <i data-lucide="arrow-right" class="w-5 h-5"></i>
                     </button>
                 </div>
             `,
             init: () => {}
         },
-        4: {
+        5: {
+            title: "Übung 3: E-Mail Analyse",
+            render: () => `
+                <div class="fade-in space-y-6">
+                    <p class="text-sm text-gray-600">Jetzt wird es ernst. Analysiere diese echte "Horror-Mail" aus dem Alltag.</p>
+
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-red-500">
+                        <h3 class="font-bold text-red-900 mb-2 flex items-center gap-2"><i data-lucide="mail-warning" class="w-5 h-5"></i> E-Mail Check</h3>
+                        <div class="bg-gray-50 p-3 rounded border border-gray-200 text-xs font-mono mb-4 text-gray-700 leading-relaxed">
+                            <strong>Von:</strong> Lager (Müller)<br>
+                            <strong>Betreff:</strong> SCHON WIEDER KAPUTT!!!<br><br>
+                            Sagen Sie mal, sind Ihre Fahrer eigentlich blind? <br>
+                            Die Lieferung heute morgen ist eine Katastrophe. Alles aufgerissen. Wenn Sie keine Lust haben zu arbeiten, suchen wir wen anders.<br>
+                            Müller
+                        </div>
+
+                        <div id="mailQuizContainer" class="space-y-4">
+                            <!-- Frage 1 -->
+                            <div class="bg-slate-50 p-3 rounded border border-slate-100">
+                                <p class="text-sm font-bold mb-2 text-slate-800">1. "Sind Ihre Fahrer blind?"</p>
+                                <p class="text-xs text-gray-500 mb-2">Welches Ohr hört hier zu?</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="solveMail(this, false)" class="bg-white border p-2 rounded text-xs font-medium shadow-sm">Sachinhalt</button>
+                                    <button onclick="solveMail(this, true)" class="bg-white border p-2 rounded text-xs font-medium shadow-sm">Beziehung</button>
+                                </div>
+                                <div class="feedback hidden mt-2 text-xs"></div>
+                            </div>
+
+                            <!-- Frage 2 -->
+                            <div class="bg-slate-50 p-3 rounded border border-slate-100">
+                                <p class="text-sm font-bold mb-2 text-slate-800">2. Was ist die Selbstoffenbarung?</p>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <button onclick="solveMail(this, true)" class="bg-white border p-2 rounded text-xs font-medium text-left px-3 shadow-sm">"Ich bin wütend und habe keine Geduld mehr."</button>
+                                    <button onclick="solveMail(this, false)" class="bg-white border p-2 rounded text-xs font-medium text-left px-3 shadow-sm">"Die Ware ist beschädigt."</button>
+                                </div>
+                                <div class="feedback hidden mt-2 text-xs"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="navigate(6)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95">
+                        Zur Final Challenge <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            `,
+            init: () => {}
+        },
+        6: {
             title: "Deine Challenge",
             render: () => `
                  <div class="fade-in space-y-6 text-center">
@@ -338,7 +423,25 @@
         }
     };
 
-    // --- Logic for Chapter 2 (Retoure Quiz) ---
+    // --- Interaction Functions ---
+    
+    function toggleInfo(id) {
+        const el = document.getElementById(id);
+        const parent = el.parentElement;
+        
+        // Close others? Optional, but cleaner on mobile
+        // document.querySelectorAll('[id$="-info"]').forEach(d => { if(d.id !== id) d.classList.add('hidden') });
+
+        el.classList.toggle('hidden');
+        
+        // Rotate Icon logic optional, keeping it simple
+        if (!el.classList.contains('hidden')) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+
+    // --- Logic for Chapter 3 (Retoure Quiz) ---
     const retoureQuestions = [
         {
             text: "Der Azubi hört: 'Der Chef hat schlechte Laune, weil hier Chaos ist.'",
@@ -364,7 +467,7 @@
 
     function renderRetoureQuiz() {
         const container = document.getElementById('retoureQuizContainer');
-        const nextBtn = document.getElementById('kap2NextBtn');
+        const nextBtn = document.getElementById('kap3NextBtn'); // ID changed to kap3
 
         if (retoureQuizIndex >= retoureQuestions.length) {
             container.innerHTML = `
@@ -480,18 +583,12 @@
     }
 
     function solveSpeed(btn, type) {
-        // Simple visual feedback for Speed Round (Kap 3)
-        // Sache is usually "blue", Appell "red" contextually here
-        // But logic is simpler:
-        // Q1: "Mülleimer voll" -> Sach (is technically fact) BUT meant as Appell.
-        // Let's allow both but explain.
-        
         const explanation = btn.parentElement.nextElementSibling;
         explanation.classList.remove('hidden');
         explanation.classList.add('fade-in');
         
-        // Highlight clicked button
-        btn.classList.add('ring-2', 'ring-offset-1', 'ring-slate-400');
+        // Visual feedback
+        btn.classList.add('ring-2', 'ring-offset-1', 'ring-slate-400', 'bg-slate-50');
     }
 
     function solveMail(btn, isCorrect) {
