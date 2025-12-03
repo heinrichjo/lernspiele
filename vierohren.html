@@ -70,7 +70,7 @@
         }
         main {
             flex: 1;
-            padding-bottom: 80px;
+            /* padding-bottom entfernt, da Footer nicht mehr fixed ist */
         }
         /* Styles für das Quiz in Kap 3 */
         .quiz-btn {
@@ -116,15 +116,15 @@
     </div>
 
     <!-- Main Content Area -->
-    <main id="contentArea" class="p-4 overflow-y-auto">
+    <main id="contentArea" class="p-4">
         <!-- Content will be injected via JS -->
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 p-3 fixed bottom-0 w-full max-w-[600px] flex items-center justify-between text-xs text-gray-500 z-40">
+    <!-- Footer (Jetzt static/in-flow, nicht mehr fixed) -->
+    <footer class="bg-white border-t border-gray-200 p-3 mt-auto w-full flex items-center justify-between text-xs text-gray-500">
         <div>
             <span class="block font-bold">Johannes Heinrich 2025</span>
-            <span>Welser Logistik Training</span>
+            <span>Welserschule Logistik Training</span>
         </div>
         <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
              alt="Logo" 
