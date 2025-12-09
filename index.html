@@ -35,14 +35,16 @@
 </head>
 <body class="min-h-screen antialiased">
 
-    <!-- Header mit Logo -->
+    <!-- Header mit Emojis statt Bild-Logo -->
     <header class="bg-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-center">
-            <!-- Verwenden des bereitgestellten Logos -->
-            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" 
-                alt="BS4 Augsburg Logo" 
-                class="h-16 object-contain rounded-md"
-                onerror="this.onerror=null; this.src='https://placehold.co/150x64/004080/ffffff?text=BS4+Logo';">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-center items-center">
+            <!-- Emojis als Logo-Ersatz -->
+            <!-- text-6xl sorgt für die Größe, select-none verhindert das Markieren wie bei Text -->
+            <div class="text-6xl flex gap-6 select-none filter drop-shadow-sm cursor-default" role="img" aria-label="Logo: LKW, Computer und Spiele">
+                <span title="Logistik">🚛</span>
+                <span title="IT & Computer">💻</span>
+                <span title="Lernspiele">🎮</span>
+            </div>
         </div>
     </header>
 
@@ -91,10 +93,8 @@
                         description: "Löse interaktive Python-Aufgaben in einem Spiel, um Level aufzusteigen und Konfetti zu verdienen.", 
                         link: "pythonacademy.html" 
                     },        
-
                     
-
-                                        { 
+                    { 
                         id: 16, 
                         title: "Haftungs-Quiz", 
                         category: "Spedition- und Logistikdienstleistungen", 
@@ -114,7 +114,7 @@
                         category: "IT-Systemmanagement", 
                         description: "Baue eine Objektstadt mithilfe von Klassen! ?!? Häh?", 
                         link: "objectopolis.html" 
-                    },       
+                    },        
                     { 
                         id: 13, 
                         title: "OOP Zoo-Manager", 
@@ -348,9 +348,3 @@
 
 </body>
 </html>
-
-
-
-
-
-
