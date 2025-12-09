@@ -223,9 +223,9 @@
             align-items: center;
             gap: 10px;
         }
-        .footer-logo {
-            height: 30px;
-            width: auto;
+        .footer-emojis {
+            font-size: 1.5rem;
+            margin-right: 10px;
         }
         
         @media (max-width: 600px) {
@@ -292,7 +292,7 @@
 
     <footer>
         <div class="footer-left">
-            <img src="https://www.welserschule.de/wp-content/uploads/2025/11/BS4_Logo_Web_ohneSlogan.jpg" alt="Logo" class="footer-logo">
+            <span class="footer-emojis">🚚📦🏗️</span>
             <strong>Johannes Heinrich</strong>
         </div>
         <div>Erstellt mithilfe von Gemini • 2025</div>
@@ -973,79 +973,192 @@ function finishGame() {
 function calculateAndDrawOptimalPacking(itemsToPack) {
     const pCtx = document.getElementById('previewCanvas').getContext('2d');
     const pScale = 0.6; 
-    let simItems = itemsToPack.map(i => ({w: i.originalW, h: i.originalH, color: i.color, stopId: i.stopId, rotatable: i.rotatable, sf: i.sf}));
     
-    // --- STACKING LOGIC (Stack Mode Only) ---
+    // Basis Items vorbereiten
+    let simItemsRaw = itemsToPack.map(i => ({
+        w: i.originalW, h: i.originalH, color: i.color, 
+        stopId: i.stopId, rotatable: i.rotatable, sf: i.sf,
+        h_real: i.realHeight
+    }));
+
+    // --- STACKING VORBEREITUNG (Nur im Stack Mode) ---
+    // Wir gruppieren Items zu "Türmen", bevor wir sie in 2D packen.
     if (gameMode === 'stack') {
-        // Gruppe items by dimension (footprint)
-        let grouped = [];
-        // Sortieren: SF >= 1 zuerst (als Basis), dann SF 0
-        simItems.sort((a,b) => b.sf - a.sf);
-        
         let stacks = [];
-        simItems.forEach(item => {
-            // Versuch, item auf bestehenden Stack zu packen
-            let added = false;
-            for (let s of stacks) {
-                // Check Dimension (muss gleich sein, Rotationscheck einfachheitshalber ignorieren wir hier und nehmen an W==W && H==H)
-                let dimMatch = (s.w === item.w && s.h === item.h); // Oder rotated
-                if (dimMatch) {
-                    // Check Load Bearing capacity of stack top
-                    // Vereinfacht: Wenn der Stack schon existiert, hat er unten ein SF>=1 item.
-                    // Wir packen einfach drauf.
-                    s.items.push(item);
-                    added = true;
-                    break;
+        // Sortieren: SF 1 zuerst (als Basis), dann SF 0 (Top only)
+        // Aber auch nach Größe, um "gleiches auf gleiches" zu finden
+        simItemsRaw.sort((a,b) => {
+            if (a.w !== b.w) return b.w - a.w; // Breite
+            if (a.h !== b.h) return b.h - a.h; // Tiefe
+            return b.sf - a.sf; // SF
+        });
+
+        let unprocessed = [...simItemsRaw];
+        
+        while(unprocessed.length > 0) {
+            let base = unprocessed.shift();
+            let currentStack = { 
+                w: base.w, h: base.h, 
+                color: base.color, // Farbe der Basis
+                items: [base],
+                currentHeight: base.h_real
+            };
+            
+            // Suche weitere Items für diesen Stack
+            let i = 0;
+            while (i < unprocessed.length) {
+                let candidate = unprocessed[i];
+                // Check Dimensions 
+                let dimMatch = (candidate.w === currentStack.w && candidate.h === currentStack.h);
+                // Check if Stack is full? (TRAILER_HEIGHT_CM)
+                let fitsHeight = (currentStack.currentHeight + candidate.h_real <= TRAILER_HEIGHT_CM);
+                // Check SF of the item currently at the top of the stack
+                let topItem = currentStack.items[currentStack.items.length - 1];
+                let canBearLoad = (topItem.sf >= 1);
+                
+                if (dimMatch && fitsHeight && canBearLoad) {
+                    currentStack.items.push(candidate);
+                    currentStack.currentHeight += candidate.h_real;
+                    unprocessed.splice(i, 1); 
+                } else {
+                    i++;
                 }
             }
-            if (!added) {
-                // Neuer Stack
-                stacks.push({ w: item.w, h: item.h, items: [item] });
-            }
-        });
+            stacks.push(currentStack);
+        }
         
-        // Ersetze simItems durch "Stacks" (repräsentiert durch das Basis-Item, aber nur 1x pro Stack für 2D Packer)
-        simItems = stacks.map(s => s.items[0]);
+        // Ersetze die simItems durch die Stack-Basis-Objekte für den 2D Packer
+        simItemsRaw = stacks; 
     }
 
-    if (gameMode === 'delivery') simItems.sort((a, b) => (a.stopId !== b.stopId) ? b.stopId - a.stopId : Math.max(b.w, b.h) - Math.max(a.w, a.h));
-    else simItems.sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
+    // --- MULTI-PASS PACKING STRATEGY ---
+    let strategies = [];
+    
+    if (gameMode === 'delivery') {
+        strategies.push({ name: 'Delivery', sort: (a,b) => (a.stopId !== b.stopId) ? b.stopId - a.stopId : Math.max(b.w, b.h) - Math.max(a.w, a.h) });
+    } else {
+        strategies.push({ name: 'Area', sort: (a,b) => (b.w * b.h) - (a.w * a.h) });
+        strategies.push({ name: 'MaxSide', sort: (a,b) => Math.max(b.w, b.h) - Math.max(a.w, a.h) });
+        strategies.push({ name: 'Width', sort: (a,b) => b.w - a.w });
+    }
 
-    pCtx.clearRect(0,0, 800, 200);
-    pCtx.fillStyle = '#e2e8f0'; pCtx.fillRect(0, 0, 800, 240*pScale);
-    let freeRects = [{x:0,y:0,w:9999,h:240}]; let maxX = 0; let placed = [];
+    let bestResult = { maxX: Infinity, placed: [] };
 
-    simItems.forEach(itm => {
-        let bestScore = Infinity, bestR = -1, bestW, bestH;
-        for(let i=0; i<freeRects.length; i++) {
-            let r = freeRects[i];
-            let opts = [];
-            if (r.w>=itm.w && r.h>=itm.h) opts.push({w:itm.w, h:itm.h});
-            if (itm.rotatable && r.w>=itm.h && r.h>=itm.w) opts.push({w:itm.h, h:itm.w});
-            for(let o of opts) {
-                let valid = true;
-                if (gameMode === 'delivery') {
-                    for(let p of placed) if (p.stopId > itm.stopId && r.y < p.y+p.h && r.y+o.h > p.y && p.x > r.x) valid = false;
-                }
-                if (valid) {
-                    let score = Math.min(r.w-o.w, r.h-o.h) + r.x*0.1;
-                    if (score < bestScore) { bestScore = score; bestR = i; bestW = o.w; bestH = o.h; }
+    strategies.forEach(strat => {
+        // Clone items for this run
+        let runItems = JSON.parse(JSON.stringify(simItemsRaw));
+        runItems.sort(strat.sort);
+        
+        // Run Packer
+        let freeRects = [{x:0, y:0, w:9999, h:TRAILER_WIDTH_CM}];
+        let placed = [];
+        let currentMaxX = 0;
+
+        runItems.forEach(itm => {
+            let bestScore = Infinity;
+            let bestR = -1;
+            let bestW, bestH;
+
+            // Suche Best Fit in allen Free Rects
+            for(let i=0; i<freeRects.length; i++) {
+                let r = freeRects[i];
+                
+                // Optionen: Normal und Gedreht
+                let opts = [];
+                // Check Normal
+                if (r.w >= itm.w && r.h >= itm.h) opts.push({w:itm.w, h:itm.h});
+                // Check Rotated
+                let canRotate = (itm.rotatable !== undefined) ? itm.rotatable : true;
+                if (canRotate && r.w >= itm.h && r.h >= itm.w) opts.push({w:itm.h, h:itm.w});
+
+                for(let o of opts) {
+                    // Delivery Constraint Check
+                    let valid = true;
+                    if (gameMode === 'delivery') {
+                        for(let p of placed) {
+                            if (p.stopId > itm.stopId && r.y < p.y+p.h && r.y+o.h > p.y && p.x > r.x) valid = false;
+                        }
+                    }
+
+                    if (valid) {
+                        // Heuristik: Score = X_Pos + (Fit * Penalty)
+                        let shortSideFit = Math.min(r.w - o.w, r.h - o.h);
+                        let score = r.x + (shortSideFit * 0.5); 
+                        
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestR = i;
+                            bestW = o.w;
+                            bestH = o.h;
+                        }
+                    }
                 }
             }
-        }
-        if (bestR !== -1) {
-            let r = freeRects[bestR];
-            pCtx.fillStyle = itm.color; pCtx.fillRect(r.x*pScale, r.y*pScale, bestW*pScale, bestH*pScale);
-            pCtx.strokeRect(r.x*pScale, r.y*pScale, bestW*pScale, bestH*pScale);
-            placed.push({x:r.x, y:r.y, w:bestW, h:bestH, stopId:itm.stopId});
-            let rw = r.w - bestW, rh = r.h - bestH;
-            let n = (rw > rh) ? [{x:r.x,y:r.y+bestH,w:bestW,h:rh}, {x:r.x+bestW,y:r.y,w:rw,h:r.h}] : [{x:r.x+bestW,y:r.y,w:rw,h:bestH}, {x:r.x,y:r.y+bestH,w:r.w,h:rh}];
-            freeRects.splice(bestR, 1, ...n);
-            freeRects = freeRects.filter(fr => fr.w>0 && fr.h>0);
-            maxX = Math.max(maxX, r.x+bestW);
+
+            if (bestR !== -1) {
+                let r = freeRects[bestR];
+                placed.push({
+                    x: r.x, y: r.y, w: bestW, h: bestH, 
+                    color: itm.color, stopId: itm.stopId,
+                    stackCount: (itm.items ? itm.items.length : 1) // Info für Zeichnen
+                });
+                
+                // Update MaxX
+                currentMaxX = Math.max(currentMaxX, r.x + bestW);
+
+                // Guillotine Split
+                let rw = r.w - bestW;
+                let rh = r.h - bestH;
+                let newRects = [];
+                
+                if (rw > rh) {
+                    // Vertical Split
+                    newRects.push({x: r.x, y: r.y + bestH, w: bestW, h: rh}); // Unten
+                    newRects.push({x: r.x + bestW, y: r.y, w: rw, h: r.h});   // Rechts
+                } else {
+                    // Horizontal Split
+                    newRects.push({x: r.x + bestW, y: r.y, w: rw, h: bestH}); // Rechts
+                    newRects.push({x: r.x, y: r.y + bestH, w: r.w, h: rh});   // Unten
+                }
+
+                freeRects.splice(bestR, 1, ...newRects);
+                freeRects = freeRects.filter(fr => fr.w >= 1 && fr.h >= 1);
+            }
+        });
+
+        // Check if better
+        if (currentMaxX < bestResult.maxX) {
+            bestResult = { maxX: currentMaxX, placed: placed };
         }
     });
-    return maxX;
+
+    // --- DRAW BEST RESULT ---
+    pCtx.clearRect(0,0, 800, 200);
+    pCtx.fillStyle = '#e2e8f0'; pCtx.fillRect(0, 0, 800, 240*pScale);
+    pCtx.strokeStyle = '#94a3b8'; pCtx.strokeRect(0, 0, 800, 240*pScale);
+
+    bestResult.placed.forEach(p => {
+        pCtx.fillStyle = p.color; 
+        pCtx.fillRect(p.x*pScale, p.y*pScale, p.w*pScale, p.h*pScale);
+        pCtx.strokeRect(p.x*pScale, p.y*pScale, p.w*pScale, p.h*pScale);
+        
+        if (p.stackCount > 1) {
+            pCtx.fillStyle = 'white';
+            pCtx.font = 'bold 10px Arial';
+            pCtx.fillText(`x${p.stackCount}`, p.x*pScale + 5, p.y*pScale + 12);
+        }
+    });
+
+    // Lademeter Linie
+    pCtx.beginPath();
+    pCtx.strokeStyle = 'red';
+    pCtx.lineWidth = 2;
+    let lineX = bestResult.maxX * pScale;
+    pCtx.moveTo(lineX, 0);
+    pCtx.lineTo(lineX, 240 * pScale + 10);
+    pCtx.stroke();
+
+    return bestResult.maxX;
 }
 
 function closeModal() { document.getElementById('result-modal').style.display = 'none'; }
